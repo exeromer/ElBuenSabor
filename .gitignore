@@ -134,3 +134,44 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# >>>>>> ADICIONES ESPECÍFICAS PARA EL PROYECTO JAVA/SPRING/MAVEN >>>>>>
+
+# Archivos compilados de Java
+*.class
+
+# Directorio de compilación de Maven
+target/
+
+# Directorio .mvn (configuración local de Maven)
+.mvn/
+
+# Archivos de IntelliJ IDEA
+.idea/
+
+# Archivos de log (general) - Si tienes patrones específicos, ajústalos
+*.log
+
+# Directorio temporal (general)
+tmp/
+
+# Archivos empaquetados (JAR, WAR, etc.)
+*.jar
+*.war
+
+# Archivos de Spring Boot DevTools (si los usas, aunque generalmente es mejor no versionarlos)
+.spring-boot-devtools.properties
+
+# Archivos de los módulos de Maven (si tienes una estructura multi-módulo avanzada)
+*/target/
+*/.mvn/
+*/.idea/
+*/.classpath
+*/.project
+*/.settings/
+
+# <<<<<< FIN DE ADICIONES JAVA/SPRING/MAVEN >>>>>>
+
+# >>>>>> ADICIONES ESPECÍFICAS PARA VSCODE (FRONTEND) >>>>>>
+# Carpeta .vscode de VSCode
+.vscode/
