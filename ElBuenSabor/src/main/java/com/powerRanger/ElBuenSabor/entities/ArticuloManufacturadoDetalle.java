@@ -1,0 +1,67 @@
+package com.powerRanger.ElBuenSabor.entities;
+
+import jakarta.persistence.*;
+
+
+@Entity
+public class ArticuloManufacturadoDetalle {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // <-- Añadido
+    private Integer id;  // ID del detalle del artículo manufacturado
+
+    @Column(nullable = true)
+    private Integer cantidad;
+
+    @ManyToOne
+    private ArticuloInsumo articuloInsumo;  // Relación muchos a uno con ArticuloInsumo
+
+    @ManyToOne
+    @JoinColumn(name = "articulo_manufacturado_id", nullable = true)
+    private ArticuloManufacturado articuloManufacturado;
+
+    @Column(name = "estadoActivo")
+    private Boolean estadoActivo;  // Estado activo
+
+    public Integer getCantidad() {
+        return cantidad;
+    }
+
+    public void setCantidad(Integer cantidad) {
+        this.cantidad = cantidad;
+    }
+
+    public ArticuloInsumo getArticuloInsumo() {
+        return articuloInsumo;
+    }
+
+    public void setArticuloInsumo(ArticuloInsumo articuloInsumo) {
+        this.articuloInsumo = articuloInsumo;
+    }
+
+    public ArticuloManufacturado getArticuloManufacturado() {
+        return articuloManufacturado;
+    }
+
+    public void setArticuloManufacturado(ArticuloManufacturado articuloManufacturado) {
+        this.articuloManufacturado = articuloManufacturado;
+    }
+
+    public Boolean getEstadoActivo() {
+        return estadoActivo;
+    }
+
+    public void setEstadoActivo(Boolean estadoActivo) {
+        this.estadoActivo = estadoActivo;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+}
+
+

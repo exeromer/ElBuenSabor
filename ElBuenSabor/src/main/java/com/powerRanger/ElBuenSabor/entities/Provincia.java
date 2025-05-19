@@ -1,0 +1,56 @@
+package com.powerRanger.ElBuenSabor.entities;
+
+import jakarta.persistence.*;
+
+import java.util.List;
+
+@Entity
+public class Provincia {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(nullable = true)
+    private String nombre;
+
+    @ManyToOne
+    @JoinColumn(name = "pais_id") // La columna de unión que hace referencia al país
+    private Pais pais;
+
+    @OneToMany(mappedBy = "provincia") // Relación bidireccional con Localidad
+    private List<Localidad> localidades;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getNombre() {
+        return nombre;
+    }
+
+    public void setNombre(String nombre) {
+        this.nombre = nombre;
+    }
+
+    public Pais getPais() {
+        return pais;
+    }
+
+    public void setPais(Pais pais) {
+        this.pais = pais;
+    }
+
+    public List<Localidad> getLocalidades() {
+        return localidades;
+    }
+
+    public void setLocalidades(List<Localidad> localidades) {
+        this.localidades = localidades;
+    }
+
+
+}
