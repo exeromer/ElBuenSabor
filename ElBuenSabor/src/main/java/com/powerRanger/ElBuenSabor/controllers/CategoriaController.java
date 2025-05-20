@@ -1,56 +1,77 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-
 package com.powerRanger.ElBuenSabor.controllers;
 
-/**
- *
- * @author Hitman
- */
 import com.powerRanger.ElBuenSabor.entities.Categoria;
-import com.powerRanger.ElBuenSabor.service.CategoriaService;
+import com.powerRanger.ElBuenSabor.services.CategoriaService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/categorias")
+@RequestMapping("/api/categorias") // Es buena práctica usar un prefijo como /api
 public class CategoriaController {
 
     @Autowired
-    private CategoriaService categoriaService;
+    private CategoriaService categoriaService; // Usar la interfaz
 
-    // Obtener todas las categorías
     @GetMapping
-    public List<Categoria> getAllCategorias() {
-        return categoriaService.getAllCategorias();
+    public ResponseEntity<List<Categoria>> getAllCategorias() {
+        try {
+            List<Categoria> categorias = categoriaService.getAllCategorias();
+            if (categorias.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(categorias);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
     }
 
-    // Obtener una categoría por ID
     @GetMapping("/{id}")
-    public Categoria getCategoriaById(@PathVariable Integer id) {
-        return categoriaService.getCategoriaById(id);
+    public ResponseEntity<?> getCategoriaById(@PathVariable Integer id) {
+        try {
+            Categoria categoria = categoriaService.getCategoriaById(id);
+            return ResponseEntity.ok(categoria);
+        } catch (Exception e) {
+            // Podrías tener una clase de error más específica aquí
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 
-    // Crear una nueva categoría
     @PostMapping
-    public Categoria createCategoria(@RequestBody Categoria categoria) {
-        return categoriaService.createCategoria(categoria);
+    public ResponseEntity<?> createCategoria(@RequestBody Categoria categoria) {
+        try {
+            Categoria nuevaCategoria = categoriaService.createCategoria(categoria);
+            return new ResponseEntity<>(nuevaCategoria, HttpStatus.CREATED);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 
-    // Actualizar una categoría
     @PutMapping("/{id}")
-    public Categoria updateCategoria(@PathVariable Integer id, @RequestBody Categoria categoria) {
-        return categoriaService.updateCategoria(id, categoria);
+    public ResponseEntity<?> updateCategoria(@PathVariable Integer id, @RequestBody Categoria categoria) {
+        try {
+            Categoria categoriaActualizada = categoriaService.updateCategoria(id, categoria);
+            return ResponseEntity.ok(categoriaActualizada);
+        } catch (Exception e) {
+            // Si la excepción es "no encontrado", devuelve 404, sino 400.
+            // Esto podría mejorarse con manejo de excepciones más específico.
+            if (e.getMessage().contains("no encontrada")) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            }
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
     }
 
-    // Eliminar una categoría
     @DeleteMapping("/{id}")
-    public void deleteCategoria(@PathVariable Integer id) {
-        categoriaService.deleteCategoria(id);
+    public ResponseEntity<?> deleteCategoria(@PathVariable Integer id) {
+        try {
+            categoriaService.deleteCategoria(id);
+            return ResponseEntity.noContent().build(); // O ResponseEntity.ok().body("Categoría eliminada");
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        }
     }
 }
-

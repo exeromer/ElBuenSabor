@@ -1,7 +1,7 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.entities.Factura;
-import com.powerRanger.ElBuenSabor.service.FacturaService; // La interfaz
+import com.powerRanger.ElBuenSabor.services.FacturaService; // La interfaz
 import com.powerRanger.ElBuenSabor.exceptions.ResourceNotFoundException;
 import com.powerRanger.ElBuenSabor.exceptions.InvalidOperationException;
 

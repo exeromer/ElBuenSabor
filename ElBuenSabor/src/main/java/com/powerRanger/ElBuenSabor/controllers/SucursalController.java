@@ -10,7 +10,7 @@ package com.powerRanger.ElBuenSabor.controllers;
  * @author Hitman
  */
 import com.powerRanger.ElBuenSabor.entities.Sucursal;
-import com.powerRanger.ElBuenSabor.service.SucursalService;
+import com.powerRanger.ElBuenSabor.services.SucursalService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

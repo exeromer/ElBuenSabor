@@ -1,37 +1,40 @@
 package com.powerRanger.ElBuenSabor.entities;
 
 import jakarta.persistence.*;
-//import lombok.Data; // Eliminado
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.Size;
-import java.util.Objects;
+import jakarta.validation.constraints.Min;    // Para números
+import jakarta.validation.constraints.NotNull; // Para objetos y Boolean
+// No necesitas importar Size o Objects aquí si no los usas directamente en esta subclase.
+// Lombok fue eliminado, lo cual está bien ya que estamos definiendo getters/setters manualmente.
 
-
-// @Data // Eliminado
 @Entity
+// @JsonIdentityInfo ya está en la superclase Articulo, por lo que se hereda.
+// No es necesario repetirlo aquí a menos que quieras una configuración diferente para la subclase.
 public class ArticuloInsumo extends Articulo {
 
-    @Column(nullable = true)
-    @Min(1)
+    @Column(nullable = true) // Considera si el precio de compra puede ser nulo
+    @Min(value = 0, message = "El precio de compra no puede ser negativo") // Permite 0 si es posible
     private Double precioCompra;
 
-    @Column(nullable = true)
-    @Min(0)
-    private Integer stockActual;
+    @Column(nullable = true) // Considera si el stock puede ser nulo
+    @Min(value = 0, message = "El stock actual no puede ser negativo")
+    private Double stockActual; // Cambiado a Double para consistencia con precioCompra y para permitir decimales
 
-    @Column(nullable = true)
-    @Min(0)
-    private Integer stockMaximo;
+    @Column(nullable = true) // Considera si el stock puede ser nulo
+    @Min(value = 0, message = "El stock máximo no puede ser negativo")
+    private Double stockMaximo; // Cambiado a Double
 
-    @Column(nullable = false) // Dejaste nullable = false, asegúrate que siempre tenga valor.
+    @Column(nullable = false) // Correcto si siempre debe tener un valor
+    @NotNull(message = "Debe especificarse si es para elaborar")
     private Boolean esParaElaborar;
 
     // Constructores
     public ArticuloInsumo() {
-        super();
+        super(); // Llama al constructor de Articulo
     }
 
-    public ArticuloInsumo(String denominacion, Double precioVenta, UnidadMedida unidadMedida, Categoria categoria, Boolean estadoActivo, Double precioCompra, Integer stockActual, Integer stockMaximo, Boolean esParaElaborar) {
+    public ArticuloInsumo(String denominacion, Double precioVenta, UnidadMedida unidadMedida,
+                          Categoria categoria, Boolean estadoActivo, Double precioCompra,
+                          Double stockActual, Double stockMaximo, Boolean esParaElaborar) {
         super(denominacion, precioVenta, unidadMedida, categoria, estadoActivo);
         this.precioCompra = precioCompra;
         this.stockActual = stockActual;
@@ -39,72 +42,29 @@ public class ArticuloInsumo extends Articulo {
         this.esParaElaborar = esParaElaborar;
     }
 
-    // Getters y Setters (ya los tenías)
-    public Double getPrecioCompra() {
-        return precioCompra;
-    }
+    // Getters y Setters
+    public Double getPrecioCompra() { return precioCompra; }
+    public void setPrecioCompra(Double precioCompra) { this.precioCompra = precioCompra; }
+    public Double getStockActual() { return stockActual; } // Devuelve Double
+    public void setStockActual(Double stockActual) { this.stockActual = stockActual; } // Acepta Double
+    public Double getStockMaximo() { return stockMaximo; } // Devuelve Double
+    public void setStockMaximo(Double stockMaximo) { this.stockMaximo = stockMaximo; } // Acepta Double
+    public Boolean getEsParaElaborar() { return esParaElaborar; }
+    public void setEsParaElaborar(Boolean esParaElaborar) { this.esParaElaborar = esParaElaborar; }
 
-    public void setPrecioCompra(Double precioCompra) {
-        this.precioCompra = precioCompra;
-    }
-
-    public Integer getStockActual() {
-        return stockActual;
-    }
-
-    public void setStockActual(Integer stockActual) {
-        this.stockActual = stockActual;
-    }
-
-    public Integer getStockMaximo() {
-        return stockMaximo;
-    }
-
-    public void setStockMaximo(Integer stockMaximo) {
-        this.stockMaximo = stockMaximo;
-    }
-
-    public Boolean getEsParaElaborar() {
-        return esParaElaborar;
-    }
-
-    public void setEsParaElaborar(Boolean esParaElaborar) {
-        this.esParaElaborar = esParaElaborar;
-    }
-
-    // equals, hashCode, toString (hereda de Articulo para id, pero podemos sobreescribir si la lógica de negocio lo requiere)
-    // Por ahora, usará los de Articulo si no se sobreescriben. Si necesitas una lógica de igualdad específica
-    // para ArticuloInsumo que incluya sus propios campos, deberías implementarlos aquí.
-    // Ejemplo de toString específico:
     @Override
     public String toString() {
+        // Llama al toString de la superclase y añade los campos específicos de ArticuloInsumo
         return "ArticuloInsumo{" +
-                "id=" + getId() + // Llama al getter de la superclase
-                ", denominacion='" + getDenominacion() + '\'' + // Llama al getter de la superclase
+                super.toString() + // Incluye los campos de Articulo
                 ", precioCompra=" + precioCompra +
                 ", stockActual=" + stockActual +
+                ", stockMaximo=" + stockMaximo +
                 ", esParaElaborar=" + esParaElaborar +
                 '}';
     }
-    // Para equals y hashCode, si la identidad sigue siendo por 'id', los de la superclase Articulo son suficientes.
-    // Si ArticuloInsumo tiene su propia identidad o campos clave adicionales para igualdad,
-    // entonces sobreescribe equals y hashCode.
-    // Ejemplo (si el 'id' sigue siendo la clave primaria para la igualdad):
-    // @Override
-    // public boolean equals(Object o) {
-    //     if (this == o) return true;
-    //     if (o == null || getClass() != o.getClass()) return false;
-    //     if (!super.equals(o)) return false; // Importante llamar al equals de la superclase
-    //     ArticuloInsumo that = (ArticuloInsumo) o;
-    //     return Objects.equals(precioCompra, that.precioCompra) && Objects.equals(stockActual, that.stockActual) && Objects.equals(esParaElaborar, that.esParaElaborar);
-    // }
 
-    // @Override
-    // public int hashCode() {
-    //     return Objects.hash(super.hashCode(), precioCompra, stockActual, esParaElaborar);
-    // }
-    // Dado que Articulo ya implementa equals y hashCode basado en 'id', y ArticuloInsumo es un tipo de Articulo,
-    // usualmente no es necesario re-implementarlos a menos que la lógica de igualdad cambie fundamentalmente.
-    // Por simplicidad, me atendré a los heredados de Articulo basados en 'id'.
-
+    // equals y hashCode: Los heredados de Articulo (basados en ID) son generalmente suficientes
+    // ya que un ArticuloInsumo sigue siendo un Articulo identificado por su ID único.
+    // No es necesario sobreescribirlos a menos que tengas una razón de negocio específica.
 }

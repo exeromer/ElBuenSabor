@@ -1,0 +1,16 @@
+Domain:
+dev-5bq2twv3khpw5ph6.us.auth0.com
+
+Client ID:
+U2tvvI9ewjXrt3fKFpl968vQmXOKT2d8
+
+
+El buen sabor API:
+id:
+682bdfe7c9ecbe15c18d0103
+
+Name: 
+El Buen Sabor API
+
+Identifier:
+https://api.elbuensabor.com

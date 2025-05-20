@@ -10,7 +10,7 @@ package com.powerRanger.ElBuenSabor.controllers;
  * @author Hitman
  */
 import com.powerRanger.ElBuenSabor.entities.Imagen;
-import com.powerRanger.ElBuenSabor.service.ImagenService;
+import com.powerRanger.ElBuenSabor.services.ImagenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

@@ -1,71 +1,72 @@
 package com.powerRanger.ElBuenSabor.entities;
 
 import jakarta.persistence.*;
-import java.util.ArrayList; // Asegúrate de inicializar la lista
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import java.util.ArrayList;
 import java.util.List;
+// com.fasterxml.jackson.annotation.JsonIdentityInfo se hereda de Articulo
 
 @Entity
 public class ArticuloManufacturado extends Articulo {
 
-    @Column(nullable = true)
+    @Column(length = 1000)
+    @Size(max = 1000, message = "La descripción no puede exceder los 1000 caracteres")
     private String descripcion;
 
-    @Column(nullable = true)
+    @NotNull(message = "El tiempo estimado en minutos es obligatorio")
+    @Min(value = 1, message = "El tiempo estimado debe ser de al menos 1 minuto")
     private Integer tiempoEstimadoMinutos;
 
-    @Column(nullable = true)
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    @NotEmpty(message = "La preparación не puede estar vacía")
     private String preparacion;
 
-    @OneToMany(mappedBy = "articuloManufacturado", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ArticuloManufacturadoDetalle> manufacturadoDetalles = new ArrayList<>(); // Inicializado
+    @OneToMany(mappedBy = "articuloManufacturado", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<ArticuloManufacturadoDetalle> manufacturadoDetalles = new ArrayList<>();
 
-    // Constructores
     public ArticuloManufacturado() {
         super();
     }
 
-    public ArticuloManufacturado(String denominacion, Double precioVenta, UnidadMedida unidadMedida, Categoria categoria, Boolean estadoActivo, String descripcion, Integer tiempoEstimadoMinutos, String preparacion) {
+    public ArticuloManufacturado(String denominacion, Double precioVenta, UnidadMedida unidadMedida,
+                                 Categoria categoria, Boolean estadoActivo, String descripcion,
+                                 Integer tiempoEstimadoMinutos, String preparacion) {
         super(denominacion, precioVenta, unidadMedida, categoria, estadoActivo);
         this.descripcion = descripcion;
         this.tiempoEstimadoMinutos = tiempoEstimadoMinutos;
         this.preparacion = preparacion;
     }
 
-    // Getters y Setters (ya los tenías)
-    public String getDescripcion() {
-        return descripcion;
+    // Getters y Setters
+    public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) { this.descripcion = descripcion; }
+    public Integer getTiempoEstimadoMinutos() { return tiempoEstimadoMinutos; }
+    public void setTiempoEstimadoMinutos(Integer tiempoEstimadoMinutos) { this.tiempoEstimadoMinutos = tiempoEstimadoMinutos; }
+    public String getPreparacion() { return preparacion; }
+    public void setPreparacion(String preparacion) { this.preparacion = preparacion; }
+    public List<ArticuloManufacturadoDetalle> getManufacturadoDetalles() { return manufacturadoDetalles; }
+    public void setManufacturadoDetalles(List<ArticuloManufacturadoDetalle> manufacturadoDetalles) { this.manufacturadoDetalles = manufacturadoDetalles; }
+
+    // Métodos Helper
+    public void addManufacturadoDetalle(ArticuloManufacturadoDetalle detalle) {
+        if (this.manufacturadoDetalles == null) {
+            this.manufacturadoDetalles = new ArrayList<>();
+        }
+        this.manufacturadoDetalles.add(detalle);
+        detalle.setArticuloManufacturado(this);
     }
 
-    public void setDescripcion(String descripcion) {
-        this.descripcion = descripcion;
+    public void removeManufacturadoDetalle(ArticuloManufacturadoDetalle detalle) {
+        if (this.manufacturadoDetalles != null) {
+            this.manufacturadoDetalles.remove(detalle);
+            detalle.setArticuloManufacturado(null);
+        }
     }
 
-    public Integer getTiempoEstimadoMinutos() {
-        return tiempoEstimadoMinutos;
-    }
-
-    public void setTiempoEstimadoMinutos(Integer tiempoEstimadoMinutos) {
-        this.tiempoEstimadoMinutos = tiempoEstimadoMinutos;
-    }
-
-    public String getPreparacion() {
-        return preparacion;
-    }
-
-    public void setPreparacion(String preparacion) {
-        this.preparacion = preparacion;
-    }
-
-    public List<ArticuloManufacturadoDetalle> getManufacturadoDetalles() {
-        return manufacturadoDetalles;
-    }
-
-    public void setManufacturadoDetalles(List<ArticuloManufacturadoDetalle> manufacturadoDetalles) {
-        this.manufacturadoDetalles = manufacturadoDetalles;
-    }
-
-    // equals, hashCode, toString (similar a ArticuloInsumo, hereda de Articulo)
-    // Ejemplo de toString específico:
     @Override
     public String toString() {
         return "ArticuloManufacturado{" +
@@ -73,15 +74,7 @@ public class ArticuloManufacturado extends Articulo {
                 ", denominacion='" + getDenominacion() + '\'' +
                 ", descripcion='" + descripcion + '\'' +
                 ", tiempoEstimadoMinutos=" + tiempoEstimadoMinutos +
+                ", numDetalles=" + (manufacturadoDetalles != null ? manufacturadoDetalles.size() : 0) +
                 '}';
     }
-
-    public void addManufacturadoDetalle(ArticuloManufacturadoDetalle detalle) {
-        if (this.manufacturadoDetalles == null) {
-            this.manufacturadoDetalles = new ArrayList<>();
-        }
-        this.manufacturadoDetalles.add(detalle);
-        detalle.setArticuloManufacturado(this); // Establece la relación bidireccional
-    }
-
 }
