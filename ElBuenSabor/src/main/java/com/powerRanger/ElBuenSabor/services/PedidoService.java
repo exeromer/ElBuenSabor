@@ -1,45 +1,18 @@
 package com.powerRanger.ElBuenSabor.services;
 
+import com.powerRanger.ElBuenSabor.dtos.PedidoRequestDTO;
 import com.powerRanger.ElBuenSabor.entities.Pedido;
-import com.powerRanger.ElBuenSabor.repository.PedidoRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-
+import com.powerRanger.ElBuenSabor.entities.enums.Estado;
+import jakarta.validation.Valid;
 import java.util.List;
-import java.util.Optional;
 
-@Service
-public class PedidoService {
-
-    @Autowired
-    private PedidoRepository pedidoRepository;
-
-    // Obtener todos los pedidos
-    public List<Pedido> getAllPedidos() {
-        return pedidoRepository.findAll();
-    }
-
-    // Obtener un pedido por ID
-    public Pedido getPedidoById(Integer id) {
-        Optional<Pedido> pedido = pedidoRepository.findById(id);
-        return pedido.orElse(null);  // Retorna null si no se encuentra
-    }
-
-    // Crear un nuevo pedido
-    public Pedido createPedido(Pedido pedido) {
-        return pedidoRepository.save(pedido);
-    }
-
-    // Actualizar un pedido
-    public Pedido updatePedido(Integer id, Pedido pedido) {
-        if (pedidoRepository.existsById(id)) {
-            return pedidoRepository.save(pedido);
-        }
-        return null;
-    }
-
-    // Eliminar un pedido
-    public void deletePedido(Integer id) {
-        pedidoRepository.deleteById(id);
-    }
+public interface PedidoService {
+    List<Pedido> getAll();
+    Pedido getById(Integer id) throws Exception;
+    List<Pedido> getPedidosByClienteId(Integer clienteId) throws Exception;
+    List<Pedido> getPedidosByClienteAuth0Id(String auth0Id) throws Exception;
+    Pedido create(@Valid PedidoRequestDTO dto) throws Exception;
+    Pedido createForAuthenticatedClient(String auth0Id, @Valid PedidoRequestDTO dto) throws Exception;
+    Pedido updateEstado(Integer id, Estado nuevoEstado) throws Exception;
+    void softDelete(Integer id) throws Exception;
 }

@@ -1,105 +1,58 @@
 package com.powerRanger.ElBuenSabor.entities;
 
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 import java.util.Objects;
 
 @Entity
+@Table(name = "detalle_pedido")
+@JsonIdentityInfo(
+        generator = ObjectIdGenerators.PropertyGenerator.class,
+        property = "id")
 public class DetallePedido {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = true)
+    @NotNull(message = "La cantidad es obligatoria")
+    @Min(value = 1, message = "La cantidad debe ser al menos 1")
     private Integer cantidad;
 
-    @Column(nullable = true)
+    @NotNull(message = "El subtotal es obligatorio")
+    @DecimalMin(value = "0.0", message = "El subtotal no puede ser negativo")
     private Double subTotal;
 
-    @ManyToOne
-    @JoinColumn(name = "articulo_id")
+    @NotNull(message = "El artículo es obligatorio para el detalle")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "articulo_id", nullable = false)
     private Articulo articulo;
 
-    @ManyToOne
-    @JoinColumn(name = "pedido_id")
+    @NotNull(message = "El pedido es obligatorio para el detalle")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pedido_id", nullable = false)
     private Pedido pedido;
 
-    @Column(name = "estadoActivo")
-    private Boolean estadoActivo;
+    // Eliminamos estadoActivo y pagoRealizado de aquí, ya que no los estamos usando y son más propios del Pedido.
+    // Si los necesitas, puedes volver a añadirlos con @NotNull.
 
-    @Column(name = "pagoRealizado") // Considera si este campo realmente va aquí o a nivel de Pedido/Factura
-    private Boolean pagoRealizado;
+    public DetallePedido() {}
 
-    // Constructores
-    public DetallePedido() {
-    }
+    // Getters y Setters
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+    public Integer getCantidad() { return cantidad; }
+    public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
+    public Double getSubTotal() { return subTotal; }
+    public void setSubTotal(Double subTotal) { this.subTotal = subTotal; }
+    public Articulo getArticulo() { return articulo; }
+    public void setArticulo(Articulo articulo) { this.articulo = articulo; }
+    public Pedido getPedido() { return pedido; }
+    public void setPedido(Pedido pedido) { this.pedido = pedido; }
 
-    public DetallePedido(Integer cantidad, Double subTotal, Articulo articulo, Pedido pedido, Boolean estadoActivo, Boolean pagoRealizado) {
-        this.cantidad = cantidad;
-        this.subTotal = subTotal;
-        this.articulo = articulo;
-        this.pedido = pedido;
-        this.estadoActivo = estadoActivo;
-        this.pagoRealizado = pagoRealizado;
-    }
-
-    // Getters y Setters (ya los tenías)
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public Integer getCantidad() {
-        return cantidad;
-    }
-
-    public void setCantidad(Integer cantidad) {
-        this.cantidad = cantidad;
-    }
-
-    public Double getSubTotal() {
-        return subTotal;
-    }
-
-    public void setSubTotal(Double subTotal) {
-        this.subTotal = subTotal;
-    }
-
-    public Articulo getArticulo() {
-        return articulo;
-    }
-
-    public void setArticulo(Articulo articulo) {
-        this.articulo = articulo;
-    }
-
-    public Pedido getPedido() {
-        return pedido;
-    }
-
-    public void setPedido(Pedido pedido) {
-        this.pedido = pedido;
-    }
-
-    public Boolean getEstadoActivo() {
-        return estadoActivo;
-    }
-
-    public void setEstadoActivo(Boolean estadoActivo) {
-        this.estadoActivo = estadoActivo;
-    }
-
-    public Boolean getPagoRealizado() {
-        return pagoRealizado;
-    }
-
-    public void setPagoRealizado(Boolean pagoRealizado) {
-        this.pagoRealizado = pagoRealizado;
-    }
-
-    // equals, hashCode, toString
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -109,18 +62,12 @@ public class DetallePedido {
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
+    public int hashCode() { return Objects.hash(id); }
 
     @Override
     public String toString() {
-        return "DetallePedido{" +
-                "id=" + id +
-                ", cantidad=" + cantidad +
-                ", subTotal=" + subTotal +
+        return "DetallePedido{" + "id=" + id + ", cantidad=" + cantidad + ", subTotal=" + subTotal +
                 ", articuloId=" + (articulo != null ? articulo.getId() : "null") +
-                ", pedidoId=" + (pedido != null ? pedido.getId() : "null") +
-                '}';
+                ", pedidoId=" + (pedido != null ? pedido.getId() : "null") + '}';
     }
 }

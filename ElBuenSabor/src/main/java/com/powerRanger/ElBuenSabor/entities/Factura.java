@@ -1,175 +1,111 @@
 package com.powerRanger.ElBuenSabor.entities;
 
-import com.powerRanger.ElBuenSabor.entities.enums.*; // Importar el Enum
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.powerRanger.ElBuenSabor.entities.enums.EstadoFactura;
+import com.powerRanger.ElBuenSabor.entities.enums.FormaPago;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 @Entity
+@JsonIdentityInfo(
+        generator = ObjectIdGenerators.PropertyGenerator.class,
+        property = "id")
 public class Factura {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(nullable = false)
+    @NotNull(message = "La fecha de facturación es obligatoria")
+    @PastOrPresent(message = "La fecha de facturación no puede ser futura")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaFacturacion;
 
-    @Column(nullable = true)
+    // Los campos de MercadoPago son opcionales
     private Integer mpPaymentId;
-
-    @Column(nullable = true)
     private Integer mpMerchantOrderId;
-
-    @Column(nullable = true)
     private String mpPreferenceId;
-
-    @Column(nullable = true)
     private String mpPaymentType;
 
-    @Column(nullable = false)
+    @NotNull(message = "El total de venta es obligatorio")
+    @DecimalMin(value = "0.0", message = "El total de venta no puede ser negativo")
     private Double totalVenta;
 
-    @OneToOne
-    @JoinColumn(name = "pedido_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY) // Es importante que Pedido exista
+    @JoinColumn(name = "pedido_id", nullable = false, unique = true) // Una factura por pedido
+    @NotNull(message = "El pedido asociado es obligatorio")
     private Pedido pedido;
 
+    @NotNull(message = "La forma de pago es obligatoria")
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
     private FormaPago formaPago;
 
-    // REEMPLAZO de estadoActivo por estadoFactura
+    @NotNull(message = "El estado de la factura es obligatorio")
     @Enumerated(EnumType.STRING)
-    @Column(name = "estado_factura", nullable = false) // Nombre de columna explícito
+    @Column(name = "estado_factura", nullable = false)
     private EstadoFactura estadoFactura;
 
-    @Column(name = "fecha_anulacion") // Nueva columna para la fecha de anulación
-    private LocalDate fechaAnulacion;
+    @Column(name = "fecha_anulacion")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate fechaAnulacion; // Se establece solo si se anula
 
     @OneToMany(mappedBy = "factura", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<FacturaDetalle> detallesFactura = new ArrayList<>();
 
-    // Constructores
     public Factura() {
-        this.estadoFactura = EstadoFactura.ACTIVA; // Por defecto, una nueva factura está activa
-        this.fechaFacturacion = LocalDate.now(); // Por defecto, fecha actual
+        this.fechaFacturacion = LocalDate.now(); // Valor por defecto
+        this.estadoFactura = EstadoFactura.ACTIVA; // Estado por defecto
+        this.detallesFactura = new ArrayList<>();
     }
 
-    // Constructor modificado para incluir el estado inicial (aunque se setea por defecto)
-    public Factura(LocalDate fechaFacturacion, Integer mpPaymentId, Integer mpMerchantOrderId, String mpPreferenceId, String mpPaymentType, Double totalVenta, Pedido pedido, FormaPago formaPago) {
-        this(); // Llama al constructor por defecto para inicializar estadoFactura y fechaFacturacion
-        if (fechaFacturacion != null) this.fechaFacturacion = fechaFacturacion; // Permite sobreescribir la fecha por defecto
-        this.mpPaymentId = mpPaymentId;
-        this.mpMerchantOrderId = mpMerchantOrderId;
-        this.mpPreferenceId = mpPreferenceId;
-        this.mpPaymentType = mpPaymentType;
-        this.totalVenta = totalVenta;
-        this.pedido = pedido;
-        this.formaPago = formaPago;
-    }
+    // Getters y Setters (los que ya tenías)
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+    public LocalDate getFechaFacturacion() { return fechaFacturacion; }
+    public void setFechaFacturacion(LocalDate fechaFacturacion) { this.fechaFacturacion = fechaFacturacion; }
+    public Integer getMpPaymentId() { return mpPaymentId; }
+    public void setMpPaymentId(Integer mpPaymentId) { this.mpPaymentId = mpPaymentId; }
+    public Integer getMpMerchantOrderId() { return mpMerchantOrderId; }
+    public void setMpMerchantOrderId(Integer mpMerchantOrderId) { this.mpMerchantOrderId = mpMerchantOrderId; }
+    public String getMpPreferenceId() { return mpPreferenceId; }
+    public void setMpPreferenceId(String mpPreferenceId) { this.mpPreferenceId = mpPreferenceId; }
+    public String getMpPaymentType() { return mpPaymentType; }
+    public void setMpPaymentType(String mpPaymentType) { this.mpPaymentType = mpPaymentType; }
+    public Double getTotalVenta() { return totalVenta; }
+    public void setTotalVenta(Double totalVenta) { this.totalVenta = totalVenta; }
+    public Pedido getPedido() { return pedido; }
+    public void setPedido(Pedido pedido) { this.pedido = pedido; }
+    public FormaPago getFormaPago() { return formaPago; }
+    public void setFormaPago(FormaPago formaPago) { this.formaPago = formaPago; }
+    public EstadoFactura getEstadoFactura() { return estadoFactura; }
+    public void setEstadoFactura(EstadoFactura estadoFactura) { this.estadoFactura = estadoFactura; }
+    public LocalDate getFechaAnulacion() { return fechaAnulacion; }
+    public void setFechaAnulacion(LocalDate fechaAnulacion) { this.fechaAnulacion = fechaAnulacion; }
+    public List<FacturaDetalle> getDetallesFactura() { return detallesFactura; }
+    public void setDetallesFactura(List<FacturaDetalle> detallesFactura) { this.detallesFactura = detallesFactura; }
 
-
-    // Getters y Setters
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
-
-    public LocalDate getFechaFacturacion() {
-        return fechaFacturacion;
-    }
-
-    public void setFechaFacturacion(LocalDate fechaFacturacion) {
-        this.fechaFacturacion = fechaFacturacion;
-    }
-
-    public Integer getMpPaymentId() {
-        return mpPaymentId;
-    }
-
-    public void setMpPaymentId(Integer mpPaymentId) {
-        this.mpPaymentId = mpPaymentId;
-    }
-
-    public Integer getMpMerchantOrderId() {
-        return mpMerchantOrderId;
-    }
-
-    public void setMpMerchantOrderId(Integer mpMerchantOrderId) {
-        this.mpMerchantOrderId = mpMerchantOrderId;
-    }
-
-    public String getMpPreferenceId() {
-        return mpPreferenceId;
-    }
-
-    public void setMpPreferenceId(String mpPreferenceId) {
-        this.mpPreferenceId = mpPreferenceId;
-    }
-
-    public String getMpPaymentType() {
-        return mpPaymentType;
-    }
-
-    public void setMpPaymentType(String mpPaymentType) {
-        this.mpPaymentType = mpPaymentType;
-    }
-
-    public Double getTotalVenta() {
-        return totalVenta;
-    }
-
-    public void setTotalVenta(Double totalVenta) {
-        this.totalVenta = totalVenta;
-    }
-
-    public Pedido getPedido() {
-        return pedido;
-    }
-
-    public void setPedido(Pedido pedido) {
-        this.pedido = pedido;
-    }
-
-    public FormaPago getFormaPago() {
-        return formaPago;
-    }
-
-    public void setFormaPago(FormaPago formaPago) {
-        this.formaPago = formaPago;
-    }
-
-    public EstadoFactura getEstadoFactura() {
-        return estadoFactura;
-    }
-
-    public void setEstadoFactura(EstadoFactura estadoFactura) {
-        this.estadoFactura = estadoFactura;
-    }
-
-    public LocalDate getFechaAnulacion() {
-        return fechaAnulacion;
-    }
-
-    public void setFechaAnulacion(LocalDate fechaAnulacion) {
-        this.fechaAnulacion = fechaAnulacion;
-    }
-
-    public List<FacturaDetalle> getDetallesFactura() {
-        return detallesFactura;
-    }
-
-    public void setDetallesFactura(List<FacturaDetalle> detallesFactura) {
-        this.detallesFactura = detallesFactura;
-    }
-
+    // Métodos Helper
     public void addDetalleFactura(FacturaDetalle detalle) {
+        if (this.detallesFactura == null) {
+            this.detallesFactura = new ArrayList<>();
+        }
         this.detallesFactura.add(detalle);
-        detalle.setFactura(this);
+        detalle.setFactura(this); // Establece la relación bidireccional
+    }
+
+    public void removeDetalleFactura(FacturaDetalle detalle) {
+        if (this.detallesFactura != null) {
+            this.detallesFactura.remove(detalle);
+            detalle.setFactura(null);
+        }
     }
 
     @Override
@@ -181,20 +117,11 @@ public class Factura {
     }
 
     @Override
-    public int hashCode() {
-        return Objects.hash(id);
-    }
+    public int hashCode() { return Objects.hash(id); }
 
     @Override
     public String toString() {
-        return "Factura{" +
-                "id=" + id +
-                ", fechaFacturacion=" + fechaFacturacion +
-                ", totalVenta=" + totalVenta +
-                ", pedidoId=" + (pedido != null ? pedido.getId() : "null") +
-                ", estadoFactura=" + estadoFactura +
-                ", fechaAnulacion=" + fechaAnulacion +
-                ", numeroDeLineas=" + (detallesFactura != null ? detallesFactura.size() : 0) +
-                '}';
+        return "Factura{" + "id=" + id + ", fechaFacturacion=" + fechaFacturacion + ", totalVenta=" + totalVenta +
+                ", pedidoId=" + (pedido != null ? pedido.getId() : "null") + ", estadoFactura=" + estadoFactura + '}';
     }
 }

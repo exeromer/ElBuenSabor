@@ -1,8 +1,8 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
-import com.powerRanger.ElBuenSabor.dtos.EmpresaRequestDTO;
-import com.powerRanger.ElBuenSabor.entities.Empresa;
-import com.powerRanger.ElBuenSabor.services.EmpresaService;
+import com.powerRanger.ElBuenSabor.dtos.PromocionRequestDTO;
+import com.powerRanger.ElBuenSabor.entities.Promocion;
+import com.powerRanger.ElBuenSabor.services.PromocionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,18 +17,18 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/empresas")
+@RequestMapping("/api/promociones")
 @Validated
-public class EmpresaController {
+public class PromocionController {
 
     @Autowired
-    private EmpresaService empresaService;
+    private PromocionService promocionService;
 
     @PostMapping
-    public ResponseEntity<?> createEmpresa(@Valid @RequestBody EmpresaRequestDTO dto) {
+    public ResponseEntity<?> createPromocion(@Valid @RequestBody PromocionRequestDTO dto) {
         try {
-            Empresa nuevaEmpresa = empresaService.create(dto);
-            return new ResponseEntity<>(nuevaEmpresa, HttpStatus.CREATED);
+            Promocion nuevaPromocion = promocionService.create(dto);
+            return new ResponseEntity<>(nuevaPromocion, HttpStatus.CREATED);
         } catch (ConstraintViolationException e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
@@ -46,23 +46,23 @@ public class EmpresaController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Empresa>> getAllEmpresas() {
+    public ResponseEntity<List<Promocion>> getAllPromociones() {
         try {
-            List<Empresa> empresas = empresaService.getAll();
-            if (empresas.isEmpty()) {
+            List<Promocion> promociones = promocionService.getAll();
+            if (promociones.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
-            return ResponseEntity.ok(empresas);
+            return ResponseEntity.ok(promociones);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getEmpresaById(@PathVariable Integer id) {
+    public ResponseEntity<?> getPromocionById(@PathVariable Integer id) {
         try {
-            Empresa empresa = empresaService.getById(id);
-            return ResponseEntity.ok(empresa);
+            Promocion promocion = promocionService.getById(id);
+            return ResponseEntity.ok(promocion);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.NOT_FOUND.value());
@@ -72,10 +72,10 @@ public class EmpresaController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateEmpresa(@PathVariable Integer id, @Valid @RequestBody EmpresaRequestDTO dto) {
+    public ResponseEntity<?> updatePromocion(@PathVariable Integer id, @Valid @RequestBody PromocionRequestDTO dto) {
         try {
-            Empresa empresaActualizada = empresaService.update(id, dto);
-            return ResponseEntity.ok(empresaActualizada);
+            Promocion promocionActualizada = promocionService.update(id, dto);
+            return ResponseEntity.ok(promocionActualizada);
         } catch (ConstraintViolationException e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
@@ -93,18 +93,18 @@ public class EmpresaController {
         }
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteEmpresa(@PathVariable Integer id) {
+    @DeleteMapping("/{id}") // Implementa borrado lógico
+    public ResponseEntity<?> softDeletePromocion(@PathVariable Integer id) {
         try {
-            empresaService.delete(id);
-            return ResponseEntity.noContent().build();
+            promocionService.softDelete(id);
+            Map<String, String> response = new HashMap<>();
+            response.put("mensaje", "Promoción con ID " + id + " marcada como inactiva (borrado lógico).");
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
-            HttpStatus status = e.getMessage().contains("no encontrada") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            // Si la excepción es porque tiene sucursales y no se pueden borrar, BAD_REQUEST o CONFLICT (409) sería apropiado.
-            errorResponse.put("status", status.value());
+            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
             errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(status).body(errorResponse);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
     }
 }

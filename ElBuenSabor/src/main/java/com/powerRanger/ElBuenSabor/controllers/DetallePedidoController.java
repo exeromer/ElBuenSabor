@@ -1,55 +1,87 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-
 package com.powerRanger.ElBuenSabor.controllers;
 
-/**
- *
- * @author Hitman
- */
-import com.powerRanger.ElBuenSabor.entities.DetallePedido;
+import com.powerRanger.ElBuenSabor.entities.DetallePedido; // ✅ CORREGIDO: Importar DetallePedido
 import com.powerRanger.ElBuenSabor.services.DetallePedidoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
-@RequestMapping("/detallepedidos")
+@RequestMapping("/api/detallepedidos") // Ruta base consistente
 public class DetallePedidoController {
 
     @Autowired
     private DetallePedidoService detallePedidoService;
 
-    // Obtener todos los detalles de pedidos
     @GetMapping
-    public List<DetallePedido> getAllDetallePedidos() {
-        return detallePedidoService.getAllDetallePedidos();
+    public ResponseEntity<List<DetallePedido>> getAllDetallePedidos() { // ✅ Usa DetallePedido
+        try {
+            List<DetallePedido> detalles = detallePedidoService.getAllDetallePedidos();
+            if (detalles.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(detalles);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
-    // Obtener un detalle de pedido por ID
     @GetMapping("/{id}")
-    public DetallePedido getDetallePedidoById(@PathVariable Integer id) {
-        return detallePedidoService.getDetallePedidoById(id);
+    public ResponseEntity<?> getDetallePedidoById(@PathVariable Integer id) { // ✅ Usa DetallePedido
+        try {
+            DetallePedido detalle = detallePedidoService.getDetallePedidoById(id);
+            return ResponseEntity.ok(detalle);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        }
     }
 
-    // Crear un nuevo detalle de pedido
     @PostMapping
-    public DetallePedido createDetallePedido(@RequestBody DetallePedido detallePedido) {
-        return detallePedidoService.createDetallePedido(detallePedido);
+    public ResponseEntity<?> createDetallePedido(@RequestBody DetallePedido detallePedido) { // ✅ Usa DetallePedido
+        try {
+            // El servicio createDetallePedido debería validar que el Pedido y Articulo asociados existan
+            DetallePedido nuevoDetalle = detallePedidoService.createDetallePedido(detallePedido);
+            return new ResponseEntity<>(nuevoDetalle, HttpStatus.CREATED);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+        }
     }
 
-    // Actualizar un detalle de pedido
     @PutMapping("/{id}")
-    public DetallePedido updateDetallePedido(@PathVariable Integer id, @RequestBody DetallePedido detallePedido) {
-        return detallePedidoService.updateDetallePedido(id, detallePedido);
+    public ResponseEntity<?> updateDetallePedido(@PathVariable Integer id, @RequestBody DetallePedido detallePedido) { // ✅ Usa DetallePedido
+        try {
+            DetallePedido detalleActualizado = detallePedidoService.updateDetallePedido(id, detallePedido);
+            return ResponseEntity.ok(detalleActualizado);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            HttpStatus status = e.getMessage().contains("no encontrado") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            errorResponse.put("status", status.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(status).body(errorResponse);
+        }
     }
 
-    // Eliminar un detalle de pedido
     @DeleteMapping("/{id}")
-    public void deleteDetallePedido(@PathVariable Integer id) {
-        detallePedidoService.deleteDetallePedido(id);
+    public ResponseEntity<?> deleteDetallePedido(@PathVariable Integer id) {
+        try {
+            detallePedidoService.deleteDetallePedido(id);
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        }
     }
 }
