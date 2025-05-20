@@ -1,4 +1,4 @@
-package com.powerRanger.ElBuenSabor.initializers;
+package com.powerRanger.ElBuenSabor.config;
 
 import com.powerRanger.ElBuenSabor.entities.*;
 import com.powerRanger.ElBuenSabor.entities.enums.*;
