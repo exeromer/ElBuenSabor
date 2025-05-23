@@ -1,7 +1,6 @@
 package com.powerRanger.ElBuenSabor.services;
 
-import com.powerRanger.ElBuenSabor.dtos.DomicilioRequestDTO;
-import com.powerRanger.ElBuenSabor.dtos.SucursalRequestDTO;
+import com.powerRanger.ElBuenSabor.dtos.*; // Importar todos los DTOs
 import com.powerRanger.ElBuenSabor.entities.*;
 import com.powerRanger.ElBuenSabor.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +16,7 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Validated
@@ -29,6 +29,100 @@ public class SucursalServiceImpl implements SucursalService {
     @Autowired private PromocionRepository promocionRepository;
     @Autowired private CategoriaRepository categoriaRepository;
 
+    // Mappers para DTOs anidados (podrían estar en sus propios servicios/mappers)
+    private PaisResponseDTO convertPaisToDto(Pais pais) {
+        if (pais == null) return null;
+        PaisResponseDTO dto = new PaisResponseDTO();
+        dto.setId(pais.getId());
+        dto.setNombre(pais.getNombre());
+        return dto;
+    }
+
+    private ProvinciaResponseDTO convertProvinciaToDto(Provincia provincia) {
+        if (provincia == null) return null;
+        ProvinciaResponseDTO dto = new ProvinciaResponseDTO();
+        dto.setId(provincia.getId());
+        dto.setNombre(provincia.getNombre());
+        dto.setPais(convertPaisToDto(provincia.getPais()));
+        return dto;
+    }
+
+    private LocalidadResponseDTO convertLocalidadToDto(Localidad localidad) {
+        if (localidad == null) return null;
+        LocalidadResponseDTO dto = new LocalidadResponseDTO();
+        dto.setId(localidad.getId());
+        dto.setNombre(localidad.getNombre());
+        dto.setProvincia(convertProvinciaToDto(localidad.getProvincia()));
+        return dto;
+    }
+
+    private DomicilioResponseDTO convertDomicilioToDto(Domicilio domicilio) {
+        if (domicilio == null) return null;
+        DomicilioResponseDTO dto = new DomicilioResponseDTO();
+        dto.setId(domicilio.getId());
+        dto.setCalle(domicilio.getCalle());
+        dto.setNumero(domicilio.getNumero());
+        dto.setCp(domicilio.getCp());
+        dto.setLocalidad(convertLocalidadToDto(domicilio.getLocalidad()));
+        return dto;
+    }
+
+    private EmpresaResponseDTO convertEmpresaToDto(Empresa empresa) {
+        if (empresa == null) return null;
+        EmpresaResponseDTO dto = new EmpresaResponseDTO();
+        dto.setId(empresa.getId());
+        dto.setNombre(empresa.getNombre());
+        dto.setRazonSocial(empresa.getRazonSocial());
+        dto.setCuil(empresa.getCuil());
+        return dto;
+    }
+
+    private CategoriaResponseDTO convertCategoriaToDto(Categoria categoria) {
+        if (categoria == null) return null;
+        CategoriaResponseDTO dto = new CategoriaResponseDTO();
+        dto.setId(categoria.getId());
+        dto.setDenominacion(categoria.getDenominacion());
+        dto.setEstadoActivo(categoria.getEstadoActivo());
+        return dto;
+    }
+
+    private PromocionSimpleResponseDTO convertPromocionToSimpleDto(Promocion promocion) {
+        if (promocion == null) return null;
+        PromocionSimpleResponseDTO dto = new PromocionSimpleResponseDTO();
+        dto.setId(promocion.getId());
+        dto.setDenominacion(promocion.getDenominacion());
+        return dto;
+    }
+
+    // Método de Mapeo Principal de Entidad Sucursal a SucursalResponseDTO
+    private SucursalResponseDTO convertToDto(Sucursal sucursal) {
+        SucursalResponseDTO dto = new SucursalResponseDTO();
+        dto.setId(sucursal.getId());
+        dto.setNombre(sucursal.getNombre());
+        dto.setHorarioApertura(sucursal.getHorarioApertura());
+        dto.setHorarioCierre(sucursal.getHorarioCierre());
+        dto.setEstadoActivo(sucursal.getEstadoActivo());
+        dto.setFechaBaja(sucursal.getFechaBaja());
+
+        if (sucursal.getEmpresa() != null) {
+            dto.setEmpresa(convertEmpresaToDto(sucursal.getEmpresa()));
+        }
+        if (sucursal.getDomicilio() != null) {
+            dto.setDomicilio(convertDomicilioToDto(sucursal.getDomicilio()));
+        }
+        if (sucursal.getCategorias() != null) {
+            dto.setCategorias(sucursal.getCategorias().stream()
+                    .map(this::convertCategoriaToDto)
+                    .collect(Collectors.toList()));
+        }
+        if (sucursal.getPromociones() != null) {
+            dto.setPromociones(sucursal.getPromociones().stream()
+                    .map(this::convertPromocionToSimpleDto)
+                    .collect(Collectors.toList()));
+        }
+        return dto;
+    }
+
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
 
     private LocalTime parseTime(String timeString, String fieldName) throws Exception {
@@ -36,10 +130,10 @@ public class SucursalServiceImpl implements SucursalService {
             throw new Exception("El " + fieldName + " no puede estar vacío.");
         }
         try {
-            return LocalTime.parse(timeString, TIME_FORMATTER); // HH:mm
+            return LocalTime.parse(timeString, TIME_FORMATTER);
         } catch (DateTimeParseException e1) {
             try {
-                return LocalTime.parse(timeString, DateTimeFormatter.ofPattern("HH:mm:ss")); // HH:mm:ss
+                return LocalTime.parse(timeString, DateTimeFormatter.ofPattern("HH:mm:ss"));
             } catch (DateTimeParseException e2) {
                 throw new Exception("Formato de " + fieldName + " inválido. Use HH:mm o HH:mm:ss. Valor recibido: " + timeString);
             }
@@ -74,65 +168,72 @@ public class SucursalServiceImpl implements SucursalService {
         Domicilio domicilioManaged = createOrUpdateDomicilio(isCreate ? null : sucursal.getDomicilio(), dto.getDomicilio());
         sucursal.setDomicilio(domicilioManaged);
 
-        // Manejo de Categorías
         List<Categoria> nuevasCategorias = new ArrayList<>();
-        if (dto.getCategoriaIds() != null && !dto.getCategoriaIds().isEmpty()) {
+        if (dto.getCategoriaIds() != null) {
             for (Integer categoriaId : new HashSet<>(dto.getCategoriaIds())) {
                 Categoria categoria = categoriaRepository.findById(categoriaId)
                         .orElseThrow(() -> new Exception("Categoría no encontrada con ID: " + categoriaId));
                 nuevasCategorias.add(categoria);
             }
         }
-        sucursal.setCategorias(nuevasCategorias); // Asignar la nueva lista procesada
+        sucursal.setCategorias(nuevasCategorias);
 
-        // Manejo de Promociones
         List<Promocion> nuevasPromociones = new ArrayList<>();
-        if (dto.getPromocionIds() != null && !dto.getPromocionIds().isEmpty()) {
+        if (dto.getPromocionIds() != null) {
             for (Integer promocionId : new HashSet<>(dto.getPromocionIds())) {
                 Promocion promocion = promocionRepository.findById(promocionId)
                         .orElseThrow(() -> new Exception("Promoción no encontrada con ID: " + promocionId));
                 nuevasPromociones.add(promocion);
             }
         }
-        sucursal.setPromociones(nuevasPromociones); // Asignar la nueva lista procesada
+        sucursal.setPromociones(nuevasPromociones);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Sucursal> getAll() {
-        return sucursalRepository.findAll();
+    public List<SucursalResponseDTO> getAll() {
+        return sucursalRepository.findAll().stream()
+                .map(this::convertToDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Sucursal getById(Integer id) throws Exception {
-        return sucursalRepository.findById(id)
+    public SucursalResponseDTO getById(Integer id) throws Exception {
+        Sucursal sucursal = sucursalRepository.findById(id)
                 .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + id));
+        return convertToDto(sucursal);
     }
 
     @Override
     @Transactional
-    public Sucursal create(@Valid SucursalRequestDTO dto) throws Exception {
+    public SucursalResponseDTO create(@Valid SucursalRequestDTO dto) throws Exception {
         Sucursal sucursal = new Sucursal();
-        // Inicializar listas en la nueva sucursal para que no sean null antes de mapDtoToEntity
-        sucursal.setCategorias(new ArrayList<>());
-        sucursal.setPromociones(new ArrayList<>());
         mapDtoToEntity(dto, sucursal, true);
-        return sucursalRepository.save(sucursal);
+        Sucursal sucursalGuardada = sucursalRepository.save(sucursal);
+        return convertToDto(sucursalGuardada);
     }
 
     @Override
     @Transactional
-    public Sucursal update(Integer id, @Valid SucursalRequestDTO dto) throws Exception {
-        Sucursal sucursalExistente = getById(id);
-        mapDtoToEntity(dto, sucursalExistente, false);
-        return sucursalRepository.save(sucursalExistente);
+    public SucursalResponseDTO update(Integer id, @Valid SucursalRequestDTO dto) throws Exception {
+        Sucursal sucursalExistente = getById(id). // Esto devuelve DTO, necesitamos la entidad
+                orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + id)); // Corrección aquí
+
+        // Para obtener la entidad:
+        Sucursal entidadSucursal = sucursalRepository.findById(id)
+                .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + id));
+
+        mapDtoToEntity(dto, entidadSucursal, false);
+        Sucursal sucursalActualizada = sucursalRepository.save(entidadSucursal);
+        return convertToDto(sucursalActualizada);
     }
 
     @Override
     @Transactional
     public void softDelete(Integer id) throws Exception {
-        Sucursal sucursal = getById(id);
+        Sucursal sucursal = sucursalRepository.findById(id) // Obtener la entidad para actualizarla
+                .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + id + " para borrado lógico"));
         sucursal.setEstadoActivo(false);
         sucursal.setFechaBaja(LocalDate.now());
         sucursalRepository.save(sucursal);

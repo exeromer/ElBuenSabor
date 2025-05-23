@@ -1,11 +1,13 @@
 package com.powerRanger.ElBuenSabor.services;
 
-import com.powerRanger.ElBuenSabor.dtos.FacturaCreateRequestDTO;
+import com.powerRanger.ElBuenSabor.dtos.*; // Todos los DTOs
 import com.powerRanger.ElBuenSabor.entities.*;
-import com.powerRanger.ElBuenSabor.entities.enums.Estado;
+import com.powerRanger.ElBuenSabor.entities.enums.Estado; // Para validar estado del pedido
 import com.powerRanger.ElBuenSabor.entities.enums.EstadoFactura;
 import com.powerRanger.ElBuenSabor.repository.FacturaRepository;
 import com.powerRanger.ElBuenSabor.repository.PedidoRepository;
+// Asumiendo que Mappers.java existe o los mappers están aquí
+import com.powerRanger.ElBuenSabor.mappers.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,6 +16,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Validated
@@ -21,113 +24,161 @@ public class FacturaServiceImpl implements FacturaService {
 
     @Autowired private FacturaRepository facturaRepository;
     @Autowired private PedidoRepository pedidoRepository;
+    @Autowired private Mappers mappers; // Inyectar la clase Mappers
+
+    // --- MAPPERS (o usar la clase Mappers inyectada) ---
+    // Si no tienes una clase Mappers, definirías los métodos convertTo...DTO aquí.
+    // Por ejemplo:
+    // private ArticuloSimpleResponseDTO convertArticuloToSimpleDto(Articulo articulo) { ... }
+    // private FacturaDetalleResponseDTO convertFacturaDetalleToDto(FacturaDetalle detalle) { ... }
+    // private PedidoSimpleResponseDTO convertPedidoToSimpleDto(Pedido pedido) { ... }
+    // etc.
+
+    private FacturaResponseDTO convertToResponseDto(Factura factura) {
+        if (factura == null) return null;
+        FacturaResponseDTO dto = new FacturaResponseDTO();
+        dto.setId(factura.getId());
+        dto.setFechaFacturacion(factura.getFechaFacturacion());
+        dto.setMpPaymentId(factura.getMpPaymentId());
+        dto.setMpMerchantOrderId(factura.getMpMerchantOrderId());
+        dto.setMpPreferenceId(factura.getMpPreferenceId());
+        dto.setMpPaymentType(factura.getMpPaymentType());
+        dto.setTotalVenta(factura.getTotalVenta());
+        dto.setFormaPago(factura.getFormaPago());
+        dto.setEstadoFactura(factura.getEstadoFactura());
+        dto.setFechaAnulacion(factura.getFechaAnulacion());
+
+        if (factura.getPedido() != null) {
+            PedidoSimpleResponseDTO pedidoDto = new PedidoSimpleResponseDTO();
+            pedidoDto.setId(factura.getPedido().getId());
+            pedidoDto.setFechaPedido(factura.getPedido().getFechaPedido());
+            dto.setPedido(pedidoDto);
+        }
+
+        if (factura.getDetallesFactura() != null) {
+            dto.setDetallesFactura(factura.getDetallesFactura().stream()
+                    .map(detalle -> {
+                        FacturaDetalleResponseDTO detalleDto = new FacturaDetalleResponseDTO();
+                        detalleDto.setId(detalle.getId());
+                        detalleDto.setCantidad(detalle.getCantidad());
+                        detalleDto.setDenominacionArticulo(detalle.getDenominacionArticulo());
+                        detalleDto.setPrecioUnitarioArticulo(detalle.getPrecioUnitarioArticulo());
+                        detalleDto.setSubTotal(detalle.getSubTotal());
+                        if (detalle.getArticulo() != null) {
+                            // Usa el mapper de la clase Mappers si lo tienes
+                            detalleDto.setArticulo(mappers.convertArticuloToSimpleDto(detalle.getArticulo()));
+                        }
+                        return detalleDto;
+                    }).collect(Collectors.toList()));
+        }
+        return dto;
+    }
+    // --- FIN MAPPERS ---
+
 
     @Override
     @Transactional(readOnly = true)
-    public List<Factura> getAllActivas() {
-        return facturaRepository.findByEstadoFactura(EstadoFactura.ACTIVA);
+    public List<FacturaResponseDTO> getAllActivas() {
+        return facturaRepository.findByEstadoFactura(EstadoFactura.ACTIVA).stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Factura> getAll() {
-        return facturaRepository.findAll();
+    public List<FacturaResponseDTO> getAll() {
+        return facturaRepository.findAll().stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Factura findByIdActiva(Integer id) throws Exception {
-        return facturaRepository.findByIdAndEstadoFactura(id, EstadoFactura.ACTIVA)
+    public FacturaResponseDTO findByIdActiva(Integer id) throws Exception {
+        Factura factura = facturaRepository.findByIdAndEstadoFactura(id, EstadoFactura.ACTIVA)
                 .orElseThrow(() -> new Exception("Factura activa con ID " + id + " no encontrada."));
+        return convertToResponseDto(factura);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Factura findByIdIncludingAnuladas(Integer id) throws Exception {
-        return facturaRepository.findById(id)
+    public FacturaResponseDTO findByIdIncludingAnuladas(Integer id) throws Exception {
+        Factura factura = facturaRepository.findById(id)
                 .orElseThrow(() -> new Exception("Factura con ID " + id + " no encontrada."));
+        return convertToResponseDto(factura);
     }
 
     @Override
     @Transactional
-    public Factura generarFacturaParaPedido(@Valid FacturaCreateRequestDTO dto) throws Exception {
+    public FacturaResponseDTO generarFacturaParaPedido(@Valid FacturaCreateRequestDTO dto) throws Exception {
         Pedido pedidoAFacturar = pedidoRepository.findById(dto.getPedidoId())
                 .orElseThrow(() -> new Exception("Pedido con ID " + dto.getPedidoId() + " no encontrado."));
 
-        if (pedidoAFacturar.getFactura() != null &&
-                pedidoAFacturar.getFactura().getEstadoFactura() == EstadoFactura.ACTIVA) {
-            throw new Exception("El pedido con ID " + dto.getPedidoId() + " ya tiene una factura activa (ID: " + pedidoAFacturar.getFactura().getId() + ").");
+        if (facturaRepository.findByPedidoId(pedidoAFacturar.getId())
+                .map(f -> f.getEstadoFactura() == EstadoFactura.ACTIVA).orElse(false)) {
+            throw new Exception("El pedido con ID " + dto.getPedidoId() + " ya tiene una factura activa.");
         }
 
-        // Validar que el pedido esté en un estado facturable (ej. ENTREGADO o PAGADO si tuvieras ese estado)
-        if (pedidoAFacturar.getEstado() != Estado.ENTREGADO) {
-            // Ajusta esta lógica según tus estados de pedido.
-            // Quizás un pedido en PREPARACION o PENDIENTE también se puede facturar si es pago adelantado.
-            throw new Exception("El pedido con ID " + dto.getPedidoId() + " no está en un estado que permita la facturación (Estado actual: " + pedidoAFacturar.getEstado() + "). Debe estar ENTREGADO.");
+        if (pedidoAFacturar.getEstado() != Estado.ENTREGADO) { // O el estado que consideres facturable
+            throw new Exception("El pedido con ID " + dto.getPedidoId() + " no está en estado ENTREGADO para ser facturado. Estado actual: " + pedidoAFacturar.getEstado());
         }
 
         if (pedidoAFacturar.getDetalles() == null || pedidoAFacturar.getDetalles().isEmpty()) {
-            throw new Exception("El pedido con ID " + dto.getPedidoId() + " no tiene detalles y no puede ser facturado.");
+            throw new Exception("El pedido con ID " + dto.getPedidoId() + " no tiene detalles.");
         }
 
-        Factura nuevaFactura = new Factura(); // Constructor setea fecha y estado ACTIVA
+        Factura nuevaFactura = new Factura();
         nuevaFactura.setPedido(pedidoAFacturar);
         nuevaFactura.setFormaPago(pedidoAFacturar.getFormaPago());
-        nuevaFactura.setTotalVenta(pedidoAFacturar.getTotal()); // El total ya está calculado en el pedido
-
-        // Setear datos de MercadoPago si vienen en el DTO
+        nuevaFactura.setTotalVenta(pedidoAFacturar.getTotal());
         nuevaFactura.setMpPaymentId(dto.getMpPaymentId());
         nuevaFactura.setMpMerchantOrderId(dto.getMpMerchantOrderId());
         nuevaFactura.setMpPreferenceId(dto.getMpPreferenceId());
         nuevaFactura.setMpPaymentType(dto.getMpPaymentType());
 
         for (DetallePedido detallePedido : pedidoAFacturar.getDetalles()) {
-            Articulo articuloDelPedido = detallePedido.getArticulo();
-            if (articuloDelPedido == null) {
-                throw new Exception("Error de datos: Artículo no encontrado para el DetallePedido ID: " + detallePedido.getId());
-            }
-
             FacturaDetalle facturaDetalle = new FacturaDetalle();
             facturaDetalle.setCantidad(detallePedido.getCantidad());
-            facturaDetalle.setDenominacionArticulo(articuloDelPedido.getDenominacion()); // Foto del nombre
-            facturaDetalle.setPrecioUnitarioArticulo(articuloDelPedido.getPrecioVenta()); // Foto del precio
-            facturaDetalle.setSubTotal(detallePedido.getSubTotal()); // Ya calculado en DetallePedido
-            facturaDetalle.setArticulo(articuloDelPedido); // Referencia al artículo original (opcional)
-
-            nuevaFactura.addDetalleFactura(facturaDetalle); // El helper establece la relación bidireccional
+            facturaDetalle.setDenominacionArticulo(detallePedido.getArticulo().getDenominacion());
+            facturaDetalle.setPrecioUnitarioArticulo(detallePedido.getArticulo().getPrecioVenta());
+            facturaDetalle.setSubTotal(detallePedido.getSubTotal());
+            facturaDetalle.setArticulo(detallePedido.getArticulo());
+            nuevaFactura.addDetalleFactura(facturaDetalle);
         }
 
         Factura facturaGuardada = facturaRepository.save(nuevaFactura);
 
-        // Actualizar el estado del pedido a FACTURADO
         pedidoAFacturar.setFactura(facturaGuardada);
-        // Si tienes el estado FACTURADO en tu Enum Estado de Pedido:
-        // pedidoAFacturar.setEstado(Estado.FACTURADO);
+        // Considera si debes cambiar el estado del pedido a FACTURADO aquí
+        // if (pedidoAFacturar.getEstado() == Estado.ENTREGADO) { // O el estado previo
+        //    pedidoAFacturar.setEstado(Estado.FACTURADO); // Si tienes este estado
+        // }
         pedidoRepository.save(pedidoAFacturar);
 
-        return facturaGuardada;
+        return convertToResponseDto(facturaGuardada);
     }
 
     @Override
     @Transactional
-    public Factura anularFactura(Integer id) throws Exception {
-        Factura facturaAAnular = findByIdIncludingAnuladas(id);
+    public FacturaResponseDTO anularFactura(Integer id) throws Exception {
+        Factura facturaAAnular = facturaRepository.findById(id) // Buscar sin importar estado para anular
+                .orElseThrow(() -> new Exception("Factura con ID " + id + " no encontrada."));
 
         if (facturaAAnular.getEstadoFactura() == EstadoFactura.ANULADA) {
             throw new Exception("La factura con ID " + id + " ya se encuentra anulada.");
         }
-        // Aquí podrías añadir lógica de negocio, ej. no anular facturas muy antiguas, etc.
 
         facturaAAnular.setEstadoFactura(EstadoFactura.ANULADA);
         facturaAAnular.setFechaAnulacion(LocalDate.now());
 
-        // Desvincular del pedido (el pedido sigue existiendo, pero sin esta factura activa)
+        // Opcional: Lógica de negocio al anular, ej. desvincular del pedido o cambiar estado del pedido.
         // Pedido pedidoAsociado = facturaAAnular.getPedido();
         // if (pedidoAsociado != null) {
-        //     pedidoAsociado.setFactura(null); // Opcional, depende de cómo quieras manejar la relación
-        //     // También podrías querer cambiar el estado del pedido a uno que refleje la anulación de la factura.
+        //     pedidoAsociado.setFactura(null);
+        //     // pedidoAsociado.setEstado(Estado.PENDIENTE_DE_REFACTURACION); // Ejemplo
         //     pedidoRepository.save(pedidoAsociado);
         // }
-        return facturaRepository.save(facturaAAnular);
+        Factura facturaGuardada = facturaRepository.save(facturaAAnular);
+        return convertToResponseDto(facturaGuardada);
     }
 }

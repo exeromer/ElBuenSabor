@@ -1,7 +1,8 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.dtos.ImagenRequestDTO;
-import com.powerRanger.ElBuenSabor.entities.Imagen;
+import com.powerRanger.ElBuenSabor.dtos.ImagenResponseDTO; // Importar DTO de respuesta
+// import com.powerRanger.ElBuenSabor.entities.Imagen; // Ya no se devuelve la entidad
 import com.powerRanger.ElBuenSabor.services.ImagenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -17,7 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/imagenes")
+@RequestMapping("/api/imagenes") // CRUD para metadatos de imágenes
 @Validated
 public class ImagenController {
 
@@ -27,33 +28,25 @@ public class ImagenController {
     @PostMapping
     public ResponseEntity<?> createImagen(@Valid @RequestBody ImagenRequestDTO dto) {
         try {
-            Imagen nuevaImagen = imagenService.createImagen(dto);
-            return new ResponseEntity<>(nuevaImagen, HttpStatus.CREATED);
+            ImagenResponseDTO nuevaImagenDto = imagenService.createImagen(dto);
+            return new ResponseEntity<>(nuevaImagenDto, HttpStatus.CREATED);
         } catch (ConstraintViolationException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-            errorResponse.put("error", "Error de validación");
-            errorResponse.put("mensajes", e.getConstraintViolations().stream()
-                    .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-                    .collect(Collectors.toList()));
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleConstraintViolation(e);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleGenericException(e, HttpStatus.BAD_REQUEST);
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<Imagen>> getAllImagenes() {
+    public ResponseEntity<List<ImagenResponseDTO>> getAllImagenes() {
         try {
-            List<Imagen> imagenes = imagenService.getAllImagenes();
+            List<ImagenResponseDTO> imagenes = imagenService.getAllImagenes();
             if (imagenes.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
             return ResponseEntity.ok(imagenes);
         } catch (Exception e) {
+            // Loguear e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -61,35 +54,23 @@ public class ImagenController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getImagenById(@PathVariable Integer id) {
         try {
-            Imagen imagen = imagenService.getImagenById(id);
-            return ResponseEntity.ok(imagen);
+            ImagenResponseDTO imagenDto = imagenService.getImagenById(id);
+            return ResponseEntity.ok(imagenDto);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateImagen(@PathVariable Integer id, @Valid @RequestBody ImagenRequestDTO dto) {
         try {
-            Imagen imagenActualizada = imagenService.updateImagen(id, dto);
-            return ResponseEntity.ok(imagenActualizada);
+            ImagenResponseDTO imagenActualizadaDto = imagenService.updateImagen(id, dto);
+            return ResponseEntity.ok(imagenActualizadaDto);
         } catch (ConstraintViolationException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-            errorResponse.put("error", "Error de validación al actualizar");
-            errorResponse.put("mensajes", e.getConstraintViolations().stream()
-                    .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-                    .collect(Collectors.toList()));
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleConstraintViolation(e);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
             HttpStatus status = e.getMessage().contains("no encontrada") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            errorResponse.put("status", status.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(status).body(errorResponse);
+            return handleGenericException(e, status);
         }
     }
 
@@ -99,10 +80,26 @@ public class ImagenController {
             imagenService.deleteImagen(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
+    }
+
+    // Métodos helper para manejo de errores (copiados de otros controladores)
+    private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+        errorResponse.put("error", "Error de validación");
+        errorResponse.put("mensajes", e.getConstraintViolations().stream()
+                .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+                .collect(Collectors.toList()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    private ResponseEntity<Map<String, Object>> handleGenericException(Exception e, HttpStatus status) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", e.getMessage());
+        // e.printStackTrace(); // Útil para depuración en consola del servidor
+        return ResponseEntity.status(status).body(errorResponse);
     }
 }

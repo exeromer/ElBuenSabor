@@ -1,7 +1,8 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.dtos.PromocionRequestDTO;
-import com.powerRanger.ElBuenSabor.entities.Promocion;
+import com.powerRanger.ElBuenSabor.dtos.PromocionResponseDTO; // Importar DTO de respuesta
+// import com.powerRanger.ElBuenSabor.entities.Promocion; // Ya no se devuelve entidad
 import com.powerRanger.ElBuenSabor.services.PromocionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -27,28 +28,19 @@ public class PromocionController {
     @PostMapping
     public ResponseEntity<?> createPromocion(@Valid @RequestBody PromocionRequestDTO dto) {
         try {
-            Promocion nuevaPromocion = promocionService.create(dto);
-            return new ResponseEntity<>(nuevaPromocion, HttpStatus.CREATED);
+            PromocionResponseDTO nuevaPromocionDto = promocionService.create(dto); // Devuelve DTO
+            return new ResponseEntity<>(nuevaPromocionDto, HttpStatus.CREATED);
         } catch (ConstraintViolationException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-            errorResponse.put("error", "Error de validación");
-            errorResponse.put("mensajes", e.getConstraintViolations().stream()
-                    .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-                    .collect(Collectors.toList()));
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleConstraintViolation(e);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleGenericException(e, HttpStatus.BAD_REQUEST);
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<Promocion>> getAllPromociones() {
+    public ResponseEntity<List<PromocionResponseDTO>> getAllPromociones() { // Devuelve Lista de DTOs
         try {
-            List<Promocion> promociones = promocionService.getAll();
+            List<PromocionResponseDTO> promociones = promocionService.getAll();
             if (promociones.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -59,41 +51,29 @@ public class PromocionController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPromocionById(@PathVariable Integer id) {
+    public ResponseEntity<?> getPromocionById(@PathVariable Integer id) { // Devuelve DTO o Error
         try {
-            Promocion promocion = promocionService.getById(id);
-            return ResponseEntity.ok(promocion);
+            PromocionResponseDTO promocionDto = promocionService.getById(id);
+            return ResponseEntity.ok(promocionDto);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePromocion(@PathVariable Integer id, @Valid @RequestBody PromocionRequestDTO dto) {
         try {
-            Promocion promocionActualizada = promocionService.update(id, dto);
-            return ResponseEntity.ok(promocionActualizada);
+            PromocionResponseDTO promocionActualizadaDto = promocionService.update(id, dto); // Devuelve DTO
+            return ResponseEntity.ok(promocionActualizadaDto);
         } catch (ConstraintViolationException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-            errorResponse.put("error", "Error de validación al actualizar");
-            errorResponse.put("mensajes", e.getConstraintViolations().stream()
-                    .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-                    .collect(Collectors.toList()));
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleConstraintViolation(e);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
             HttpStatus status = e.getMessage().contains("no encontrada") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            errorResponse.put("status", status.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(status).body(errorResponse);
+            return handleGenericException(e, status);
         }
     }
 
-    @DeleteMapping("/{id}") // Implementa borrado lógico
+    @DeleteMapping("/{id}")
     public ResponseEntity<?> softDeletePromocion(@PathVariable Integer id) {
         try {
             promocionService.softDelete(id);
@@ -101,10 +81,26 @@ public class PromocionController {
             response.put("mensaje", "Promoción con ID " + id + " marcada como inactiva (borrado lógico).");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
+    }
+
+    // Métodos helper para manejo de errores
+    private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+        errorResponse.put("error", "Error de validación");
+        errorResponse.put("mensajes", e.getConstraintViolations().stream()
+                .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+                .collect(Collectors.toList()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    private ResponseEntity<Map<String, Object>> handleGenericException(Exception e, HttpStatus status) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity.status(status).body(errorResponse);
     }
 }

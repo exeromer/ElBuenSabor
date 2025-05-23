@@ -1,17 +1,20 @@
 package com.powerRanger.ElBuenSabor.services;
 
-import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoRequestDTO; // Importar DTO
-import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoDetalleDTO; // Importar DTO
+import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoRequestDTO;
+import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoDetalleDTO; // DTO de Request para detalle
+import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoResponseDTO; // DTO de Response
 import com.powerRanger.ElBuenSabor.entities.*;
+import com.powerRanger.ElBuenSabor.mappers.Mappers; // Asumiendo que Mappers está en este paquete
 import com.powerRanger.ElBuenSabor.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import jakarta.validation.Valid; // Lo mantenemos si el controlador pasa el DTO con @Valid
+import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Validated
@@ -21,24 +24,10 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
     @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
     @Autowired private CategoriaRepository categoriaRepository;
     @Autowired private UnidadMedidaRepository unidadMedidaRepository;
+    @Autowired private Mappers mappers; // Usar la clase Mappers
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<ArticuloManufacturado> getAllArticuloManufacturados() {
-        return manufacturadoRepository.findAll();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ArticuloManufacturado getArticuloManufacturadoById(Integer id) throws Exception {
-        return manufacturadoRepository.findById(id)
-                .orElseThrow(() -> new Exception("Artículo Manufacturado no encontrado con ID: " + id));
-    }
-
-    @Override
-    @Transactional
-    public ArticuloManufacturado createArticuloManufacturado(@Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
-        ArticuloManufacturado am = new ArticuloManufacturado();
+    private void mapRequestDtoToEntity(ArticuloManufacturadoRequestDTO dto, ArticuloManufacturado am) throws Exception {
+        // Mapear campos de Articulo base
         am.setDenominacion(dto.getDenominacion());
         am.setPrecioVenta(dto.getPrecioVenta());
         am.setEstadoActivo(dto.getEstadoActivo());
@@ -51,13 +40,18 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
                 .orElseThrow(() -> new Exception("Unidad de medida no encontrada con ID: " + dto.getUnidadMedidaId()));
         am.setUnidadMedida(unidadMedida);
 
-        // Mapear campos específicos de ArticuloManufacturado desde el DTO
+        // Mapear campos específicos de ArticuloManufacturado
         am.setDescripcion(dto.getDescripcion());
         am.setTiempoEstimadoMinutos(dto.getTiempoEstimadoMinutos());
         am.setPreparacion(dto.getPreparacion());
 
-        // Procesar los detalles
-        if (dto.getManufacturadoDetalles() != null) {
+        // Manejar detalles
+        // Estrategia: borrar los detalles existentes y añadir los nuevos.
+        // orphanRemoval=true en ArticuloManufacturado.manufacturadoDetalles se encarga de borrar de BD.
+        if (am.getManufacturadoDetalles() == null) am.setManufacturadoDetalles(new ArrayList<>());
+        am.getManufacturadoDetalles().clear(); // Limpiar para asegurar que orphanRemoval actúe si es una actualización
+
+        if (dto.getManufacturadoDetalles() != null && !dto.getManufacturadoDetalles().isEmpty()) {
             for (ArticuloManufacturadoDetalleDTO detalleDto : dto.getManufacturadoDetalles()) {
                 ArticuloInsumo insumo = articuloInsumoRepository.findById(detalleDto.getArticuloInsumoId())
                         .orElseThrow(() -> new Exception("ArticuloInsumo no encontrado con ID: " + detalleDto.getArticuloInsumoId()));
@@ -66,60 +60,49 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
                 nuevoDetalle.setArticuloInsumo(insumo);
                 nuevoDetalle.setCantidad(detalleDto.getCantidad());
                 nuevoDetalle.setEstadoActivo(detalleDto.getEstadoActivo() != null ? detalleDto.getEstadoActivo() : true);
-                am.addManufacturadoDetalle(nuevoDetalle); // El helper establece la relación bidireccional
+                am.addManufacturadoDetalle(nuevoDetalle); // Usa el helper para añadir y establecer la relación bidireccional
             }
         }
-        return manufacturadoRepository.save(am);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ArticuloManufacturadoResponseDTO> getAllArticuloManufacturados() {
+        return manufacturadoRepository.findAll().stream()
+                .map(am -> (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(am))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ArticuloManufacturadoResponseDTO getArticuloManufacturadoById(Integer id) throws Exception {
+        ArticuloManufacturado am = manufacturadoRepository.findById(id)
+                .orElseThrow(() -> new Exception("Artículo Manufacturado no encontrado con ID: " + id));
+        return (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(am);
     }
 
     @Override
     @Transactional
-    public ArticuloManufacturado updateArticuloManufacturado(Integer id, @Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
-        ArticuloManufacturado amExistente = getArticuloManufacturadoById(id);
+    public ArticuloManufacturadoResponseDTO createArticuloManufacturado(@Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
+        ArticuloManufacturado am = new ArticuloManufacturado();
+        // Asegurar que las listas estén inicializadas antes de mapDtoToEntity
+        am.setImagenes(new ArrayList<>()); // Heredado de Articulo
+        am.setManufacturadoDetalles(new ArrayList<>());
 
-        // Mapear campos de Articulo base
-        amExistente.setDenominacion(dto.getDenominacion());
-        amExistente.setPrecioVenta(dto.getPrecioVenta());
-        amExistente.setEstadoActivo(dto.getEstadoActivo());
+        mapRequestDtoToEntity(dto, am);
+        ArticuloManufacturado amGuardado = manufacturadoRepository.save(am);
+        return (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(amGuardado);
+    }
 
-        if (dto.getCategoriaId() != null) {
-            Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
-                    .orElseThrow(() -> new Exception("Categoría no encontrada con ID: " + dto.getCategoriaId()));
-            amExistente.setCategoria(categoria);
-        } else {
-            throw new Exception("El ID de la categoría es obligatorio.");
-        }
+    @Override
+    @Transactional
+    public ArticuloManufacturadoResponseDTO updateArticuloManufacturado(Integer id, @Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
+        ArticuloManufacturado amExistente = manufacturadoRepository.findById(id)
+                .orElseThrow(() -> new Exception("Artículo Manufacturado no encontrado con ID: " + id));
 
-
-        if (dto.getUnidadMedidaId() != null) {
-            UnidadMedida unidadMedida = unidadMedidaRepository.findById(dto.getUnidadMedidaId())
-                    .orElseThrow(() -> new Exception("Unidad de medida no encontrada con ID: " + dto.getUnidadMedidaId()));
-            amExistente.setUnidadMedida(unidadMedida);
-        } else {
-            throw new Exception("El ID de la unidad de medida es obligatorio.");
-        }
-
-        // Mapear campos específicos de ArticuloManufacturado
-        amExistente.setDescripcion(dto.getDescripcion());
-        amExistente.setTiempoEstimadoMinutos(dto.getTiempoEstimadoMinutos());
-        amExistente.setPreparacion(dto.getPreparacion());
-
-        // Estrategia para actualizar detalles: borrar los antiguos y añadir los nuevos.
-        amExistente.getManufacturadoDetalles().clear(); // orphanRemoval=true se encarga de borrar de BD
-
-        if (dto.getManufacturadoDetalles() != null) {
-            for (ArticuloManufacturadoDetalleDTO detalleDto : dto.getManufacturadoDetalles()) {
-                ArticuloInsumo insumo = articuloInsumoRepository.findById(detalleDto.getArticuloInsumoId())
-                        .orElseThrow(() -> new Exception("ArticuloInsumo no encontrado con ID: " + detalleDto.getArticuloInsumoId()));
-
-                ArticuloManufacturadoDetalle nuevoDetalle = new ArticuloManufacturadoDetalle();
-                nuevoDetalle.setArticuloInsumo(insumo);
-                nuevoDetalle.setCantidad(detalleDto.getCantidad());
-                nuevoDetalle.setEstadoActivo(detalleDto.getEstadoActivo() != null ? detalleDto.getEstadoActivo() : true);
-                amExistente.addManufacturadoDetalle(nuevoDetalle);
-            }
-        }
-        return manufacturadoRepository.save(amExistente);
+        mapRequestDtoToEntity(dto, amExistente);
+        ArticuloManufacturado amActualizado = manufacturadoRepository.save(amExistente);
+        return (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(amActualizado);
     }
 
     @Override
@@ -128,6 +111,7 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
         if (!manufacturadoRepository.existsById(id)) {
             throw new Exception("Artículo Manufacturado no encontrado con ID: " + id + " para eliminar.");
         }
+        // CascadeType.ALL y orphanRemoval=true en manufacturadoDetalles se encargarán de borrar detalles.
         manufacturadoRepository.deleteById(id);
     }
 }

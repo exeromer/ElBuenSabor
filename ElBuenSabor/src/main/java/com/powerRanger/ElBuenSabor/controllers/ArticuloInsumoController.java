@@ -1,11 +1,14 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
-import com.powerRanger.ElBuenSabor.entities.ArticuloInsumo;
+import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoResponseDTO; // DTO de respuesta
+import com.powerRanger.ElBuenSabor.entities.ArticuloInsumo; // Para el @RequestBody
 import com.powerRanger.ElBuenSabor.services.ArticuloInsumoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 import jakarta.validation.ConstraintViolationException;
 
 import java.util.HashMap;
@@ -14,35 +17,31 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/articulosinsumo") // Ruta con /api
+@RequestMapping("/api/articulosinsumo")
+@Validated
 public class ArticuloInsumoController {
 
     @Autowired
     private ArticuloInsumoService articuloInsumoService;
 
     @PostMapping
-    public ResponseEntity<?> createArticuloInsumo(@RequestBody ArticuloInsumo articuloInsumo) {
+    public ResponseEntity<?> createArticuloInsumo(@Valid @RequestBody ArticuloInsumo articuloInsumo) {
+        // Este endpoint acepta la entidad ArticuloInsumo directamente.
+        // Podrías crear un ArticuloInsumoRequestDTO si necesitas más control.
         try {
-            ArticuloInsumo nuevoInsumo = articuloInsumoService.createArticuloInsumo(articuloInsumo);
-            return new ResponseEntity<>(nuevoInsumo, HttpStatus.CREATED);
+            ArticuloInsumoResponseDTO nuevoInsumoDto = articuloInsumoService.createArticuloInsumo(articuloInsumo);
+            return new ResponseEntity<>(nuevoInsumoDto, HttpStatus.CREATED);
         } catch (ConstraintViolationException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Error de validación");
-            errorResponse.put("mensajes", e.getConstraintViolations().stream()
-                    .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-                    .collect(Collectors.toList()));
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleConstraintViolation(e);
         } catch (Exception e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleGenericException(e, HttpStatus.BAD_REQUEST);
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<ArticuloInsumo>> getAllArticuloInsumo() {
+    public ResponseEntity<List<ArticuloInsumoResponseDTO>> getAllArticuloInsumo() {
         try {
-            List<ArticuloInsumo> insumos = articuloInsumoService.getAllArticuloInsumo();
+            List<ArticuloInsumoResponseDTO> insumos = articuloInsumoService.getAllArticuloInsumo();
             if (insumos.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -55,32 +54,23 @@ public class ArticuloInsumoController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getArticuloInsumoById(@PathVariable Integer id) {
         try {
-            ArticuloInsumo insumo = articuloInsumoService.getArticuloInsumoById(id);
-            return ResponseEntity.ok(insumo);
+            ArticuloInsumoResponseDTO insumoDto = articuloInsumoService.getArticuloInsumoById(id);
+            return ResponseEntity.ok(insumoDto);
         } catch (Exception e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateArticuloInsumo(@PathVariable Integer id, @RequestBody ArticuloInsumo articuloInsumoDetails) {
+    public ResponseEntity<?> updateArticuloInsumo(@PathVariable Integer id, @Valid @RequestBody ArticuloInsumo articuloInsumoDetails) {
         try {
-            ArticuloInsumo insumoActualizado = articuloInsumoService.updateArticuloInsumo(id, articuloInsumoDetails);
-            return ResponseEntity.ok(insumoActualizado);
+            ArticuloInsumoResponseDTO insumoActualizadoDto = articuloInsumoService.updateArticuloInsumo(id, articuloInsumoDetails);
+            return ResponseEntity.ok(insumoActualizadoDto);
         } catch (ConstraintViolationException e) {
-            Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("error", "Error de validación al actualizar");
-            errorResponse.put("mensajes", e.getConstraintViolations().stream()
-                    .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-                    .collect(Collectors.toList()));
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleConstraintViolation(e);
         } catch (Exception e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
             HttpStatus status = e.getMessage().contains("no encontrado") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            return ResponseEntity.status(status).body(errorResponse);
+            return handleGenericException(e, status);
         }
     }
 
@@ -90,9 +80,26 @@ public class ArticuloInsumoController {
             articuloInsumoService.deleteArticuloInsumo(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            Map<String, String> errorResponse = new HashMap<>();
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
+    }
+
+    // Métodos helper para manejo de errores (puedes moverlos a una clase base o @ControllerAdvice)
+    private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+        errorResponse.put("error", "Error de validación");
+        errorResponse.put("mensajes", e.getConstraintViolations().stream()
+                .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+                .collect(Collectors.toList()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    private ResponseEntity<Map<String, Object>> handleGenericException(Exception e, HttpStatus status) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity.status(status).body(errorResponse);
     }
 }

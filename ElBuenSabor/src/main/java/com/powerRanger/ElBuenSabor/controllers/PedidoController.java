@@ -2,16 +2,15 @@ package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.dtos.PedidoEstadoRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.PedidoRequestDTO;
-import com.powerRanger.ElBuenSabor.entities.Pedido;
-import com.powerRanger.ElBuenSabor.entities.Usuario;
+import com.powerRanger.ElBuenSabor.dtos.PedidoResponseDTO; // Importar DTO de respuesta
+// import com.powerRanger.ElBuenSabor.entities.Pedido; // Ya no se devuelve entidad
 import com.powerRanger.ElBuenSabor.services.PedidoService;
-import com.powerRanger.ElBuenSabor.services.UsuarioService;
+import com.powerRanger.ElBuenSabor.services.UsuarioService; // Sigue siendo necesario si usas Authentication
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
-// import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -31,40 +30,24 @@ public class PedidoController {
     private PedidoService pedidoService;
 
     @Autowired
-    private UsuarioService usuarioService;
+    private UsuarioService usuarioService; // Mantener para el endpoint /mis-pedidos si se usa
 
     @PostMapping
-    // @PreAuthorize("hasAuthority('ROLE_CLIENTE')")
     public ResponseEntity<?> createPedidoForAuthenticatedClient(@Valid @RequestBody PedidoRequestDTO dto, Authentication authentication) {
         try {
-            // Cuando la seguridad esté activa, obtendrás el auth0Id del token
-            // String auth0Id = "auth0|testcliente"; // Placeholder si pruebas sin token real
-            // if (authentication != null && authentication.getPrincipal() instanceof Jwt) {
-            //     Jwt jwt = (Jwt) authentication.getPrincipal();
-            //     auth0Id = jwt.getSubject();
-            // } else {
-            //     // Manejar caso donde no hay token o el principal no es Jwt (importante si permites acceso sin token a este endpoint)
-            //     // Por ahora, con SecurityConfig permitiendo todo, authentication será null.
-            //     // Para que este endpoint funcione sin token, deberías usar el createPedidoByAdmin
-            //     // o modificar la lógica para tomar clienteId del DTO si no hay auth.
-            //     // Vamos a asumir que si no hay auth, es un error o usamos el clienteId del DTO
-            //     if (dto.getClienteId() == null) {
-            //         throw new Exception("Se requiere clienteId en el DTO o un usuario autenticado.");
-            //     }
-            //     // Para prueba SIN token, llamamos al create normal que usa clienteId del DTO
-            //     Pedido nuevoPedido = pedidoService.create(dto);
-            //     return new ResponseEntity<>(nuevoPedido, HttpStatus.CREATED);
-            // }
-            // Pedido nuevoPedido = pedidoService.createForAuthenticatedClient(auth0Id, dto);
-            // return new ResponseEntity<>(nuevoPedido, HttpStatus.CREATED);
-
-            // Simplificación para pruebas con SecurityConfig permitiendo todo y sin enviar token:
-            // Usaremos el endpoint /admin o asumiremos que el clienteId viene en el DTO
-            if (dto.getClienteId() == null) {
-                throw new Exception("Se requiere clienteId en el DTO para este endpoint de prueba.");
+            if (authentication == null && dto.getClienteId() == null) { // Modo prueba sin token y sin clienteId
+                throw new Exception("Para crear un pedido sin autenticación (modo prueba), se requiere clienteId en el DTO.");
             }
-            Pedido nuevoPedido = pedidoService.create(dto); // Usa el método que toma clienteId del DTO
-            return new ResponseEntity<>(nuevoPedido, HttpStatus.CREATED);
+
+            PedidoResponseDTO nuevoPedidoDto;
+            if (authentication != null && authentication.getPrincipal() instanceof Jwt) {
+                Jwt jwt = (Jwt) authentication.getPrincipal();
+                String auth0Id = jwt.getSubject();
+                nuevoPedidoDto = pedidoService.createForAuthenticatedClient(auth0Id, dto);
+            } else { // Sin autenticación (permitAll) o clienteId provisto para admin
+                nuevoPedidoDto = pedidoService.create(dto);
+            }
+            return new ResponseEntity<>(nuevoPedidoDto, HttpStatus.CREATED);
 
         } catch (ConstraintViolationException e) {
             return handleConstraintViolation(e);
@@ -74,11 +57,10 @@ public class PedidoController {
     }
 
     @PostMapping("/admin")
-    // @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<?> createPedidoByAdmin(@Valid @RequestBody PedidoRequestDTO dto) {
         try {
-            Pedido nuevoPedido = pedidoService.create(dto);
-            return new ResponseEntity<>(nuevoPedido, HttpStatus.CREATED);
+            PedidoResponseDTO nuevoPedidoDto = pedidoService.create(dto);
+            return new ResponseEntity<>(nuevoPedidoDto, HttpStatus.CREATED);
         } catch (ConstraintViolationException e) {
             return handleConstraintViolation(e);
         } catch (Exception e) {
@@ -87,10 +69,9 @@ public class PedidoController {
     }
 
     @GetMapping
-    // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')")
-    public ResponseEntity<List<Pedido>> getAllPedidos() {
+    public ResponseEntity<List<PedidoResponseDTO>> getAllPedidos() {
         try {
-            List<Pedido> pedidos = pedidoService.getAll();
+            List<PedidoResponseDTO> pedidos = pedidoService.getAll();
             if (pedidos.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -101,33 +82,15 @@ public class PedidoController {
     }
 
     @GetMapping("/mis-pedidos")
-    // @PreAuthorize("hasAuthority('ROLE_CLIENTE')")
     public ResponseEntity<?> getMisPedidos(Authentication authentication) {
         try {
-            // String auth0Id = "auth0|testcliente"; // Placeholder si pruebas sin token real
-            // if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
-            //     throw new Exception("Se requiere autenticación para ver 'mis pedidos'.");
-            // }
-            // Jwt jwt = (Jwt) authentication.getPrincipal();
-            // auth0Id = jwt.getSubject();
-
-            // Para prueba sin token, necesitaríamos un clienteId o auth0Id de prueba
-            // Esto fallará si no hay autenticación real.
-            // List<Pedido> pedidos = pedidoService.getPedidosByClienteAuth0Id(auth0Id);
-
-            // Alternativa para prueba sin token (requiere un clienteId como parámetro):
-            // Este endpoint debería ser /cliente/{clienteId}/pedidos para ser más RESTful
-            // Por ahora, no lo implementaremos así para no cambiar la firma del servicio.
-            // Solo para demostración, no usar en producción sin seguridad real:
-            if (authentication == null) { // Simulación para cuando no hay token
-                Map<String, Object> errorResponse = new HashMap<>();
-                errorResponse.put("error", "Simulación: Se requiere autenticación para ver 'mis pedidos'. Pruebe GET /api/pedidos/cliente/{id}");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(errorResponse);
+            if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+                throw new Exception("Se requiere autenticación para ver 'mis pedidos'.");
             }
             Jwt jwt = (Jwt) authentication.getPrincipal();
             String auth0Id = jwt.getSubject();
 
-            List<Pedido> pedidos = pedidoService.getPedidosByClienteAuth0Id(auth0Id);
+            List<PedidoResponseDTO> pedidos = pedidoService.getPedidosByClienteAuth0Id(auth0Id);
             if (pedidos.isEmpty()) return ResponseEntity.noContent().build();
             return ResponseEntity.ok(pedidos);
         } catch (Exception e) {
@@ -135,11 +98,10 @@ public class PedidoController {
         }
     }
 
-    @GetMapping("/cliente/{clienteId}") // Endpoint para que admin/empleado vea pedidos de un cliente
-    // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')")
+    @GetMapping("/cliente/{clienteId}")
     public ResponseEntity<?> getPedidosByClienteId(@PathVariable Integer clienteId) {
         try {
-            List<Pedido> pedidos = pedidoService.getPedidosByClienteId(clienteId);
+            List<PedidoResponseDTO> pedidos = pedidoService.getPedidosByClienteId(clienteId);
             if (pedidos.isEmpty()) return ResponseEntity.noContent().build();
             return ResponseEntity.ok(pedidos);
         } catch (Exception e) {
@@ -148,29 +110,26 @@ public class PedidoController {
     }
 
     @GetMapping("/{id}")
-    // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO') or @pedidoSecurityService.isOwner(authentication, #id)")
     public ResponseEntity<?> getPedidoById(@PathVariable Integer id) {
         try {
-            Pedido pedido = pedidoService.getById(id);
-            return ResponseEntity.ok(pedido);
+            PedidoResponseDTO pedidoDto = pedidoService.getById(id);
+            return ResponseEntity.ok(pedidoDto);
         } catch (Exception e) {
             return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
     }
 
     @PutMapping("/{id}/estado")
-    // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')")
     public ResponseEntity<?> updatePedidoEstado(@PathVariable Integer id, @Valid @RequestBody PedidoEstadoRequestDTO estadoDto) {
         try {
-            Pedido pedidoActualizado = pedidoService.updateEstado(id, estadoDto.getNuevoEstado());
-            return ResponseEntity.ok(pedidoActualizado);
+            PedidoResponseDTO pedidoActualizadoDto = pedidoService.updateEstado(id, estadoDto.getNuevoEstado());
+            return ResponseEntity.ok(pedidoActualizadoDto);
         } catch (Exception e) {
             return handleGenericException(e, HttpStatus.BAD_REQUEST);
         }
     }
 
     @DeleteMapping("/{id}")
-    // @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')")
     public ResponseEntity<?> softDeletePedido(@PathVariable Integer id) {
         try {
             pedidoService.softDelete(id);

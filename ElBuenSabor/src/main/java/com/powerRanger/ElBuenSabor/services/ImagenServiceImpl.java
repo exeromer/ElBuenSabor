@@ -1,9 +1,10 @@
 package com.powerRanger.ElBuenSabor.services;
 
 import com.powerRanger.ElBuenSabor.dtos.ImagenRequestDTO;
-import com.powerRanger.ElBuenSabor.entities.Articulo; // Necesario si vas a asociar desde aquí
+import com.powerRanger.ElBuenSabor.dtos.ImagenResponseDTO; // Importar DTO de respuesta
+import com.powerRanger.ElBuenSabor.entities.Articulo;
 import com.powerRanger.ElBuenSabor.entities.Imagen;
-import com.powerRanger.ElBuenSabor.entities.Promocion; // Necesario si vas a asociar desde aquí
+import com.powerRanger.ElBuenSabor.entities.Promocion;
 import com.powerRanger.ElBuenSabor.repository.ArticuloRepository;
 import com.powerRanger.ElBuenSabor.repository.ImagenRepository;
 import com.powerRanger.ElBuenSabor.repository.PromocionRepository;
@@ -14,113 +15,130 @@ import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @Validated
 public class ImagenServiceImpl implements ImagenService {
 
-    @Autowired
-    private ImagenRepository imagenRepository;
+    @Autowired private ImagenRepository imagenRepository;
+    @Autowired private ArticuloRepository articuloRepository;
+    @Autowired private PromocionRepository promocionRepository;
+    @Autowired private FileStorageService fileStorageService;
 
-    @Autowired
-    private ArticuloRepository articuloRepository; // Para buscar Articulo al crear/actualizar Imagen
+    // Método de Mapeo de Entidad a DTO de Respuesta
+    private ImagenResponseDTO convertToResponseDto(Imagen imagen) {
+        if (imagen == null) return null;
+        ImagenResponseDTO dto = new ImagenResponseDTO();
+        dto.setId(imagen.getId());
+        dto.setDenominacion(imagen.getDenominacion());
+        dto.setEstadoActivo(imagen.getEstadoActivo());
+        if (imagen.getArticulo() != null) {
+            dto.setArticuloId(imagen.getArticulo().getId());
+            dto.setArticuloDenominacion(imagen.getArticulo().getDenominacion());
+        }
+        if (imagen.getPromocion() != null) {
+            dto.setPromocionId(imagen.getPromocion().getId());
+            dto.setPromocionDenominacion(imagen.getPromocion().getDenominacion());
+        }
+        return dto;
+    }
 
-    @Autowired
-    private PromocionRepository promocionRepository; // Para buscar Promocion al crear/actualizar Imagen
-
-    @Autowired
-    private FileStorageService fileStorageService; // Inyectar el servicio de archivos
-
-    // Método helper para mapear DTO a Entidad y manejar asociaciones
-    private void mapDtoToEntity(ImagenRequestDTO dto, Imagen imagen) throws Exception {
+    // Método helper para mapear DTO de request a Entidad y manejar asociaciones
+    private void mapRequestDtoToEntity(ImagenRequestDTO dto, Imagen imagen) throws Exception {
         imagen.setDenominacion(dto.getDenominacion());
         imagen.setEstadoActivo(dto.getEstadoActivo() != null ? dto.getEstadoActivo() : true);
 
-        // Desasociar de Articulo si no se provee articuloId o es null
-        imagen.setArticulo(null);
+        imagen.setArticulo(null); // Desasociar primero por si cambia
         if (dto.getArticuloId() != null) {
             Articulo articulo = articuloRepository.findById(dto.getArticuloId())
-                    .orElseThrow(() -> new Exception("Artículo no encontrado con ID: " + dto.getArticuloId() + " para asociar a la imagen."));
+                    .orElseThrow(() -> new Exception("Artículo no encontrado con ID: " + dto.getArticuloId()));
             imagen.setArticulo(articulo);
-            // Nota: Si Articulo tiene una List<Imagen> y es el dueño de la relación (con CascadeType.ALL),
-            // también deberías añadir la imagen a la lista del artículo y guardar el artículo.
-            // Ejemplo: articulo.addImagen(imagen); // asumiendo que addImagen maneja la bidireccionalidad
-            // En este modelo, Imagen tiene la FK, así que setear imagen.setArticulo() es lo principal.
+            // Si Articulo tiene una lista de Imagenes y es bidireccional, actualizar el otro lado
+            // articulo.addImagen(imagen); // Asumiendo que Articulo tiene este helper
         }
 
-        // Desasociar de Promocion si no se provee promocionId o es null
-        imagen.setPromocion(null);
+        imagen.setPromocion(null); // Desasociar primero por si cambia
         if (dto.getPromocionId() != null) {
-            // Asumimos que PromocionRepository y la entidad Promocion existen.
-            // Si no, esta parte daría error o debería comentarse.
             Promocion promocion = promocionRepository.findById(dto.getPromocionId())
-                    .orElseThrow(() -> new Exception("Promoción no encontrada con ID: " + dto.getPromocionId() + " para asociar a la imagen."));
+                    .orElseThrow(() -> new Exception("Promoción no encontrada con ID: " + dto.getPromocionId()));
             imagen.setPromocion(promocion);
-            // Similar a Articulo, si Promocion tiene una List<Imagen> y es dueña.
+            // Si Promocion tiene una lista de Imagenes y es bidireccional, actualizar el otro lado
+            // promocion.addImagen(imagen); // Asumiendo que Promocion tiene este helper
         }
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Imagen> getAllImagenes() {
-        return imagenRepository.findAll();
+    public List<ImagenResponseDTO> getAllImagenes() {
+        return imagenRepository.findAll().stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Imagen getImagenById(Integer id) throws Exception {
-        return imagenRepository.findById(id)
+    public ImagenResponseDTO getImagenById(Integer id) throws Exception {
+        Imagen imagen = imagenRepository.findById(id)
                 .orElseThrow(() -> new Exception("Imagen no encontrada con ID: " + id));
+        return convertToResponseDto(imagen);
     }
 
     @Override
     @Transactional
-    public Imagen createImagen(@Valid ImagenRequestDTO dto) throws Exception {
+    public ImagenResponseDTO createImagen(@Valid ImagenRequestDTO dto) throws Exception {
         Imagen imagen = new Imagen();
-        mapDtoToEntity(dto, imagen);
-        return imagenRepository.save(imagen);
+        mapRequestDtoToEntity(dto, imagen);
+        Imagen imagenGuardada = imagenRepository.save(imagen);
+        return convertToResponseDto(imagenGuardada);
     }
 
     @Override
     @Transactional
-    public Imagen updateImagen(Integer id, @Valid ImagenRequestDTO dto) throws Exception {
-        Imagen imagenExistente = getImagenById(id); // Verifica si existe
-        mapDtoToEntity(dto, imagenExistente);
-        return imagenRepository.save(imagenExistente);
+    public ImagenResponseDTO updateImagen(Integer id, @Valid ImagenRequestDTO dto) throws Exception {
+        Imagen imagenExistente = imagenRepository.findById(id)
+                .orElseThrow(() -> new Exception("Imagen no encontrada con ID: " + id));
+        mapRequestDtoToEntity(dto, imagenExistente);
+        Imagen imagenActualizada = imagenRepository.save(imagenExistente);
+        return convertToResponseDto(imagenActualizada);
     }
 
     @Override
     @Transactional
     public void deleteImagen(Integer id) throws Exception {
-        Imagen imagen = getImagenById(id); // Verifica si existe y obtiene la entidad
+        Imagen imagen = imagenRepository.findById(id)
+                .orElseThrow(() -> new Exception("Imagen no encontrada con ID: " + id));
 
         String denominacion = imagen.getDenominacion();
         String filename = null;
 
-        // Extraer el nombre del archivo de la denominacion (URL o path)
-        // Esto asume que la denominacion es la URL completa generada por FileUploadController
-        // o solo el nombre de archivo si así lo decidiste.
         if (denominacion != null && denominacion.contains("/api/files/view/")) {
             filename = denominacion.substring(denominacion.lastIndexOf("/") + 1);
         } else if (denominacion != null && !denominacion.contains("/")) {
-            // Si la denominacion es solo el nombre del archivo (ej. UUID.jpg)
             filename = denominacion;
         }
-        // Si la denominacion es una URL externa completa (ej. https://...), no intentamos borrar.
 
-        // Primero borrar el registro de la base de datos
-        imagenRepository.delete(imagen);
+        // Desasociar de Articulo si es el lado dueño o para mantener consistencia si Articulo tiene colección
+        if(imagen.getArticulo() != null && imagen.getArticulo().getImagenes() != null) {
+            // Esta lógica es más compleja si Articulo es el dueño de una colección de Imagenes.
+            // Por ahora, la entidad Imagen solo tiene una referencia @ManyToOne.
+            // Si Articulo tiene @OneToMany(mappedBy="articulo", cascade=ALL, orphanRemoval=true) List<Imagen> imagenes,
+            // y usas articulo.removeImagen(imagen), entonces guardar el artículo se encargaría.
+            // Como estamos borrando la Imagen directamente, y ella es la dueña de la FK a Articulo (si así se mapea),
+            // no hay mucho que hacer aquí para la colección de Articulo, solo borrar la Imagen.
+            // PERO, si Articulo tiene una List<Imagen> y es la dueña, se debe borrar la imagen de esa lista y guardar Articulo.
+            // El modelo actual de Imagen tiene el ManyToOne, así que al borrar Imagen se rompe la FK.
+        }
+        // Similar para Promocion
 
-        // Si se pudo extraer un nombre de archivo local, intentar borrarlo del disco
+        imagenRepository.delete(imagen); // Borra de la BD
+
         if (filename != null && !filename.isEmpty()) {
             try {
-                fileStorageService.delete(filename);
+                fileStorageService.delete(filename); // Borra del disco
                 System.out.println("Archivo físico '" + filename + "' eliminado del disco.");
             } catch (Exception e) {
-                // Es importante loguear este error, pero usualmente no queremos que la transacción
-                // falle solo porque no se pudo borrar el archivo físico (la entidad DB ya se borró).
                 System.err.println("Error al intentar borrar el archivo físico '" + filename + "' del disco: " + e.getMessage());
-                // Podrías considerar un mecanismo de reintento o marcarlo para limpieza manual.
             }
         }
     }

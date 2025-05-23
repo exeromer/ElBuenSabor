@@ -1,7 +1,8 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
-import com.powerRanger.ElBuenSabor.dtos.ImagenRequestDTO; // Importar el DTO
-import com.powerRanger.ElBuenSabor.entities.Imagen;
+import com.powerRanger.ElBuenSabor.dtos.ImagenRequestDTO;
+import com.powerRanger.ElBuenSabor.dtos.ImagenResponseDTO; // Importar DTO de respuesta
+// import com.powerRanger.ElBuenSabor.entities.Imagen; // Ya no necesitamos la entidad aquí directamente para la respuesta
 import com.powerRanger.ElBuenSabor.services.FileStorageService;
 import com.powerRanger.ElBuenSabor.services.ImagenService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.io.IOException;
-import java.nio.file.Files; // Necesario para Files.probeContentType
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -34,7 +35,6 @@ public class FileUploadController {
 
     @PostMapping("/upload")
     public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file,
-                                        // Opcional: IDs para asociar la imagen directamente al subirla
                                         @RequestParam(name = "articuloId", required = false) Integer articuloId,
                                         @RequestParam(name = "promocionId", required = false) Integer promocionId) {
         Map<String, Object> response = new HashMap<>();
@@ -50,26 +50,24 @@ public class FileUploadController {
                     .path(filename)
                     .toUriString();
 
-            // Crear y poblar el DTO para la entidad Imagen
             ImagenRequestDTO imagenDto = new ImagenRequestDTO();
-            imagenDto.setDenominacion(fileDownloadUri); // Guardamos la URL de acceso
+            imagenDto.setDenominacion(fileDownloadUri);
             imagenDto.setEstadoActivo(true);
-            imagenDto.setArticuloId(articuloId);     // Asociar si se proporciona el ID
-            imagenDto.setPromocionId(promocionId); // Asociar si se proporciona el ID
+            imagenDto.setArticuloId(articuloId);
+            imagenDto.setPromocionId(promocionId);
 
-            // Llamar al servicio con el DTO
-            Imagen savedImage = imagenService.createImagen(imagenDto);
+            // Llamar al servicio con el DTO, ahora devuelve ImagenResponseDTO
+            ImagenResponseDTO savedImageDto = imagenService.createImagen(imagenDto); // ✅ CAMBIO AQUÍ
 
             response.put("message", "Archivo subido exitosamente: " + file.getOriginalFilename());
             response.put("filename", filename);
             response.put("url", fileDownloadUri);
-            response.put("imagenDB", savedImage); // El objeto Imagen (entidad) guardado en la BD
+            response.put("imagenDB", savedImageDto); // ✅ CAMBIO AQUÍ: Poner el DTO en la respuesta
             return ResponseEntity.ok(response);
 
         } catch (Exception e) {
             response.put("error", "No se pudo subir el archivo: " + (file != null ? file.getOriginalFilename() : "nombre desconocido") + ". Error: " + e.getMessage());
-            // Loguear el error completo para depuración
-            e.printStackTrace(); // Importante para ver la causa raíz en la consola del servidor
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }
@@ -80,11 +78,6 @@ public class FileUploadController {
                                                                          @RequestParam(name = "promocionId", required = false) Integer promocionId) {
         List<Map<String, Object>> responses = Arrays.stream(files)
                 .map(file -> {
-                    // Reutilizamos la lógica de uploadFile, pero capturamos la respuesta en un Map
-                    // NOTA: uploadFile ahora espera articuloId y promocionId, debes decidir cómo pasarlos aquí
-                    // si quieres que cada imagen en la subida múltiple se asocie igual, o si necesitas
-                    // una lógica más compleja para asociar cada imagen individualmente.
-                    // Por ahora, pasaré los mismos articuloId y promocionId a cada llamada de uploadFile.
                     ResponseEntity<?> singleResponse = uploadFile(file, articuloId, promocionId);
                     Map<String, Object> responseMap = new HashMap<>();
                     if (singleResponse.getStatusCode().is2xxSuccessful() && singleResponse.getBody() instanceof Map) {
@@ -98,8 +91,7 @@ public class FileUploadController {
                             responseMap.put("errorDetails", ((Map<String,Object>) singleResponse.getBody()).get("error"));
                         } else if (singleResponse.getBody() != null) {
                             responseMap.put("errorDetails", singleResponse.getBody().toString());
-                        }
-                        else {
+                        } else {
                             responseMap.put("errorDetails", "Error desconocido durante la subida del archivo " + file.getOriginalFilename());
                         }
                     }
@@ -113,7 +105,7 @@ public class FileUploadController {
     public ResponseEntity<Resource> serveFile(@PathVariable String filename) {
         try {
             Resource file = fileStorageService.loadAsResource(filename);
-            String contentType = "application/octet-stream"; // Tipo por defecto
+            String contentType = "application/octet-stream";
             try {
                 contentType = Files.probeContentType(file.getFile().toPath());
                 if (contentType == null) {
@@ -125,7 +117,7 @@ public class FileUploadController {
 
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(contentType))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"") // inline para mostrar en navegador
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + file.getFilename() + "\"")
                     .body(file);
         } catch (Exception e) {
             System.err.println("Error al servir el archivo " + filename + ": " + e.getMessage());
@@ -135,16 +127,16 @@ public class FileUploadController {
 
     @DeleteMapping("/delete/{filename:.+}")
     public ResponseEntity<?> deleteFile(@PathVariable String filename) {
-        // Este endpoint actualmente solo borra del disco.
-        // El borrado de la entidad Imagen (y consecuentemente el archivo físico a través del ImagenService)
-        // se hace a través de DELETE /api/imagenes/{idDeLaImagenDB}
         Map<String, String> response = new HashMap<>();
         try {
+            // Este endpoint solo borra el archivo del disco.
+            // La lógica para borrar la entidad Imagen y luego el archivo físico
+            // está en ImagenService y se accede a través de DELETE /api/imagenes/{id}
             fileStorageService.delete(filename);
-            response.put("message", "Archivo '" + filename + "' eliminado correctamente del disco.");
+            response.put("message", "Archivo '" + filename + "' eliminado correctamente del disco (solo del disco).");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            response.put("error", "No se pudo eliminar el archivo: " + filename + ". Error: " + e.getMessage());
+            response.put("error", "No se pudo eliminar el archivo del disco: " + filename + ". Error: " + e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
         }
     }

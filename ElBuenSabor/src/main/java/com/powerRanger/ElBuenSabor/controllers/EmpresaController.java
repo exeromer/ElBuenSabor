@@ -1,6 +1,7 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.dtos.EmpresaRequestDTO;
+import com.powerRanger.ElBuenSabor.dtos.EmpresaResponseDTO; // Importar DTO de respuesta
 import com.powerRanger.ElBuenSabor.entities.Empresa;
 import com.powerRanger.ElBuenSabor.services.EmpresaService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,9 @@ public class EmpresaController {
     public ResponseEntity<?> createEmpresa(@Valid @RequestBody EmpresaRequestDTO dto) {
         try {
             Empresa nuevaEmpresa = empresaService.create(dto);
-            return new ResponseEntity<>(nuevaEmpresa, HttpStatus.CREATED);
+            // Mapear a DTO para la respuesta
+            EmpresaResponseDTO responseDto = empresaService.getById(nuevaEmpresa.getId()); // Re-fetch y convierte a DTO
+            return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
         } catch (ConstraintViolationException e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
@@ -46,9 +49,9 @@ public class EmpresaController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Empresa>> getAllEmpresas() {
+    public ResponseEntity<List<EmpresaResponseDTO>> getAllEmpresas() { // Devuelve Lista de DTOs
         try {
-            List<Empresa> empresas = empresaService.getAll();
+            List<EmpresaResponseDTO> empresas = empresaService.getAll();
             if (empresas.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -59,10 +62,10 @@ public class EmpresaController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getEmpresaById(@PathVariable Integer id) {
+    public ResponseEntity<?> getEmpresaById(@PathVariable Integer id) { // Devuelve DTO o Error
         try {
-            Empresa empresa = empresaService.getById(id);
-            return ResponseEntity.ok(empresa);
+            EmpresaResponseDTO empresaDto = empresaService.getById(id);
+            return ResponseEntity.ok(empresaDto);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.NOT_FOUND.value());
@@ -75,7 +78,9 @@ public class EmpresaController {
     public ResponseEntity<?> updateEmpresa(@PathVariable Integer id, @Valid @RequestBody EmpresaRequestDTO dto) {
         try {
             Empresa empresaActualizada = empresaService.update(id, dto);
-            return ResponseEntity.ok(empresaActualizada);
+            // Mapear a DTO para la respuesta
+            EmpresaResponseDTO responseDto = empresaService.getById(empresaActualizada.getId());
+            return ResponseEntity.ok(responseDto);
         } catch (ConstraintViolationException e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
@@ -101,7 +106,6 @@ public class EmpresaController {
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             HttpStatus status = e.getMessage().contains("no encontrada") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            // Si la excepción es porque tiene sucursales y no se pueden borrar, BAD_REQUEST o CONFLICT (409) sería apropiado.
             errorResponse.put("status", status.value());
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.status(status).body(errorResponse);

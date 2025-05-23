@@ -1,7 +1,8 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.dtos.FacturaCreateRequestDTO;
-import com.powerRanger.ElBuenSabor.entities.Factura;
+import com.powerRanger.ElBuenSabor.dtos.FacturaResponseDTO; // Importar DTO de respuesta
+// import com.powerRanger.ElBuenSabor.entities.Factura; // Ya no se devuelve entidad
 import com.powerRanger.ElBuenSabor.services.FacturaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -9,27 +10,23 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
-// Quita los imports de tus excepciones custom si no las estás usando/definiendo por ahora
-// import com.powerRanger.ElBuenSabor.exceptions.ResourceNotFoundException;
-// import com.powerRanger.ElBuenSabor.exceptions.InvalidOperationException;
-
+// import jakarta.validation.ConstraintViolationException; // No es necesario si el DTO no tiene validaciones JSR 303 directas que el controller verifique
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/facturas") // Cambiado a /api/facturas para consistencia
+@RequestMapping("/api/facturas")
 @Validated
-// @CrossOrigin(origins = "*") // Considera configurar CORS globalmente en SecurityConfig
 public class FacturaController {
 
     @Autowired
     private FacturaService facturaService;
 
     @GetMapping("/activas")
-    public ResponseEntity<List<Factura>> getAllFacturasActivas() {
-        List<Factura> facturas = facturaService.getAllActivas();
+    public ResponseEntity<List<FacturaResponseDTO>> getAllFacturasActivas() {
+        List<FacturaResponseDTO> facturas = facturaService.getAllActivas();
         if (facturas.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -37,8 +34,8 @@ public class FacturaController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Factura>> getAllFacturasIncludingAnuladas() {
-        List<Factura> facturas = facturaService.getAll();
+    public ResponseEntity<List<FacturaResponseDTO>> getAllFacturasIncludingAnuladas() {
+        List<FacturaResponseDTO> facturas = facturaService.getAll();
         if (facturas.isEmpty()) {
             return ResponseEntity.noContent().build();
         }
@@ -48,9 +45,9 @@ public class FacturaController {
     @GetMapping("/{id}/activa")
     public ResponseEntity<?> getFacturaActivaById(@PathVariable Integer id) {
         try {
-            Factura factura = facturaService.findByIdActiva(id);
-            return ResponseEntity.ok(factura);
-        } catch (Exception e) { // Captura genérica, ResourceNotFoundException sería más específica
+            FacturaResponseDTO facturaDto = facturaService.findByIdActiva(id);
+            return ResponseEntity.ok(facturaDto);
+        } catch (Exception e) {
             return buildErrorResponse(e.getMessage(), HttpStatus.NOT_FOUND);
         }
     }
@@ -58,8 +55,8 @@ public class FacturaController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getFacturaByIdIncludingAnuladas(@PathVariable Integer id) {
         try {
-            Factura factura = facturaService.findByIdIncludingAnuladas(id);
-            return ResponseEntity.ok(factura);
+            FacturaResponseDTO facturaDto = facturaService.findByIdIncludingAnuladas(id);
+            return ResponseEntity.ok(facturaDto);
         } catch (Exception e) {
             return buildErrorResponse(e.getMessage(), HttpStatus.NOT_FOUND);
         }
@@ -68,38 +65,34 @@ public class FacturaController {
     @PostMapping("/generar-desde-pedido")
     public ResponseEntity<?> generarFacturaDesdePedido(@Valid @RequestBody FacturaCreateRequestDTO dto) {
         try {
-            Factura facturaGenerada = facturaService.generarFacturaParaPedido(dto);
-            return ResponseEntity.status(HttpStatus.CREATED).body(facturaGenerada);
-        } catch (Exception e) { // Captura genérica
-            // Podrías diferenciar el HttpStatus basado en el tipo de excepción si usaras excepciones custom
+            FacturaResponseDTO facturaGeneradaDto = facturaService.generarFacturaParaPedido(dto);
+            return ResponseEntity.status(HttpStatus.CREATED).body(facturaGeneradaDto);
+        } catch (Exception e) {
             HttpStatus status = e.getMessage().contains("no encontrado") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            if (e.getMessage().contains("ya tiene una factura activa") || e.getMessage().contains("no tiene detalles") || e.getMessage().contains("no está en estado ENTREGADO")) {
+                status = HttpStatus.BAD_REQUEST; // O CONFLICT (409) para "ya tiene factura"
+            }
             return buildErrorResponse(e.getMessage(), status);
         }
     }
 
-    // El endpoint POST para crear una factura "manualmente" usualmente no se expone o es muy restringido.
-    // La generación a partir de un pedido es el flujo principal.
-    // Si lo necesitas, asegúrate que el servicio saveManualFactura valide todo correctamente.
-    // @PostMapping
-    // public ResponseEntity<?> createManualFactura(@Valid @RequestBody Factura factura) { ... }
-
-
-    @PutMapping("/anular/{id}") // Usar PUT para una acción de cambio de estado es común, o POST
+    @PutMapping("/anular/{id}")
     public ResponseEntity<?> anularFactura(@PathVariable Integer id) {
         try {
-            Factura facturaAnulada = facturaService.anularFactura(id);
-            return ResponseEntity.ok(facturaAnulada);
-        } catch (Exception e) { // Captura genérica
-            HttpStatus status = e.getMessage().contains("no encontrada") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            FacturaResponseDTO facturaAnuladaDto = facturaService.anularFactura(id);
+            return ResponseEntity.ok(facturaAnuladaDto);
+        } catch (Exception e) {
+            HttpStatus status = e.getMessage().contains("no encontrada") ? HttpStatus.NOT_FOUND :
+                    (e.getMessage().contains("ya se encuentra anulada") ? HttpStatus.BAD_REQUEST : HttpStatus.INTERNAL_SERVER_ERROR);
             return buildErrorResponse(e.getMessage(), status);
         }
     }
 
-    // Método helper para construir respuestas de error
     private ResponseEntity<Map<String, Object>> buildErrorResponse(String message, HttpStatus status) {
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("status", status.value());
         errorResponse.put("error", message);
+        // e.printStackTrace(); // Para depuración si es necesario
         return ResponseEntity.status(status).body(errorResponse);
     }
 }

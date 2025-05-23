@@ -1,7 +1,8 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.dtos.UsuarioRequestDTO;
-import com.powerRanger.ElBuenSabor.entities.Usuario;
+import com.powerRanger.ElBuenSabor.dtos.UsuarioResponseDTO; // Importar DTO de respuesta
+// import com.powerRanger.ElBuenSabor.entities.Usuario; // Ya no se devuelve la entidad directamente
 import com.powerRanger.ElBuenSabor.services.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -27,9 +28,10 @@ public class UsuarioController {
     @PostMapping
     public ResponseEntity<?> createUsuario(@Valid @RequestBody UsuarioRequestDTO dto) {
         try {
-            Usuario nuevoUsuario = usuarioService.create(dto);
-            return new ResponseEntity<>(nuevoUsuario, HttpStatus.CREATED);
+            UsuarioResponseDTO nuevoUsuarioDto = usuarioService.create(dto); // Devuelve DTO
+            return new ResponseEntity<>(nuevoUsuarioDto, HttpStatus.CREATED);
         } catch (ConstraintViolationException e) {
+            // ... manejo de ConstraintViolationException (sin cambios)
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
             errorResponse.put("error", "Error de validación");
@@ -46,9 +48,9 @@ public class UsuarioController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Usuario>> getAllUsuarios() {
+    public ResponseEntity<List<UsuarioResponseDTO>> getAllUsuarios() { // Devuelve Lista de DTOs
         try {
-            List<Usuario> usuarios = usuarioService.getAll();
+            List<UsuarioResponseDTO> usuarios = usuarioService.getAll();
             if (usuarios.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -59,10 +61,10 @@ public class UsuarioController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUsuarioById(@PathVariable Integer id) {
+    public ResponseEntity<?> getUsuarioById(@PathVariable Integer id) { // Devuelve DTO o Error
         try {
-            Usuario usuario = usuarioService.getById(id);
-            return ResponseEntity.ok(usuario);
+            UsuarioResponseDTO usuarioDto = usuarioService.getById(id);
+            return ResponseEntity.ok(usuarioDto);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.NOT_FOUND.value());
@@ -72,10 +74,10 @@ public class UsuarioController {
     }
 
     @GetMapping("/username/{username}")
-    public ResponseEntity<?> getUsuarioByUsername(@PathVariable String username) {
+    public ResponseEntity<?> getUsuarioByUsername(@PathVariable String username) { // Devuelve DTO o Error
         try {
-            Usuario usuario = usuarioService.getByUsername(username);
-            return ResponseEntity.ok(usuario);
+            UsuarioResponseDTO usuarioDto = usuarioService.getByUsername(username);
+            return ResponseEntity.ok(usuarioDto);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.NOT_FOUND.value());
@@ -85,12 +87,10 @@ public class UsuarioController {
     }
 
     @GetMapping("/auth0/{auth0Id}")
-    public ResponseEntity<?> getUsuarioByAuth0Id(@PathVariable String auth0Id) {
+    public ResponseEntity<?> getUsuarioByAuth0Id(@PathVariable String auth0Id) { // Devuelve DTO o Error
         try {
-            // Podrías necesitar URL codificar el auth0Id si contiene caracteres especiales como '|'
-            // pero Postman y los navegadores suelen manejarlo.
-            Usuario usuario = usuarioService.getByAuth0Id(auth0Id);
-            return ResponseEntity.ok(usuario);
+            UsuarioResponseDTO usuarioDto = usuarioService.getByAuth0Id(auth0Id);
+            return ResponseEntity.ok(usuarioDto);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.NOT_FOUND.value());
@@ -102,9 +102,10 @@ public class UsuarioController {
     @PutMapping("/{id}")
     public ResponseEntity<?> updateUsuario(@PathVariable Integer id, @Valid @RequestBody UsuarioRequestDTO dto) {
         try {
-            Usuario usuarioActualizado = usuarioService.update(id, dto);
-            return ResponseEntity.ok(usuarioActualizado);
+            UsuarioResponseDTO usuarioActualizadoDto = usuarioService.update(id, dto); // Devuelve DTO
+            return ResponseEntity.ok(usuarioActualizadoDto);
         } catch (ConstraintViolationException e) {
+            // ... manejo de ConstraintViolationException (sin cambios) ...
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
             errorResponse.put("error", "Error de validación al actualizar");
@@ -121,7 +122,7 @@ public class UsuarioController {
         }
     }
 
-    @DeleteMapping("/{id}") // Implementa borrado lógico (soft delete)
+    @DeleteMapping("/{id}")
     public ResponseEntity<?> softDeleteUsuario(@PathVariable Integer id) {
         try {
             usuarioService.softDelete(id);

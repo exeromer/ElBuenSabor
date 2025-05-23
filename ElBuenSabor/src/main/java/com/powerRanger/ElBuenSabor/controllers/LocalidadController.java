@@ -1,5 +1,6 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
+import com.powerRanger.ElBuenSabor.dtos.LocalidadResponseDTO; // Importar DTO
 import com.powerRanger.ElBuenSabor.entities.Localidad;
 import com.powerRanger.ElBuenSabor.services.LocalidadService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,7 +8,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap; // Para el cuerpo de error
 import java.util.List;
+import java.util.Map;   // Para el cuerpo de error
 
 @RestController
 @RequestMapping("/api/localidades")
@@ -28,17 +31,20 @@ public class LocalidadController {
 
         try {
             Localidad nuevaLocalidad = localidadService.guardar(localidad);
-            return new ResponseEntity<>(nuevaLocalidad, HttpStatus.CREATED);
+            // Para consistencia, devolver DTO
+            LocalidadResponseDTO responseDto = localidadService.obtenerPorId(nuevaLocalidad.getId());
+            return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
         } catch (Exception e) {
-            // Considera usar un @ControllerAdvice para un manejo de excepciones más centralizado
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<Localidad>> obtenerTodasLasLocalidades() {
+    public ResponseEntity<List<LocalidadResponseDTO>> obtenerTodasLasLocalidades() { // Devuelve lista de DTOs
         try {
-            List<Localidad> localidades = localidadService.obtenerTodas();
+            List<LocalidadResponseDTO> localidades = localidadService.obtenerTodas();
             if (localidades.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -49,12 +55,15 @@ public class LocalidadController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> obtenerLocalidadPorId(@PathVariable Integer id) {
+    public ResponseEntity<?> obtenerLocalidadPorId(@PathVariable Integer id) { // Devuelve DTO
         try {
-            Localidad localidad = localidadService.obtenerPorId(id);
-            return ResponseEntity.ok(localidad);
+            LocalidadResponseDTO localidadDto = localidadService.obtenerPorId(id);
+            return ResponseEntity.ok(localidadDto);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
     }
 
@@ -63,12 +72,17 @@ public class LocalidadController {
         if (localidadDetalles.getNombre() == null || localidadDetalles.getNombre().trim().isEmpty()) {
             return ResponseEntity.badRequest().body("El nombre de la localidad es obligatorio para actualizar.");
         }
-        // La validación de la provincia se hace en el servicio
         try {
             Localidad localidadActualizada = localidadService.actualizar(id, localidadDetalles);
-            return ResponseEntity.ok(localidadActualizada);
+            // Para consistencia, devolver DTO
+            LocalidadResponseDTO responseDto = localidadService.obtenerPorId(localidadActualizada.getId());
+            return ResponseEntity.ok(responseDto);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            HttpStatus status = e.getMessage().contains("no encontrada") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            errorResponse.put("status", status.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(status).body(errorResponse);
         }
     }
 
@@ -78,7 +92,11 @@ public class LocalidadController {
             localidadService.borrar(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            HttpStatus status = e.getMessage().contains("no encontrada") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            errorResponse.put("status", status.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(status).body(errorResponse);
         }
     }
 }

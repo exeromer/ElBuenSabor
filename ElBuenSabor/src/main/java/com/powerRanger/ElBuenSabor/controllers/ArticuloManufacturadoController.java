@@ -1,7 +1,8 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
-import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoRequestDTO; // Importar DTO
-import com.powerRanger.ElBuenSabor.entities.ArticuloManufacturado;
+import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoRequestDTO;
+import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoResponseDTO; // DTO de respuesta
+// import com.powerRanger.ElBuenSabor.entities.ArticuloManufacturado; // Ya no se devuelve entidad
 import com.powerRanger.ElBuenSabor.services.ArticuloManufacturadoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -27,28 +28,19 @@ public class ArticuloManufacturadoController {
     @PostMapping
     public ResponseEntity<?> createArticuloManufacturado(@Valid @RequestBody ArticuloManufacturadoRequestDTO dto) {
         try {
-            ArticuloManufacturado nuevoAM = manufacturadoService.createArticuloManufacturado(dto);
-            return new ResponseEntity<>(nuevoAM, HttpStatus.CREATED);
+            ArticuloManufacturadoResponseDTO nuevoAMDto = manufacturadoService.createArticuloManufacturado(dto);
+            return new ResponseEntity<>(nuevoAMDto, HttpStatus.CREATED);
         } catch (ConstraintViolationException e) {
-            Map<String, Object> errorResponse = new HashMap<>(); // Usar Object para flexibilidad
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value()); // El int está bien aquí si el Map es <String, Object>
-            errorResponse.put("error", "Error de validación");
-            errorResponse.put("mensajes", e.getConstraintViolations().stream()
-                    .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-                    .collect(Collectors.toList()));
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleConstraintViolation(e);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>(); // Usar Object para flexibilidad
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleGenericException(e, HttpStatus.BAD_REQUEST);
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<ArticuloManufacturado>> getAllArticuloManufacturados() {
+    public ResponseEntity<List<ArticuloManufacturadoResponseDTO>> getAllArticuloManufacturados() {
         try {
-            List<ArticuloManufacturado> ams = manufacturadoService.getAllArticuloManufacturados();
+            List<ArticuloManufacturadoResponseDTO> ams = manufacturadoService.getAllArticuloManufacturados();
             if (ams.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -61,35 +53,23 @@ public class ArticuloManufacturadoController {
     @GetMapping("/{id}")
     public ResponseEntity<?> getArticuloManufacturadoById(@PathVariable Integer id) {
         try {
-            ArticuloManufacturado am = manufacturadoService.getArticuloManufacturadoById(id);
-            return ResponseEntity.ok(am);
+            ArticuloManufacturadoResponseDTO amDto = manufacturadoService.getArticuloManufacturadoById(id);
+            return ResponseEntity.ok(amDto);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>(); // Usar Object
-            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateArticuloManufacturado(@PathVariable Integer id, @Valid @RequestBody ArticuloManufacturadoRequestDTO dto) {
         try {
-            ArticuloManufacturado amActualizado = manufacturadoService.updateArticuloManufacturado(id, dto);
-            return ResponseEntity.ok(amActualizado);
+            ArticuloManufacturadoResponseDTO amActualizadoDto = manufacturadoService.updateArticuloManufacturado(id, dto);
+            return ResponseEntity.ok(amActualizadoDto);
         } catch (ConstraintViolationException e) {
-            Map<String, Object> errorResponse = new HashMap<>(); // Usar Object
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-            errorResponse.put("error", "Error de validación al actualizar");
-            errorResponse.put("mensajes", e.getConstraintViolations().stream()
-                    .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-                    .collect(Collectors.toList()));
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+            return handleConstraintViolation(e);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>(); // Usar Object
             HttpStatus status = e.getMessage().contains("no encontrado") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            errorResponse.put("status", status.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(status).body(errorResponse);
+            return handleGenericException(e, status);
         }
     }
 
@@ -99,10 +79,26 @@ public class ArticuloManufacturadoController {
             manufacturadoService.deleteArticuloManufacturado(id);
             return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>(); // Usar Object
-            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
+    }
+
+    // Métodos helper para manejo de errores
+    private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+        errorResponse.put("error", "Error de validación");
+        errorResponse.put("mensajes", e.getConstraintViolations().stream()
+                .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+                .collect(Collectors.toList()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    private ResponseEntity<Map<String, Object>> handleGenericException(Exception e, HttpStatus status) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity.status(status).body(errorResponse);
     }
 }

@@ -1,5 +1,6 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
+import com.powerRanger.ElBuenSabor.dtos.CategoriaResponseDTO; // Importar DTO
 import com.powerRanger.ElBuenSabor.entities.Categoria;
 import com.powerRanger.ElBuenSabor.services.CategoriaService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -7,61 +8,76 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+// Importar Map y HashMap si los usas para errores, aunque aquí no son necesarios si el servicio lanza excepciones claras
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
 
 @RestController
-@RequestMapping("/api/categorias") // Es buena práctica usar un prefijo como /api
+@RequestMapping("/api/categorias")
 public class CategoriaController {
 
     @Autowired
-    private CategoriaService categoriaService; // Usar la interfaz
+    private CategoriaService categoriaService;
 
     @GetMapping
-    public ResponseEntity<List<Categoria>> getAllCategorias() {
+    public ResponseEntity<List<CategoriaResponseDTO>> getAllCategorias() { // Devuelve Lista de DTOs
         try {
-            List<Categoria> categorias = categoriaService.getAllCategorias();
+            List<CategoriaResponseDTO> categorias = categoriaService.getAllCategorias();
             if (categorias.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
             return ResponseEntity.ok(categorias);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            // Loguear el error
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build(); // Build sin cuerpo para error interno
         }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getCategoriaById(@PathVariable Integer id) {
+    public ResponseEntity<?> getCategoriaById(@PathVariable Integer id) { // Devuelve DTO o Error
         try {
-            Categoria categoria = categoriaService.getCategoriaById(id);
-            return ResponseEntity.ok(categoria);
+            CategoriaResponseDTO categoriaDto = categoriaService.getCategoriaById(id);
+            return ResponseEntity.ok(categoriaDto);
         } catch (Exception e) {
-            // Podrías tener una clase de error más específica aquí
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
     }
 
+    // Los métodos POST, PUT, DELETE se mantienen como estaban por ahora,
+    // aceptando y devolviendo la entidad Categoria directamente,
+    // o podrías refactorizarlos para usar CategoriaRequestDTO también.
     @PostMapping
-    public ResponseEntity<?> createCategoria(@RequestBody Categoria categoria) {
+    public ResponseEntity<?> createCategoria(@RequestBody Categoria categoria) { // Podría ser CategoriaRequestDTO
         try {
             Categoria nuevaCategoria = categoriaService.createCategoria(categoria);
-            return new ResponseEntity<>(nuevaCategoria, HttpStatus.CREATED);
+            // Idealmente, al crear, también devolverías el CategoriaResponseDTO
+            // CategoriaResponseDTO responseDto = categoriaService.convertToDto(nuevaCategoria); // Necesitarías acceso a convertToDto
+            return new ResponseEntity<>(nuevaCategoria, HttpStatus.CREATED); // Por ahora, devolvemos la entidad
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateCategoria(@PathVariable Integer id, @RequestBody Categoria categoria) {
+    public ResponseEntity<?> updateCategoria(@PathVariable Integer id, @RequestBody Categoria categoria) { // Podría ser CategoriaRequestDTO
         try {
             Categoria categoriaActualizada = categoriaService.updateCategoria(id, categoria);
-            return ResponseEntity.ok(categoriaActualizada);
+            // Idealmente, también devolverías CategoriaResponseDTO
+            return ResponseEntity.ok(categoriaActualizada); // Por ahora, entidad
         } catch (Exception e) {
-            // Si la excepción es "no encontrado", devuelve 404, sino 400.
-            // Esto podría mejorarse con manejo de excepciones más específico.
-            if (e.getMessage().contains("no encontrada")) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-            }
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            HttpStatus status = e.getMessage().contains("no encontrada") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            errorResponse.put("status", status.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(status).body(errorResponse);
         }
     }
 
@@ -69,9 +85,12 @@ public class CategoriaController {
     public ResponseEntity<?> deleteCategoria(@PathVariable Integer id) {
         try {
             categoriaService.deleteCategoria(id);
-            return ResponseEntity.noContent().build(); // O ResponseEntity.ok().body("Categoría eliminada");
+            return ResponseEntity.noContent().build();
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.dtos.DomicilioRequestDTO;
+import com.powerRanger.ElBuenSabor.dtos.DomicilioResponseDTO; // Importar DTO de respuesta
 import com.powerRanger.ElBuenSabor.entities.Domicilio;
 import com.powerRanger.ElBuenSabor.services.DomicilioService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,8 +29,11 @@ public class DomicilioController {
     public ResponseEntity<?> createDomicilio(@Valid @RequestBody DomicilioRequestDTO dto) {
         try {
             Domicilio nuevoDomicilio = domicilioService.create(dto);
-            return new ResponseEntity<>(nuevoDomicilio, HttpStatus.CREATED);
+            // Mapear la entidad guardada a DomicilioResponseDTO para la respuesta
+            DomicilioResponseDTO responseDto = domicilioService.getById(nuevoDomicilio.getId());
+            return new ResponseEntity<>(responseDto, HttpStatus.CREATED);
         } catch (ConstraintViolationException e) {
+            // ... (manejo de ConstraintViolationException como lo tenías)
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
             errorResponse.put("error", "Error de validación");
@@ -38,17 +42,17 @@ public class DomicilioController {
                     .collect(Collectors.toList()));
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         } catch (Exception e) {
-            Map<String, Object> errorResponse = new HashMap<>(); // ✅ CAMBIADO A Map<String, Object>
-            errorResponse.put("status", HttpStatus.BAD_REQUEST.value()); // Ahora esto es válido
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
             errorResponse.put("error", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
         }
     }
 
     @GetMapping
-    public ResponseEntity<List<Domicilio>> getAllDomicilios() {
+    public ResponseEntity<List<DomicilioResponseDTO>> getAllDomicilios() { // Devuelve Lista de DTOs
         try {
-            List<Domicilio> domicilios = domicilioService.getAll();
+            List<DomicilioResponseDTO> domicilios = domicilioService.getAll();
             if (domicilios.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -59,10 +63,10 @@ public class DomicilioController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getDomicilioById(@PathVariable Integer id) {
+    public ResponseEntity<?> getDomicilioById(@PathVariable Integer id) { // Devuelve DTO o Error
         try {
-            Domicilio domicilio = domicilioService.getById(id);
-            return ResponseEntity.ok(domicilio);
+            DomicilioResponseDTO domicilioDto = domicilioService.getById(id);
+            return ResponseEntity.ok(domicilioDto);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.NOT_FOUND.value());
@@ -75,8 +79,11 @@ public class DomicilioController {
     public ResponseEntity<?> updateDomicilio(@PathVariable Integer id, @Valid @RequestBody DomicilioRequestDTO dto) {
         try {
             Domicilio domicilioActualizado = domicilioService.update(id, dto);
-            return ResponseEntity.ok(domicilioActualizado);
+            // Mapear la entidad actualizada a DomicilioResponseDTO para la respuesta
+            DomicilioResponseDTO responseDto = domicilioService.getById(domicilioActualizado.getId());
+            return ResponseEntity.ok(responseDto);
         } catch (ConstraintViolationException e) {
+            // ... (manejo de ConstraintViolationException como lo tenías) ...
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
             errorResponse.put("error", "Error de validación al actualizar");
