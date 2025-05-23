@@ -6,6 +6,7 @@ import com.powerRanger.ElBuenSabor.services.ClienteService;
 // import com.powerRanger.ElBuenSabor.services.UsuarioService; // Para obtener el usuario autenticado
 // import org.springframework.security.core.Authentication; // Para obtener el usuario autenticado
 // import org.springframework.security.oauth2.jwt.Jwt; // Para obtener el auth0Id
+import com.powerRanger.ElBuenSabor.services.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +20,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+
 @RestController
 @RequestMapping("/api/clientes")
 @Validated
@@ -28,6 +32,8 @@ public class ClienteController {
     private ClienteService clienteService;
     // @Autowired // Descomentar cuando se implemente la lógica de perfil
     // private UsuarioService usuarioService;
+    @Autowired
+    private UsuarioService usuarioService;
 
     @PostMapping
     public ResponseEntity<?> createCliente(@Valid @RequestBody ClienteRequestDTO dto) {
@@ -69,6 +75,20 @@ public class ClienteController {
     public ResponseEntity<?> getClienteById(@PathVariable Integer id) {
         try {
             Cliente cliente = clienteService.getClienteById(id);
+            return ResponseEntity.ok(cliente);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new HashMap<>();
+            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+            errorResponse.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/usuario/{usuarioId}") // <--- Nuevo endpoint para obtener cliente por Usuario ID
+    public ResponseEntity<?> getClienteByUsuarioId(@PathVariable Integer usuarioId) {
+        try {
+            Cliente cliente = clienteService.getClienteByUsuarioId(usuarioId)
+                    .orElseThrow(() -> new Exception("Cliente no encontrado para el Usuario ID: " + usuarioId));
             return ResponseEntity.ok(cliente);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
