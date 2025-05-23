@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
-
+import java.util.Optional;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -41,6 +41,13 @@ public class ClienteServiceImpl implements ClienteService {
     public Cliente getClienteById(Integer id) throws Exception {
         return clienteRepository.findById(id)
                 .orElseThrow(() -> new Exception("Cliente no encontrado con ID: " + id));
+    }
+
+    //agregado para obtener cliente por ID
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Cliente> getClienteByUsuarioId(Integer usuarioId) { // <--- Implementa este método
+        return clienteRepository.findByUsuarioId(usuarioId);
     }
 
     // Podríamos implementar:
