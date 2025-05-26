@@ -1,20 +1,21 @@
 package com.powerRanger.ElBuenSabor.services;
 
-import com.powerRanger.ElBuenSabor.dtos.*; // Importar todos los DTOs necesarios
+import com.powerRanger.ElBuenSabor.dtos.*;
 import com.powerRanger.ElBuenSabor.entities.*;
 import com.powerRanger.ElBuenSabor.repository.ClienteRepository;
 import com.powerRanger.ElBuenSabor.repository.DomicilioRepository;
 import com.powerRanger.ElBuenSabor.repository.UsuarioRepository;
-// import com.powerRanger.ElBuenSabor.repository.ImagenRepository; // Si se maneja imagen
+// import com.powerRanger.ElBuenSabor.repository.ImagenRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional; // Spring's Transactional
+import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects; // Asegúrate de tener este import si usas Objects::nonNull
 import java.util.stream.Collectors;
 
 @Service
@@ -24,11 +25,55 @@ public class ClienteServiceImpl implements ClienteService {
     @Autowired private ClienteRepository clienteRepository;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private DomicilioRepository domicilioRepository;
-    // @Autowired private ImagenRepository imagenRepository; // Si manejas la entidad Imagen directamente
-    // Inyectar servicios de Domicilio, etc., si los mappers están allí, o tener mappers aquí
-    @Autowired private DomicilioService domicilioService; // Para obtener DomicilioResponseDTO
+    // @Autowired private ImagenRepository imagenRepository;
+    @Autowired private DomicilioService domicilioService; // Lo mantengo por si se usa en el futuro
 
-    // Método de Mapeo de Entidad a DTO de Respuesta
+    // --- Mappers auxiliares para DomicilioResponseDTO ---
+    // (Similar a lo que tienes en SucursalServiceImpl, podrías centralizarlos)
+    private PaisResponseDTO convertPaisToDto(Pais pais) {
+        if (pais == null) return null;
+        PaisResponseDTO dto = new PaisResponseDTO();
+        dto.setId(pais.getId());
+        dto.setNombre(pais.getNombre());
+        return dto;
+    }
+
+    private ProvinciaResponseDTO convertProvinciaToDto(Provincia provincia) {
+        if (provincia == null) return null;
+        ProvinciaResponseDTO dto = new ProvinciaResponseDTO();
+        dto.setId(provincia.getId());
+        dto.setNombre(provincia.getNombre());
+        if (provincia.getPais() != null) {
+            dto.setPais(convertPaisToDto(provincia.getPais()));
+        }
+        return dto;
+    }
+
+    private LocalidadResponseDTO convertLocalidadToDto(Localidad localidad) {
+        if (localidad == null) return null;
+        LocalidadResponseDTO dto = new LocalidadResponseDTO();
+        dto.setId(localidad.getId());
+        dto.setNombre(localidad.getNombre());
+        if (localidad.getProvincia() != null) {
+            dto.setProvincia(convertProvinciaToDto(localidad.getProvincia()));
+        }
+        return dto;
+    }
+
+    private DomicilioResponseDTO convertDomicilioToDto(Domicilio domicilio) {
+        if (domicilio == null) return null;
+        DomicilioResponseDTO dto = new DomicilioResponseDTO();
+        dto.setId(domicilio.getId());
+        dto.setCalle(domicilio.getCalle());
+        dto.setNumero(domicilio.getNumero());
+        dto.setCp(domicilio.getCp());
+        if (domicilio.getLocalidad() != null) {
+            dto.setLocalidad(convertLocalidadToDto(domicilio.getLocalidad()));
+        }
+        return dto;
+    }
+    // --- Fin Mappers auxiliares ---
+
     private ClienteResponseDTO convertToResponseDto(Cliente cliente) {
         if (cliente == null) return null;
         ClienteResponseDTO dto = new ClienteResponseDTO();
@@ -48,32 +93,15 @@ public class ClienteServiceImpl implements ClienteService {
         }
 
         if (cliente.getDomicilios() != null) {
-            // Asumimos que DomicilioService tiene un método para convertir Domicilio a DomicilioResponseDTO
-            // o que tenemos un mapper aquí. Por simplicidad, lo haré aquí.
-            // Si DomicilioService.getById() devuelve DomicilioResponseDTO, sería mejor:
-            // dto.setDomicilios(cliente.getDomicilios().stream()
-            //          .map(dom -> {
-            //              try { return domicilioService.getById(dom.getId()); }
-            //              catch (Exception e) { return null; } // Manejar error
-            //          })
-            //          .filter(Objects::nonNull)
-            //          .collect(Collectors.toList()));
-            // Mapeo manual simplificado (asume que DomicilioResponseDTO se puede construir desde Domicilio)
-            dto.setDomicilios(cliente.getDomicilios().stream().map(dom -> {
-                DomicilioResponseDTO domDto = new DomicilioResponseDTO();
-                domDto.setId(dom.getId());
-                domDto.setCalle(dom.getCalle());
-                domDto.setNumero(dom.getNumero());
-                domDto.setCp(dom.getCp());
-                // Para la localidad dentro de domicilio, necesitaríamos un mapper anidado
-                // o que DomicilioResponseDTO ya la incluya si DomicilioService la mapea.
-                // Por ahora, esto es simplificado.
-                return domDto;
-            }).collect(Collectors.toList()));
+            // Usando el mapper de Domicilio completo
+            dto.setDomicilios(cliente.getDomicilios().stream()
+                    .map(this::convertDomicilioToDto) // Usa el mapper completo
+                    .collect(Collectors.toList()));
         }
 
         // if (cliente.getImagen() != null) {
-        //     dto.setImagenUrl(cliente.getImagen().getDenominacion()); // O mapear a ImagenResponseDTO
+        //     // Aquí deberías convertir Imagen a ImagenResponseDTO
+        //     // dto.setImagen(convertImagenToResponseDto(cliente.getImagen()));
         // }
         return dto;
     }
@@ -82,50 +110,46 @@ public class ClienteServiceImpl implements ClienteService {
         cliente.setNombre(dto.getNombre());
         cliente.setApellido(dto.getApellido());
         cliente.setTelefono(dto.getTelefono());
-        cliente.setEmail(dto.getEmail()); // Considerar validación de unicidad de email
+        cliente.setEmail(dto.getEmail());
         cliente.setFechaNacimiento(dto.getFechaNacimiento());
         cliente.setEstadoActivo(dto.getEstadoActivo() != null ? dto.getEstadoActivo() : true);
 
         if (dto.getUsuarioId() != null) {
             Usuario usuario = usuarioRepository.findById(dto.getUsuarioId())
                     .orElseThrow(() -> new Exception("Usuario no encontrado con ID: " + dto.getUsuarioId()));
-            // Validar si este usuario ya está asignado a otro cliente (si el ID del cliente actual es diferente)
+
+            // Solo validar si el usuario ya está asignado a OTRO cliente
+            Integer clienteIdActual = cliente.getId(); // Puede ser null si es una creación
             clienteRepository.findByUsuarioId(usuario.getId()).ifPresent(existingCliente -> {
-                if (!existingCliente.getId().equals(cliente.getId())) { // cliente.getId() será null en creación
-                    throw new RuntimeException("El Usuario ID " + dto.getUsuarioId() + " ya está asociado a otro cliente.");
+                if (clienteIdActual == null || !existingCliente.getId().equals(clienteIdActual)) {
+                    throw new RuntimeException("El Usuario ID " + dto.getUsuarioId() + " ya está asociado al cliente ID: " + existingCliente.getId());
                 }
             });
             cliente.setUsuario(usuario);
         } else {
+            // Si el usuario es opcional y se puede crear un cliente sin usuario,
+            // entonces esta excepción no debería lanzarse o el DTO debería permitir null.
+            // Asumiendo que siempre se requiere:
             throw new Exception("El ID de Usuario es obligatorio para el cliente.");
         }
 
-        // Manejar Domicilios
-        if (cliente.getDomicilios() == null) cliente.setDomicilios(new ArrayList<>());
-        // Estrategia: Sincronizar la lista de domicilios
-        List<Domicilio> domiciliosActuales = new ArrayList<>(cliente.getDomicilios());
-        List<Domicilio> domiciliosNuevos = new ArrayList<>();
+        if (cliente.getDomicilios() == null) {
+            cliente.setDomicilios(new ArrayList<>());
+        }
 
-        if (dto.getDomicilioIds() != null) {
+        List<Domicilio> domiciliosParaAsignar = new ArrayList<>();
+        if (dto.getDomicilioIds() != null && !dto.getDomicilioIds().isEmpty()) {
             for (Integer domicilioId : dto.getDomicilioIds()) {
                 Domicilio dom = domicilioRepository.findById(domicilioId)
                         .orElseThrow(() -> new Exception("Domicilio no encontrado con ID: " + domicilioId));
-                domiciliosNuevos.add(dom);
+                domiciliosParaAsignar.add(dom);
             }
         }
-        // Quitar los que ya no están
-        for (Domicilio domActual : domiciliosActuales) {
-            if (!domiciliosNuevos.contains(domActual)) {
-                cliente.removeDomicilio(domActual); // Usa el helper
-            }
+        // Sincronizar la lista de domicilios
+        cliente.getDomicilios().clear();
+        if (!domiciliosParaAsignar.isEmpty()) {
+            cliente.getDomicilios().addAll(domiciliosParaAsignar);
         }
-        // Añadir los nuevos
-        for (Domicilio domNuevo : domiciliosNuevos) {
-            if (!cliente.getDomicilios().contains(domNuevo)) { // Evitar duplicados si el helper no lo hace
-                cliente.addDomicilio(domNuevo); // Usa el helper
-            }
-        }
-        // La entidad Imagen se manejaría por separado, usualmente con subida de archivos
     }
 
     @Override
@@ -147,11 +171,11 @@ public class ClienteServiceImpl implements ClienteService {
     @Override
     @Transactional
     public ClienteResponseDTO createCliente(@Valid ClienteRequestDTO dto) throws Exception {
-        // Validar unicidad de email
-        // clienteRepository.findByEmail(dto.getEmail()).ifPresent(c -> {
-        //     throw new RuntimeException("El email '" + dto.getEmail() + "' ya está registrado.");
-        // });
-        // Validar unicidad de usuarioId
+        if (dto.getEmail() != null) { // Solo validar si el email se proporciona
+            clienteRepository.findByEmail(dto.getEmail()).ifPresent(c -> { // Asumiendo que tienes findByEmail
+                throw new RuntimeException("El email '" + dto.getEmail() + "' ya está registrado.");
+            });
+        }
         if (dto.getUsuarioId() != null && clienteRepository.findByUsuarioId(dto.getUsuarioId()).isPresent()) {
             throw new RuntimeException("El Usuario ID " + dto.getUsuarioId() + " ya está asociado a otro cliente.");
         }
@@ -168,6 +192,16 @@ public class ClienteServiceImpl implements ClienteService {
         Cliente clienteExistente = clienteRepository.findById(id)
                 .orElseThrow(() -> new Exception("Cliente no encontrado con ID: " + id));
 
+        // Validar cambio de email si es necesario
+        if (dto.getEmail() != null && !dto.getEmail().equals(clienteExistente.getEmail())) {
+            clienteRepository.findByEmail(dto.getEmail()).ifPresent(c -> {
+                if (!c.getId().equals(id)) { // Si el email pertenece a otro cliente
+                    throw new RuntimeException("El email '" + dto.getEmail() + "' ya está registrado por otro cliente.");
+                }
+            });
+        }
+        // Validar cambio de usuario si es necesario (ya se maneja en mapRequestDtoToEntity)
+
         mapRequestDtoToEntity(dto, clienteExistente);
         Cliente clienteActualizado = clienteRepository.save(clienteExistente);
         return convertToResponseDto(clienteActualizado);
@@ -176,21 +210,22 @@ public class ClienteServiceImpl implements ClienteService {
     @Override
     @Transactional
     public void softDeleteCliente(Integer id) throws Exception {
-        Cliente cliente = getClienteById(id). // Lanza excepción si no existe, getById ahora devuelve DTO
-                orElseThrow(() -> new Exception("Cliente no encontrado con ID: " + id)); // Necesitamos la entidad
+        // Obtener la ENTIDAD Cliente directamente del repositorio
+        Cliente clienteEntidad = clienteRepository.findById(id)
+                .orElseThrow(() -> new Exception("Cliente no encontrado con ID: " + id + " para borrado lógico"));
 
-        // Para obtener la entidad:
-        // Cliente clienteEntidad = clienteRepository.findById(id)
-        //    .orElseThrow(() -> new Exception("Cliente no encontrado con ID: " + id));
+        clienteEntidad.setEstadoActivo(false);
+        clienteEntidad.setFechaBaja(LocalDate.now());
 
-        cliente.setEstadoActivo(false);
-        cliente.setFechaBaja(LocalDate.now());
-        // Considerar desactivar el Usuario asociado si es exclusivo de este Cliente
-        // if (cliente.getUsuario() != null && cliente.getUsuario().getEstadoActivo()) {
-        //    cliente.getUsuario().setEstadoActivo(false);
-        //    cliente.getUsuario().setFechaBaja(LocalDate.now());
-        //    usuarioRepository.save(cliente.getUsuario());
+        // Opcional: Considerar desactivar el Usuario asociado si es exclusivo de este Cliente
+        // y si la lógica de negocio lo requiere.
+        // if (clienteEntidad.getUsuario() != null && clienteEntidad.getUsuario().getEstadoActivo()) {
+        //    Usuario usuarioAsociado = clienteEntidad.getUsuario();
+        //    usuarioAsociado.setEstadoActivo(false);
+        //    usuarioAsociado.setFechaBaja(LocalDate.now());
+        //    usuarioRepository.save(usuarioAsociado); // Guardar el usuario actualizado
         // }
-        clienteRepository.save(cliente);
+
+        clienteRepository.save(clienteEntidad); // Guardar la entidad Cliente actualizada
     }
 }
