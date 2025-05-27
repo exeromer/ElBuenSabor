@@ -1,11 +1,14 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
+import com.powerRanger.ElBuenSabor.dtos.CrearPedidoRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.PedidoEstadoRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.PedidoRequestDTO;
-import com.powerRanger.ElBuenSabor.dtos.PedidoResponseDTO; // Importar DTO de respuesta
-// import com.powerRanger.ElBuenSabor.entities.Pedido; // Ya no se devuelve entidad
+import com.powerRanger.ElBuenSabor.dtos.PedidoResponseDTO;
+import com.powerRanger.ElBuenSabor.entities.Cliente;
+import com.powerRanger.ElBuenSabor.entities.Usuario;
+import com.powerRanger.ElBuenSabor.repository.ClienteRepository;
 import com.powerRanger.ElBuenSabor.services.PedidoService;
-import com.powerRanger.ElBuenSabor.services.UsuarioService; // Sigue siendo necesario si usas Authentication
+import com.powerRanger.ElBuenSabor.services.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,12 +33,15 @@ public class PedidoController {
     private PedidoService pedidoService;
 
     @Autowired
-    private UsuarioService usuarioService; // Mantener para el endpoint /mis-pedidos si se usa
+    private UsuarioService usuarioService;
+
+    @Autowired
+    private ClienteRepository clienteRepository;
 
     @PostMapping
     public ResponseEntity<?> createPedidoForAuthenticatedClient(@Valid @RequestBody PedidoRequestDTO dto, Authentication authentication) {
         try {
-            if (authentication == null && dto.getClienteId() == null) { // Modo prueba sin token y sin clienteId
+            if (authentication == null && dto.getClienteId() == null) {
                 throw new Exception("Para crear un pedido sin autenticación (modo prueba), se requiere clienteId en el DTO.");
             }
 
@@ -44,7 +50,7 @@ public class PedidoController {
                 Jwt jwt = (Jwt) authentication.getPrincipal();
                 String auth0Id = jwt.getSubject();
                 nuevoPedidoDto = pedidoService.createForAuthenticatedClient(auth0Id, dto);
-            } else { // Sin autenticación (permitAll) o clienteId provisto para admin
+            } else {
                 nuevoPedidoDto = pedidoService.create(dto);
             }
             return new ResponseEntity<>(nuevoPedidoDto, HttpStatus.CREATED);
@@ -116,6 +122,67 @@ public class PedidoController {
             return ResponseEntity.ok(pedidoDto);
         } catch (Exception e) {
             return handleGenericException(e, HttpStatus.NOT_FOUND);
+        }
+    }
+
+    /**
+     * Crea un Pedido a partir del carrito de un Cliente específico.
+     * Versión actual para pruebas: El cliente se identifica por el clienteId en la URL.
+     */
+    @PostMapping("/cliente/{clienteId}/desde-carrito") // La URL incluye clienteId
+    public ResponseEntity<?> crearPedidoDesdeCarrito(
+            @PathVariable Integer clienteId, // Se toma el clienteId del path
+            @Valid @RequestBody CrearPedidoRequestDTO pedidoRequest) {
+
+        // ------------------------------------------------------------------------------------
+        // NOTA PARA EL FUTURO (FLUJO CORRECTO CON AUTENTICACIÓN JWT/AUTH0 ACTIVA):
+        // Cuando la seguridad con Auth0 esté completamente integrada y los clientes
+        // envíen un token JWT válido, este endpoint debería idealmente obtener la identidad
+        // del cliente a partir del token (Authentication Principal), en lugar de un ID en la URL,
+        // para acciones que el cliente realiza sobre sus propios datos.
+        //
+        // La firma del método cambiaría a algo como:
+        // @PostMapping("/desde-carrito") // URL podría ser más genérica para el cliente autenticado
+        // public ResponseEntity<?> crearPedidoDesdeCarritoAutenticado(
+        //         @Valid @RequestBody CrearPedidoRequestDTO pedidoRequest,
+        //         Authentication authentication) { // Spring Security inyecta el objeto Authentication
+        //
+        // Y la lógica para obtener el cliente sería:
+        // if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+        //     throw new Exception("Se requiere autenticación para confirmar el pedido desde el carrito.");
+        // }
+        // Jwt jwt = (Jwt) authentication.getPrincipal();
+        // String auth0Id = jwt.getSubject();
+        // Usuario usuarioAutenticado = usuarioService.findActualByAuth0Id(auth0Id) // Usando el método corregido
+        //     .orElseThrow(() -> new Exception("Usuario autenticado (Auth0 ID: " + auth0Id + ") no encontrado."));
+        // Cliente cliente = clienteRepository.findByUsuarioId(usuarioAutenticado.getId())
+        //     .orElseThrow(() -> new Exception("Perfil de Cliente no encontrado para el usuario: " + usuarioAutenticado.getUsername()));
+        // // ... luego se llama a pedidoService.crearPedidoDesdeCarrito(cliente, pedidoRequest);
+        // ------------------------------------------------------------------------------------
+
+        try {
+            // Lógica actual (para probar sin token JWT o para uso por roles como admin):
+            // Obtener el Cliente directamente usando el clienteId del path.
+            Cliente cliente = clienteRepository.findById(clienteId)
+                    .orElseThrow(() -> new Exception("Cliente no encontrado con ID: " + clienteId + ". No se puede crear pedido desde carrito."));
+
+            // Llamar al servicio con la entidad Cliente obtenida
+            PedidoResponseDTO nuevoPedidoDto = pedidoService.crearPedidoDesdeCarrito(cliente, pedidoRequest);
+            return new ResponseEntity<>(nuevoPedidoDto, HttpStatus.CREATED);
+
+        } catch (ConstraintViolationException e) {
+            return handleConstraintViolation(e);
+        } catch (Exception e) {
+            HttpStatus status = HttpStatus.BAD_REQUEST;
+            if (e.getMessage().contains("No se encontró un carrito") ||
+                    e.getMessage().contains("El carrito está vacío") ||
+                    e.getMessage().contains("no encontrado con ID:") ||
+                    e.getMessage().contains("no pertenece al cliente")) {
+                status = HttpStatus.NOT_FOUND;
+            } else if (e.getMessage().contains("Stock insuficiente")) {
+                status = HttpStatus.CONFLICT;
+            }
+            return handleGenericException(e, status);
         }
     }
 
