@@ -29,7 +29,6 @@ import type {
   UnidadMedida,
   ArticuloInsumo,
   ArticuloManufacturadoRequestDTO,
-  ArticuloManufacturadoDetalleDTO,
   // Se eliminaron los tipos no utilizados o que ya no son necesarios de importar directamente aquí
   // ArticuloManufacturadoDetalle, // No se usa directamente aquí, se mapea a DTO
   // ImagenRequestDTO // No se usa para tipificar el estado, es un DTO para el backend

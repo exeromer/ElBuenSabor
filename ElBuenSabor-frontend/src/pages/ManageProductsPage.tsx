@@ -19,22 +19,23 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Card, Button, Table, Spinner, Alert, Tabs, Tab } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
-import { getArticulosInsumo, deleteArticuloInsumo } from '../services/articuloInsumoService'; 
-import { getArticulosManufacturados, deleteArticuloManufacturado } from '../services/articuloManufacturadoService'; 
-import { deleteImageEntity } from '../services/imagenService'; 
-import { deleteFileFromServer } from '../services/fileUploadService'; 
+import { getArticulosInsumo, deleteArticuloInsumo } from '../services/articuloInsumoService';
+import { getArticulosManufacturados, deleteArticuloManufacturado } from '../services/articuloManufacturadoService';
+import { deleteImageEntity } from '../services/imagenService';
+import { deleteFileFromServer } from '../services/fileUploadService';
 import type { ArticuloManufacturado, ArticuloInsumo, Imagen } from '../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faEdit, faTrash, faBoxOpen, faTools } from '@fortawesome/free-solid-svg-icons';
-import ArticuloInsumoForm from '../components/admin/ArticuloInsumoForm'; 
-import ArticuloManufacturadoForm from '../components/admin/ArticuloManufacturadoForm'; 
+import { faPlus, faEdit, faTrash, faBoxOpen, faTools, faEye } from '@fortawesome/free-solid-svg-icons';
+import ArticuloInsumoForm from '../components/admin/ArticuloInsumoForm';
+import ArticuloManufacturadoForm from '../components/admin/ArticuloManufacturadoForm';
+import ArticuloManufacturadoDetailModal from '../components/admin/ArticuloManufacturadoDetailModal';
 
 /**
  * @interface ManageProductsPageProps
  * @description No se requieren propiedades (`props`) para este componente de página de gestión,
  * por lo que se define una interfaz vacía para claridad.
  */
-interface ManageProductsPageProps {}
+interface ManageProductsPageProps { }
 
 const ManageProductsPage: React.FC<ManageProductsPageProps> = () => {
   /**
@@ -101,6 +102,13 @@ const ManageProductsPage: React.FC<ManageProductsPageProps> = () => {
   const [editingManufacturado, setEditingManufacturado] = useState<ArticuloManufacturado | null>(null);
 
   /**
+   * @state showManufacturadoDetailModal
+   * @description Controla la visibilidad del modal `ArticuloManufactuadoDetailModal`.
+   */
+  const [showManufacturadoDetailModal, setShowManufacturadoDetailModal] = useState(false);
+  const [selectedManufacturadoForDetail, setSelectedManufacturadoForDetail] = useState<ArticuloManufacturado | null>(null);
+
+  /**
    * @function fetchData
    * @description Función asíncrona para cargar todos los artículos manufacturados e insumos del backend.
    * Actualiza los estados `manufacturados`, `insumos`, `loading` y `error`.
@@ -133,6 +141,11 @@ const ManageProductsPage: React.FC<ManageProductsPageProps> = () => {
   useEffect(() => {
     fetchData();
   }, []); // Dependencias vacías: se ejecuta solo una vez al montar
+
+  const handleViewManufacturado = async (manufacturado: ArticuloManufacturado) => {
+    setSelectedManufacturadoForDetail(manufacturado);
+    setShowManufacturadoDetailModal(true);
+  };
 
   /**
    * @function handleEditInsumo
@@ -293,8 +306,6 @@ const ManageProductsPage: React.FC<ManageProductsPageProps> = () => {
                     <tr>
                       <th>ID</th>
                       <th>Denominación</th>
-                      <th>Precio Venta</th>
-                      <th>Categoría</th>
                       <th>Estado</th>
                       <th>Acciones</th>
                     </tr>
@@ -304,14 +315,14 @@ const ManageProductsPage: React.FC<ManageProductsPageProps> = () => {
                       <tr key={am.id}>
                         <td>{am.id}</td>
                         <td>{am.denominacion}</td>
-                        <td>${am.precioVenta.toFixed(2)}</td>
-                        <td>{am.categoria.denominacion}</td>
                         <td>{am.estadoActivo ? 'Activo' : 'Inactivo'}</td>
                         <td>
-                          <Button variant="info" size="sm" className="me-2" onClick={() => handleEditManufacturado(am)}>
+                          <Button variant='ver' size="sm" className="me-3" onClick={() => handleViewManufacturado(am)}>
+                            <FontAwesomeIcon icon={faEye} className="me-1" /> Ver
+                          </Button>
+                          <Button variant="edit" size="sm" className="me-2" onClick={() => handleEditManufacturado(am)}>
                             <FontAwesomeIcon icon={faEdit} className="me-1" /> Editar
                           </Button>
-                          {/* Al eliminar, se pasa el array de imágenes para gestionar su borrado */}
                           <Button variant="danger" size="sm" onClick={() => handleDeleteManufacturado(am.id, am.imagenes)}>
                             <FontAwesomeIcon icon={faTrash} className="me-1" /> Eliminar
                           </Button>
@@ -395,6 +406,11 @@ const ManageProductsPage: React.FC<ManageProductsPageProps> = () => {
         handleClose={() => setShowManufacturadoForm(false)}
         onSave={handleFormSubmit}
         articuloToEdit={editingManufacturado}
+      />
+      <ArticuloManufacturadoDetailModal
+        show={showManufacturadoDetailModal}
+        handleClose={() => setShowManufacturadoDetailModal(false)}
+        articulo={selectedManufacturadoForDetail}
       />
     </Container>
   );

@@ -5,7 +5,9 @@
  */
 
 import apiClient, { setAuthToken } from './apiClient';
-import type { ArticuloInsumo } from '../types/types';
+import type { ArticuloInsumo, ArticuloInsumoRequestDTO, ArticuloInsumoResponseDTO } from '../types/types';
+
+
 
 /**
  * @function getArticulosInsumo
@@ -30,9 +32,9 @@ export const getArticulosInsumo = async (): Promise<ArticuloInsumo[]> => {
  * @param {string} token - El token JWT para la autenticación.
  * @returns {Promise<ArticuloInsumo>} Una promesa que resuelve con el artículo insumo creado.
  */
-export const createArticuloInsumo = async (data: ArticuloInsumo, token: string): Promise<ArticuloInsumo> => {
+export const createArticuloInsumo = async (data: ArticuloInsumoRequestDTO, token: string): Promise<ArticuloInsumoResponseDTO> => {
   setAuthToken(token);
-  const response = await apiClient.post<ArticuloInsumo>('/articulosinsumo', data);
+  const response = await apiClient.post<ArticuloInsumoResponseDTO>('/articulosinsumo', data);
   return response.data;
 };
 
@@ -44,9 +46,9 @@ export const createArticuloInsumo = async (data: ArticuloInsumo, token: string):
  * @param {string} token - El token JWT para la autenticación.
  * @returns {Promise<ArticuloInsumo>} Una promesa que resuelve con el artículo insumo actualizado.
  */
-export const updateArticuloInsumo = async (id: number, data: ArticuloInsumo, token: string): Promise<ArticuloInsumo> => {
+export const updateArticuloInsumo = async (id: number, data: ArticuloInsumoRequestDTO, token: string): Promise<ArticuloInsumoResponseDTO> => {
   setAuthToken(token);
-  const response = await apiClient.put<ArticuloInsumo>(`/articulosinsumo/${id}`, data);
+  const response = await apiClient.put<ArticuloInsumoResponseDTO>(`/articulosinsumo/${id}`, data);
   return response.data;
 };
 
@@ -61,3 +63,5 @@ export const deleteArticuloInsumo = async (id: number, token: string): Promise<v
   setAuthToken(token);
   await apiClient.delete(`/articulosinsumo/${id}`);
 };
+
+

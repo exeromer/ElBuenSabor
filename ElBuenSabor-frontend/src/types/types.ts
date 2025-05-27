@@ -407,6 +407,64 @@ export interface DomicilioRequestDTO {
   localidadId: number; // ID de la localidad a la que pertenece
 }
 
+/**
+ * @interface ArticuloInsumoRequestDTO
+ * @description DTO para crear o actualizar un artículo insumo.
+ * Corresponde al DTO `ArticuloInsumoRequestDTO` en el backend.
+ */
+export interface ArticuloInsumoRequestDTO {
+  denominacion: string;
+  precioVenta: number;
+  unidadMedidaId: number;
+  categoriaId: number;
+  estadoActivo: boolean;
+  precioCompra?: number | null; // Hacer opcional o permitir null
+  stockActual: number;
+  stockMaximo?: number | null; // Hacer opcional o permitir null
+  esParaElaborar: boolean;
+  // imagenIds?: number[]; // Opcional, si decides manejar la asociación de imágenes existentes por ID
+}
+/**
+ * @interface ArticuloBaseResponseDTO
+ * @description DTO para representar un artículo en la respuesta del backend.
+ * Corresponde al DTO `ArticuloBaseResponseDTO` en el backend.
+ */
+export interface ArticuloBaseResponseDTO {
+  id: number;
+  denominacion: string;
+  precioVenta: number;
+  estadoActivo: boolean;
+  unidadMedida: { id: number; denominacion: string }; // Asumiendo que estos son objetos simples
+  categoria: { id: number; denominacion: string };  // Asumiendo que estos son objetos simples
+  imagenes: Imagen[];
+  type: 'insumo' | 'manufacturado'; // Propiedad discriminadora
+}
+
+/**
+ * @interface ArticuloInsumoResponseDTO
+ * @description DTO para representar un artículo insumo en la respuesta del backend.
+ * Corresponde al DTO `ArticuloInsumoResponseDTO` en el backend.
+ */
+export interface ArticuloInsumoResponseDTO extends ArticuloBaseResponseDTO {
+  type: 'insumo'; // Para el discriminador si ArticuloBaseResponseDTO lo usa
+  precioCompra?: number | null; // Hacer opcionales o null si pueden no venir
+  stockActual: number;
+  stockMaximo?: number | null;
+  esParaElaborar: boolean;
+  // Otros campos específicos si los tuviera
+}
+/**
+ * @interface ArticuloManufacturadoResponseDTO
+ * @description DTO para representar un artikel manufacturado en la respuesta del backend.
+ * Corresponde al DTO `ArticuloManufacturadoResponseDTO` en el backend.
+ */
+export interface ArticuloManufacturadoDetalleResponseDTO { // Asumiendo que necesitas esto
+  id: number;
+  cantidad: number;
+  articuloInsumo: { id: number, denominacion: string, precioVenta: number }; // ArticuloSimpleResponseDTO
+  estadoActivo: boolean;
+}
+
 // ==============================================================
 // --- Otros Tipos Específicos del Frontend ---
 // ==============================================================

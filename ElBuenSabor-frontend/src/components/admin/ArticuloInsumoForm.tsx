@@ -21,7 +21,7 @@ import { getUnidadesMedida } from '../../services/unidadMedidaService';
 import { uploadFile, deleteFileFromServer, getImageUrl } from '../../services/fileUploadService';
 import { deleteImageEntity } from '../../services/imagenService';
 // Se ajusta la importación de tipos a la nueva ruta types.ts
-import type { ArticuloInsumo, Categoria, UnidadMedida } from '../../types/types'; // Se eliminó ImagenRequestDTO ya que no se tipifica el formData con él.
+import type { ArticuloInsumo, Categoria, UnidadMedida, ArticuloInsumoResponseDTO } from '../../types/types'; // Se eliminó ImagenRequestDTO ya que no se tipifica el formData con él.
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle } from '@fortawesome/free-solid-svg-icons'; // Se eliminó faUpload ya que no se usa directamente en un botón o icono visualizado.
 
@@ -279,54 +279,59 @@ const ArticuloInsumoForm: React.FC<ArticuloInsumoFormProps> = ({ show, handleClo
     try {
       const token = await getAccessTokenSilently(); // Obtiene el token de autenticación
 
-      // --- Validaciones básicas del formulario ---
-      if (!formData.denominacion || formData.precioVenta <= 0 || !formData.categoria.id || !formData.unidadMedida.id) {
-        setError('Por favor, completa todos los campos obligatorios (Denominación, Precio Venta, Categoría, Unidad de Medida).');
+      // --- Validaciones del formulario ---
+      if (!formData.denominacion ||
+        (formData.precioVenta != null && Number(formData.precioVenta) <= 0) ||
+        !formData.categoria?.id || formData.categoria.id === 0 ||
+        !formData.unidadMedida?.id || formData.unidadMedida.id === 0 ||
+        formData.stockActual == null || Number(formData.stockActual) < 0 ||
+        (formData.precioCompra != null && Number(formData.precioCompra) < 0) ||
+        (formData.stockMaximo != null && Number(formData.stockMaximo) < 0)
+      ) {
+        setError('Por favor, completa todos los campos obligatorios correctamente. Asegúrate que Categoría y Unidad de Medida estén seleccionados y los valores numéricos sean válidos.');
         setSubmitting(false);
         return;
       }
-      if (formData.precioCompra < 0 || formData.stockActual < 0 || formData.stockMaximo < 0) {
-        setError('Los valores numéricos (Precio Compra, Stock Actual, Stock Máximo) no pueden ser negativos.');
-        setSubmitting(false);
-        return;
-      }
-
-      let uploadedImageUrl: string | null = null;
-      let newImageEntityId: number | null = null;
-
-      // Si se seleccionó un nuevo archivo de imagen, se sube primero
-      if (selectedFile) {
-        const uploadResponse = await uploadFile(selectedFile, token, formData.id || undefined); // Pasa articuloId si es una edición
-        uploadedImageUrl = uploadResponse.url; // URL completa de la imagen subida
-        newImageEntityId = uploadResponse.imagenDB.id; // ID de la entidad Imagen en la DB
-      }
-
-      // Prepara el objeto ArticuloInsumo para enviar al backend
-      const articuloInsumoToSend: ArticuloInsumo = {
-        ...formData,
-        // Asegurarse de enviar solo los IDs y denominaciones necesarias para las relaciones
-        categoria: { id: formData.categoria.id, denominacion: formData.categoria.denominacion },
-        unidadMedMedida: { id: formData.unidadMedida.id, denominacion: formData.unidadMedida.denominacion }, // Corrección: Typo en 'unidadMedMedida' -> 'unidadMedida'
-        // Si se subió una nueva imagen, se reemplazan todas las imágenes existentes con la nueva.
-        // Para ArticuloInsumo, se asume que solo tendrá una imagen principal.
-        imagenes: newImageEntityId ? [{ id: newImageEntityId, denominacion: uploadedImageUrl!, estadoActivo: true }] : formData.imagenes,
+      const payload = {
+        denominacion: formData.denominacion,
+        precioVenta: Number(formData.precioVenta),
+        unidadMedidaId: formData.unidadMedida.id,
+        categoriaId: formData.categoria.id,
+        estadoActivo: formData.estadoActivo,
+        precioCompra: formData.precioCompra != null ? Number(formData.precioCompra) : null,
+        stockActual: Number(formData.stockActual),
+        stockMaximo: formData.stockMaximo != null ? Number(formData.stockMaximo) : null,
+        esParaElaborar: formData.esParaElaborar,
       };
 
-      // Decide si crear o actualizar basándose en la existencia de `articuloToEdit`
+      let savedArticulo: ArticuloInsumoResponseDTO; // El servicio backend ahora devuelve DTO
+
       if (articuloToEdit) {
-        await updateArticuloInsumo(articuloToEdit.id, articuloInsumoToSend, token);
+        savedArticulo = await updateArticuloInsumo(articuloToEdit.id, payload, token);
         alert('Artículo Insumo actualizado con éxito.');
       } else {
-        await createArticuloInsumo(articuloInsumoToSend, token);
+        savedArticulo = await createArticuloInsumo(payload, token);
         alert('Artículo Insumo creado con éxito.');
+      }
+
+      // Lógica para subir imagen si hay un archivo seleccionado y el artículo se guardó
+      if (selectedFile && savedArticulo && savedArticulo.id) {
+        try {
+          await uploadFile(selectedFile, token, savedArticulo.id, undefined); // Asocia al artículo
+        } catch (uploadError) {
+          console.error("Error al subir la imagen después de guardar el artículo:", uploadError);
+          // Podrías querer informar al usuario que el artículo se guardó pero la imagen no.
+          setError((prevError) => (prevError ? prevError + " " : "") + "Artículo guardado, pero hubo un error al subir la imagen.");
+        }
       }
 
       onSave(); // Llama al callback `onSave` para notificar al componente padre
       handleClose(); // Cierra el modal
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error al guardar artículo insumo:', err);
-      // Extrae el mensaje de error de la respuesta de Axios o un mensaje genérico
-      const errorMessage = (err as any).response?.data?.message || (err as any).message || 'Error desconocido al guardar.';
+      // Intenta obtener el mensaje de error del cuerpo de la respuesta del backend si está disponible
+      const backendError = err.response?.data?.error || err.response?.data?.message || (Array.isArray(err.response?.data?.mensajes) ? err.response.data.mensajes.join(', ') : null);
+      const errorMessage = backendError || err.message || 'Error desconocido al guardar.';
       setError(`Error al guardar: ${errorMessage}`);
     } finally {
       setSubmitting(false); // Desactiva el estado de envío

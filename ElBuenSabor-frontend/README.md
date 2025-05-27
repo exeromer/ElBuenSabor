@@ -14,36 +14,37 @@ Gestión de Usuarios y Clientes: CRUD para usuarios y clientes, incluyendo la mo
 (Próximamente: Gestión de Pedidos en el dashboard de administración)
 Página "Mis Pedidos": Los clientes pueden visualizar su historial de pedidos y el estado actual de cada uno.
 Persistencia Local: El carrito de compras se guarda automáticamente en el navegador.
+
 📦 Estructura del Proyecto
 El frontend sigue una estructura modular para facilitar la mantenibilidad y escalabilidad:
 
 src/
-├── assets/                  # Activos estáticos (imágenes, etc.)
-├── components/              # Componentes React reutilizables
-│   ├── admin/               # Formularios y UI para el panel de administración
-│   ├── auth/                # Componentes relacionados con la autenticación (ej. PrivateRoute)
-│   ├── common/              # Componentes de UI comunes (Header, Footer)
-│   ├── products/            # Componentes específicos de productos (ej. ProductCard)
+├── assets/                      # Activos estáticos (imágenes, etc.)
+├── components/                  # Componentes React reutilizables
+│   ├── admin/                   # Formularios y UI para el panel de administración
+│   ├── auth/                    # Componentes relacionados con la autenticación (ej. PrivateRoute)
+│   ├── common/                  # Componentes de UI comunes (Header, Footer)
+│   ├── products/                # Componentes específicos de productos (ej. ProductCard)
 │   └── (otros componentes...)
-├── context/                 # Contextos de React para gestión de estado global (ej. CartContext)
-├── pages/                   # Componentes de página (vistas principales de la aplicación)
-│   └── admin/               # Páginas específicas del panel de administración
-├── services/                # Módulos para interactuar con la API RESTful (Axios configurado)
-│   ├── apiClient.ts         # Configuración base de Axios y token auth
+├── context/                     # Contextos de React para gestión de estado global (ej. CartContext)
+├── pages/                       # Componentes de página (vistas principales de la aplicación)
+│   └── admin/                   # Páginas específicas del panel de administración
+├── services/                    # Módulos para interactuar con la API RESTful (Axios configurado)
+│   ├── apiClient.ts             # Configuración base de Axios y token auth
 │   ├── articuloInsumoService.ts
 │   ├── articuloManufacturadoService.ts
 │   ├── categoriaService.ts
 │   ├── clienteUsuarioService.ts
 │   ├── domicilioService.ts
-│   ├── fileUploadService.ts # Gestión de subida/bajada de archivos e URLs de imagen
-│   ├── imagenService.ts     # CRUD de entidades de imagen en DB
+│   ├── fileUploadService.ts     # Gestión de subida/bajada de archivos e URLs de imagen
+│   ├── imagenService.ts         # CRUD de entidades de imagen en DB
 │   ├── pedidoService.ts
 │   ├── sucursalService.ts
-│   ├── ubicacionService.ts  # Países, Provincias, Localidades
+│   ├── ubicacionService.ts      # Países, Provincias, Localidades
 │   └── unidadMedidaService.ts
-├── types/                   # Definiciones de tipos e interfaces TypeScript globales (types.ts)
-└── App.tsx                  # Componente raíz de la aplicación y configuración de rutas
-└── main.tsx                 # Punto de entrada de la aplicación
+├── types/                       # Definiciones de tipos e interfaces TypeScript globales (types.ts)
+└── App.tsx                      # Componente raíz de la aplicación y configuración de rutas
+└── main.tsx                     # Punto de entrada de la aplicación
 
 🛠️ Tecnologías Utilizadas
 React: Biblioteca de JavaScript para construir interfaces de usuario.
@@ -56,25 +57,62 @@ Font Awesome: Biblioteca de iconos escalables.
 date-fns: Librería para manipular y formatear fechas.
 
 🚀 Puesta en Marcha (Desarrollo)
-Clona el repositorio:
 
-git clone [URL_DEL_REPOSITORIO]
-cd el-buen-sabor-frontend
-Instala las dependencias:
+1.  **Clona el repositorio:**
+    ```bash
+    git clone [URL_DEL_REPOSITORIO_FRONTEND]
+    cd el-buen-sabor-frontend
+    ```
 
-npm install
+2.  **Instala las dependencias:**
+    ```bash
+    npm install
+    ```
 
-Crea un archivo .env en la raíz del proyecto y añade las siguientes variables:
+3.  **Variables de Entorno (`.env`):**
+    Crea un archivo `.env` en la raíz del proyecto (`el-buen-sabor-frontend/.env`) y añade las siguientes variables con tu configuración específica:
+    ```env
+    VITE_API_URL=http://localhost:8080/api
+    VITE_AUTH0_DOMAIN=dev-e7rix4gh8kwqcqy1.us.auth0.com
+    VITE_AUTH0_CLIENT_ID=vL0XaMQlQkj7DrZbFAKXEfAJ6Jtoqj8n
+    VITE_AUTH0_AUDIENCE=[https://api.elbuensabor.com]
+    VITE_AUTH0_SCOPE=openid profile email
+    ```
+    * **`VITE_API_URL`**: URL base de tu API backend.
+    * **`VITE_AUTH0_DOMAIN`**: Tu dominio de Auth0 (ej. `tu-tenant.us.auth0.com`).
+    * **`VITE_AUTH0_CLIENT_ID`**: El Client ID de tu aplicación SPA en Auth0.
+    * **`VITE_AUTH0_AUDIENCE`**: El Identifier (Audience) de tu API registrada en Auth0.
+    * **`VITE_AUTH0_SCOPE`**: Scopes OAuth solicitados.
 
-VITE_API_URL=http://localhost:8080/api/v1/buensabor # URL de tu backend
-VITE_AUTH0_DOMAIN=your_auth0_domain.auth0.com       # Tu dominio de Auth0
-VITE_AUTH0_CLIENT_ID=your_auth0_client_id            # Tu Client ID de Auth0 (SPA Application)
-VITE_AUTH0_AUDIENCE=your_auth0_audience              # Tu Audience de Auth0 (identificador de tu API)
-VITE_AUTH0_SCOPE=openid profile email                # Scopes requeridos
-(Asegúrate de reemplazar los valores your_auth0_... con los de tu configuración real de Auth0 y backend)
+4.  **Configuración de Auth0 (Dashboard):**
+    * **Aplicación SPA:**
+        * **Allowed Callback URLs:** `http://localhost:5173`
+        * **Allowed Logout URLs:** `http://localhost:5173`
+        * **Allowed Web Origins:** `http://localhost:5173`
+    * **API:**
+        * Asegúrate de que el **Identifier** de tu API coincida con `VITE_AUTH0_AUDIENCE`.
 
-Inicia la aplicación en modo desarrollo:
+5.  **Usuarios de Prueba (Crear en Auth0 Dashboard):**
+    Para probar la aplicación, crea los siguientes usuarios en tu dashboard de Auth0 (User Management > Users > "+ Create User"):
 
-npm run dev
+    * **Contraseña para ambos usuarios:** `#hola1234`
 
-La aplicación debería abrirse en http://localhost:5173 
+    * **Usuario Cliente:**
+        * **Email:** `ana.garcia@example.com`
+        * **Nota:** Al iniciar sesión por primera vez, el backend creará una entrada para este usuario en la base de datos interna con el rol `CLIENTE` por defecto.
+
+    * **Usuario Administrador (para acceder al CRUD):**
+        * **Email:** `luisluis@admin.com`
+        * **Nota:**
+            1.  Inicia sesión en el frontend con este usuario. El backend creará una entrada en la tabla `usuario` con rol `CLIENTE`.
+            2.  **Accede a tu base de datos MySQL** y modifica la columna `rol` de este usuario a `'ADMIN'`.
+            3.  Cierra sesión y vuelve a iniciar sesión para tener permisos de administrador.
+
+6.  **Iniciar la Aplicación:**
+    * Asegúrate de que tu servidor backend Spring Boot ("ElBuenSabor") esté corriendo.
+    * En la terminal, dentro de la carpeta `el-buen-sabor-frontend`:
+        ```bash
+        npm run dev
+        ```
+    La aplicación frontend debería abrirse en `http://localhost:5173`.
+
