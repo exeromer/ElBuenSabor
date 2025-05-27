@@ -2,6 +2,7 @@ package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoResponseDTO; // DTO de respuesta
+import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoResponseDTO;
 import com.powerRanger.ElBuenSabor.entities.ArticuloInsumo; // Para el @RequestBody
 import com.powerRanger.ElBuenSabor.services.ArticuloInsumoService;
 import org.springframework.beans.factory.annotation.Autowired;

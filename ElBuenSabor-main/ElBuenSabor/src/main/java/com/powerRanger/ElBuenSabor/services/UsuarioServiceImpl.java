@@ -1,7 +1,7 @@
 package com.powerRanger.ElBuenSabor.services;
 
 import com.powerRanger.ElBuenSabor.dtos.UsuarioRequestDTO;
-import com.powerRanger.ElBuenSabor.dtos.UsuarioResponseDTO; // Importar DTO de respuesta
+import com.powerRanger.ElBuenSabor.dtos.UsuarioResponseDTO;
 import com.powerRanger.ElBuenSabor.entities.Usuario;
 import com.powerRanger.ElBuenSabor.entities.enums.Rol;
 import com.powerRanger.ElBuenSabor.repository.UsuarioRepository;
@@ -23,7 +23,6 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Autowired
     private UsuarioRepository usuarioRepository;
 
-    // Método de Mapeo de Entidad a DTO de Respuesta
     private UsuarioResponseDTO convertToResponseDto(Usuario usuario) {
         if (usuario == null) return null;
         UsuarioResponseDTO dto = new UsuarioResponseDTO();
@@ -32,7 +31,6 @@ public class UsuarioServiceImpl implements UsuarioService {
         dto.setRol(usuario.getRol());
         dto.setEstadoActivo(usuario.getEstadoActivo());
         dto.setFechaBaja(usuario.getFechaBaja());
-        // No incluimos auth0Id en el DTO de respuesta general
         return dto;
     }
 
@@ -63,11 +61,16 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional(readOnly = true)
     public UsuarioResponseDTO getByAuth0Id(String auth0Id) throws Exception {
-        // Este método podría ser llamado por el controlador para un endpoint específico
-        // que sí devuelva el DTO. El findOrCreateUsuario devuelve la entidad para uso interno.
         Usuario usuario = usuarioRepository.findByAuth0Id(auth0Id)
                 .orElseThrow(() -> new Exception("Usuario no encontrado con Auth0 ID: " + auth0Id));
         return convertToResponseDto(usuario);
+    }
+
+    // Implementación del nuevo método
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<Usuario> findActualByAuth0Id(String auth0Id) {
+        return usuarioRepository.findByAuth0Id(auth0Id);
     }
 
     @Override
@@ -76,12 +79,13 @@ public class UsuarioServiceImpl implements UsuarioService {
         if (usuarioRepository.findByUsername(dto.getUsername()).isPresent()) {
             throw new Exception("El username '" + dto.getUsername() + "' ya está en uso.");
         }
-        if (usuarioRepository.findByAuth0Id(dto.getAuth0Id()).isPresent()) {
+        // Asumiendo que el auth0Id debe ser único al crear directamente.
+        if (dto.getAuth0Id() != null && usuarioRepository.findByAuth0Id(dto.getAuth0Id()).isPresent()) {
             throw new Exception("El Auth0 ID '" + dto.getAuth0Id() + "' ya está registrado.");
         }
 
         Usuario usuario = new Usuario();
-        usuario.setAuth0Id(dto.getAuth0Id());
+        usuario.setAuth0Id(dto.getAuth0Id()); // Puede ser nulo si la creación no siempre lo requiere aquí
         usuario.setUsername(dto.getUsername());
         usuario.setRol(dto.getRol());
         usuario.setEstadoActivo(dto.getEstadoActivo() != null ? dto.getEstadoActivo() : true);
@@ -96,21 +100,26 @@ public class UsuarioServiceImpl implements UsuarioService {
         Usuario usuarioExistente = usuarioRepository.findById(id)
                 .orElseThrow(() -> new Exception("Usuario no encontrado con ID: " + id));
 
-        // Validar unicidad de username si cambia
-        if (!usuarioExistente.getUsername().equals(dto.getUsername()) &&
-                usuarioRepository.findByUsername(dto.getUsername()).isPresent()) {
-            throw new RuntimeException("El username '" + dto.getUsername() + "' ya está en uso por otro usuario.");
+        if (!usuarioExistente.getUsername().equals(dto.getUsername())) {
+            usuarioRepository.findByUsername(dto.getUsername()).ifPresent(u -> {
+                if (!u.getId().equals(id)) {
+                    throw new RuntimeException("El username '" + dto.getUsername() + "' ya está en uso por otro usuario.");
+                }
+            });
         }
-        // Validar unicidad de auth0Id si cambia
-        if (!usuarioExistente.getAuth0Id().equals(dto.getAuth0Id()) &&
-                usuarioRepository.findByAuth0Id(dto.getAuth0Id()).isPresent()) {
-            throw new RuntimeException("El Auth0 ID '" + dto.getAuth0Id() + "' ya está registrado por otro usuario.");
+        if (dto.getAuth0Id() != null && !dto.getAuth0Id().equals(usuarioExistente.getAuth0Id())) {
+            usuarioRepository.findByAuth0Id(dto.getAuth0Id()).ifPresent(u -> {
+                if(!u.getId().equals(id)){
+                    throw new RuntimeException("El Auth0 ID '" + dto.getAuth0Id() + "' ya está registrado por otro usuario.");
+                }
+            });
         }
 
         usuarioExistente.setAuth0Id(dto.getAuth0Id());
         usuarioExistente.setUsername(dto.getUsername());
         usuarioExistente.setRol(dto.getRol());
-        usuarioExistente.setEstadoActivo(dto.getEstadoActivo());
+        usuarioExistente.setEstadoActivo(dto.getEstadoActivo() != null ? dto.getEstadoActivo() : usuarioExistente.getEstadoActivo());
+        // No se actualiza fechaBaja aquí directamente, eso se maneja en softDelete.
 
         Usuario usuarioActualizado = usuarioRepository.save(usuarioExistente);
         return convertToResponseDto(usuarioActualizado);
@@ -135,22 +144,36 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuarioExistente = optionalUsuario.get();
             // Opcional: actualizar username o email si han cambiado en Auth0
             // y si tu lógica de negocio lo permite.
-            // Por ahora, solo lo devolvemos.
+            boolean modificado = false;
+            if (username != null && !username.isEmpty() && !username.equals(usuarioExistente.getUsername())) {
+                // Antes de cambiar el username, verificar si el nuevo ya existe para OTRO auth0Id
+                Optional<Usuario> userWithNewUsername = usuarioRepository.findByUsername(username);
+                if(userWithNewUsername.isPresent() && !userWithNewUsername.get().getAuth0Id().equals(auth0Id)){
+                    // El nuevo username ya está tomado por otro usuario, manejar el conflicto
+                    // Por ejemplo, podrías añadir un sufijo o lanzar una excepción.
+                    // Aquí, para simplificar, no lo cambiamos si hay conflicto.
+                    System.err.println("Intento de actualizar a username '" + username + "' que ya existe para otro usuario.");
+                } else if (!userWithNewUsername.isPresent() || userWithNewUsername.get().getAuth0Id().equals(auth0Id)) {
+                    usuarioExistente.setUsername(username);
+                    modificado = true;
+                }
+            }
+            // Lógica similar para el email si lo guardas y quieres sincronizarlo
+            if (modificado) {
+                return usuarioRepository.save(usuarioExistente);
+            }
             return usuarioExistente;
         } else {
-            System.out.println("Creando nuevo usuario para auth0Id: " + auth0Id);
-
             String finalUsername = username;
             if (finalUsername == null || finalUsername.trim().isEmpty()) {
-                finalUsername = (email != null && !email.isEmpty()) ? email : "user_" + auth0Id.replace("|", "_").substring(0, Math.min(10, auth0Id.length()));
+                finalUsername = (email != null && !email.isEmpty()) ? email.split("@")[0] : "user_" + auth0Id.replaceAll("[^a-zA-Z0-9]", "").substring(0, Math.min(10, auth0Id.length()));
             }
 
-            // Asegurar unicidad del username generado
             if (usuarioRepository.findByUsername(finalUsername).isPresent()) {
-                int i = 0;
                 String baseUsername = finalUsername;
+                int count = 1;
                 do {
-                    finalUsername = baseUsername + "_" + i++;
+                    finalUsername = baseUsername + "_" + count++;
                 } while (usuarioRepository.findByUsername(finalUsername).isPresent());
             }
 
@@ -159,6 +182,7 @@ public class UsuarioServiceImpl implements UsuarioService {
             nuevoUsuario.setUsername(finalUsername);
             nuevoUsuario.setRol(Rol.CLIENTE);
             nuevoUsuario.setEstadoActivo(true);
+            // nuevoUsuario.setEmail(email); // Si tienes campo email en Usuario y lo quieres guardar
             return usuarioRepository.save(nuevoUsuario);
         }
     }

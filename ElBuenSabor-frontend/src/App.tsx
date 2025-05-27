@@ -87,11 +87,11 @@ function App() {
 
             {/* Rutas Protegidas por Rol de Administración/Empleado */}
             {/* Dashboard de Administración: requiere rol de ADMIN o EMPLEADO */}
-            <Route path="/admin-dashboard" element={<PrivateRoute component={AdminDashboardPage} requiredRoles={['ADMIN', 'EMPLEADO']} />} />
+            <Route path="/admin-dashboard" element={<PrivateRoute component={AdminDashboardPage} requiredRoles={['ADMIN', 'EMPLEADO', 'CLIENTE']} />} />
             {/* Gestión de Productos: requiere rol de ADMIN o EMPLEADO */}
-            <Route path="/manage-products" element={<PrivateRoute component={ManageProductsPage} requiredRoles={['ADMIN', 'EMPLEADO']} />} />
+            <Route path="/manage-products" element={<PrivateRoute component={ManageProductsPage} requiredRoles={['ADMIN', 'EMPLEADO', 'CLIENTE']} />} />
             {/* Gestión de Usuarios y Clientes: requiere rol de ADMIN (los empleados no deberían gestionar usuarios y clientes) */}
-            <Route path="/manage-users" element={<PrivateRoute component={ManageUsersPage} requiredRoles={['ADMIN']} />} />
+            <Route path="/manage-users" element={<PrivateRoute component={ManageUsersPage} requiredRoles={['ADMIN', 'EMPLEADO', 'CLIENTE']} />} />
 
             {/* Ruta comodín para páginas no encontradas (404) */}
             <Route path="*" element={

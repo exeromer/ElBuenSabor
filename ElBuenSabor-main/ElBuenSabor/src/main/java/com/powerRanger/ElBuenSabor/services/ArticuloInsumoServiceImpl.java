@@ -1,7 +1,7 @@
 package com.powerRanger.ElBuenSabor.services;
 
-import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoRequestDTO; // CAMBIO AQUÍ
 import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoResponseDTO;
+import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoRequestDTO; // CAMBIO AQUÍ
 import com.powerRanger.ElBuenSabor.entities.ArticuloInsumo;
 import com.powerRanger.ElBuenSabor.entities.Categoria;
 import com.powerRanger.ElBuenSabor.entities.UnidadMedida;
@@ -23,14 +23,10 @@ import java.util.stream.Collectors;
 @Validated
 public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
 
-    @Autowired
-    private ArticuloInsumoRepository articuloInsumoRepository;
-    @Autowired
-    private CategoriaRepository categoriaRepository;
-    @Autowired
-    private UnidadMedidaRepository unidadMedidaRepository;
-    @Autowired
-    private Mappers mappers;
+    @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
+    @Autowired private CategoriaRepository categoriaRepository;
+    @Autowired private UnidadMedidaRepository unidadMedidaRepository;
+    @Autowired private Mappers mappers; // Usar la clase Mappers
 
     // Método helper para mapear el DTO de Request a la Entidad
     private void mapDtoToEntity(ArticuloInsumoRequestDTO dto, ArticuloInsumo insumo) throws Exception {

@@ -1,6 +1,6 @@
 package com.powerRanger.ElBuenSabor.services;
 
-import com.powerRanger.ElBuenSabor.dtos.*; // Importar todos los DTOs
+import com.powerRanger.ElBuenSabor.dtos.*;
 import com.powerRanger.ElBuenSabor.entities.*;
 import com.powerRanger.ElBuenSabor.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -170,7 +170,7 @@ public class SucursalServiceImpl implements SucursalService {
 
         List<Categoria> nuevasCategorias = new ArrayList<>();
         if (dto.getCategoriaIds() != null) {
-            for (Integer categoriaId : new HashSet<>(dto.getCategoriaIds())) {
+            for (Integer categoriaId : new HashSet<>(dto.getCategoriaIds())) { // Usar HashSet para evitar duplicados
                 Categoria categoria = categoriaRepository.findById(categoriaId)
                         .orElseThrow(() -> new Exception("Categoría no encontrada con ID: " + categoriaId));
                 nuevasCategorias.add(categoria);
@@ -180,7 +180,7 @@ public class SucursalServiceImpl implements SucursalService {
 
         List<Promocion> nuevasPromociones = new ArrayList<>();
         if (dto.getPromocionIds() != null) {
-            for (Integer promocionId : new HashSet<>(dto.getPromocionIds())) {
+            for (Integer promocionId : new HashSet<>(dto.getPromocionIds())) { // Usar HashSet para evitar duplicados
                 Promocion promocion = promocionRepository.findById(promocionId)
                         .orElseThrow(() -> new Exception("Promoción no encontrada con ID: " + promocionId));
                 nuevasPromociones.add(promocion);
@@ -217,7 +217,8 @@ public class SucursalServiceImpl implements SucursalService {
     @Override
     @Transactional
     public SucursalResponseDTO update(Integer id, @Valid SucursalRequestDTO dto) throws Exception {
-        // Para obtener la entidad:
+        // La línea incorrecta ha sido eliminada.
+        // La siguiente línea obtiene la entidad correctamente.
         Sucursal entidadSucursal = sucursalRepository.findById(id)
                 .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + id));
 

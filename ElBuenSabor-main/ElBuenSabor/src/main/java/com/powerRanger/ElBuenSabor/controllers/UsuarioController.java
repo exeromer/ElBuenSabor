@@ -2,7 +2,6 @@ package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.dtos.UsuarioRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.UsuarioResponseDTO; // Importar DTO de respuesta
-// import com.powerRanger.ElBuenSabor.entities.Usuario; // Ya no se devuelve la entidad directamente
 import com.powerRanger.ElBuenSabor.entities.Usuario;
 import com.powerRanger.ElBuenSabor.services.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +24,18 @@ public class UsuarioController {
 
     @Autowired
     private UsuarioService usuarioService;
+
+    // Convertir entidad a DTO
+    private UsuarioResponseDTO convertUsuarioToResponseDto(Usuario usuario) {
+        if (usuario == null) return null;
+        UsuarioResponseDTO dto = new UsuarioResponseDTO();
+        dto.setId(usuario.getId());
+        dto.setUsername(usuario.getUsername());
+        dto.setRol(usuario.getRol());
+        dto.setEstadoActivo(usuario.getEstadoActivo());
+        dto.setFechaBaja(usuario.getFechaBaja());
+        return dto;
+    }
 
     @PostMapping
     public ResponseEntity<?> createUsuario(@Valid @RequestBody UsuarioRequestDTO dto) {
@@ -88,6 +99,17 @@ public class UsuarioController {
     }
 
     @GetMapping("/auth0/{auth0Id}")
+    // public ResponseEntity<?> getUsuarioByAuth0Id(@PathVariable String auth0Id) { // Devuelve DTO o Error
+    //    try {
+    //        UsuarioResponseDTO usuarioDto = usuarioService.getByAuth0Id(auth0Id);
+    //        return ResponseEntity.ok(usuarioDto);
+    //   } catch (Exception e) {
+    //        Map<String, Object> errorResponse = new HashMap<>();
+    //        errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+    //        errorResponse.put("error", e.getMessage());
+    //        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    //    }
+    //}
     public ResponseEntity<?> getUsuarioByAuth0Id(@PathVariable String auth0Id) {
         try {
             // Extraer username y email del token en el frontend y pasarlos como headers/params
@@ -143,16 +165,4 @@ public class UsuarioController {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
     }
-    private UsuarioResponseDTO convertUsuarioToResponseDto(Usuario usuario) {
-        if (usuario == null) return null;
-        UsuarioResponseDTO dto = new UsuarioResponseDTO();
-        dto.setId(usuario.getId());
-        dto.setUsername(usuario.getUsername());
-        dto.setRol(usuario.getRol());
-        dto.setEstadoActivo(usuario.getEstadoActivo());
-        dto.setFechaBaja(usuario.getFechaBaja());
-        return dto;
-    }
-
-
 }
