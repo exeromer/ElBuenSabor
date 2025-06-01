@@ -7,10 +7,8 @@ import jakarta.validation.Valid;
 import java.util.List;
 
 public interface ClienteService {
-    List<ClienteResponseDTO> getAllClientes();
+    List<ClienteResponseDTO> getAllClientes(String searchTerm); // Modificado
     ClienteResponseDTO getClienteById(Integer id) throws Exception;
-    // Opcional: ClienteResponseDTO getClienteByUsuarioAuth0Id(String auth0Id) throws Exception;
-
     ClienteResponseDTO createCliente(@Valid ClienteRequestDTO dto) throws Exception;
     ClienteResponseDTO updateCliente(Integer id, @Valid ClienteRequestDTO dto) throws Exception;
     void softDeleteCliente(Integer id) throws Exception;

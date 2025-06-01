@@ -2,7 +2,7 @@ package com.powerRanger.ElBuenSabor.controllers;
 
 import com.powerRanger.ElBuenSabor.dtos.UsuarioRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.UsuarioResponseDTO; // Importar DTO de respuesta
-// import com.powerRanger.ElBuenSabor.entities.Usuario; // Ya no se devuelve la entidad directamente
+import com.powerRanger.ElBuenSabor.entities.Usuario;
 import com.powerRanger.ElBuenSabor.services.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -24,6 +24,18 @@ public class UsuarioController {
 
     @Autowired
     private UsuarioService usuarioService;
+
+    // Convertir entidad a DTO
+    private UsuarioResponseDTO convertUsuarioToResponseDto(Usuario usuario) {
+        if (usuario == null) return null;
+        UsuarioResponseDTO dto = new UsuarioResponseDTO();
+        dto.setId(usuario.getId());
+        dto.setUsername(usuario.getUsername());
+        dto.setRol(usuario.getRol());
+        dto.setEstadoActivo(usuario.getEstadoActivo());
+        dto.setFechaBaja(usuario.getFechaBaja());
+        return dto;
+    }
 
     @PostMapping
     public ResponseEntity<?> createUsuario(@Valid @RequestBody UsuarioRequestDTO dto) {
@@ -48,14 +60,18 @@ public class UsuarioController {
     }
 
     @GetMapping
-    public ResponseEntity<List<UsuarioResponseDTO>> getAllUsuarios() { // Devuelve Lista de DTOs
+    public ResponseEntity<List<UsuarioResponseDTO>> getAllUsuarios(
+            @RequestParam(name = "searchTerm", required = false) String searchTerm
+    ) {
         try {
-            List<UsuarioResponseDTO> usuarios = usuarioService.getAll();
+            List<UsuarioResponseDTO> usuarios = usuarioService.getAll(searchTerm); // Llamar al método modificado
             if (usuarios.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
             return ResponseEntity.ok(usuarios);
         } catch (Exception e) {
+            System.err.println("Error en UsuarioController - getAllUsuarios: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -87,15 +103,32 @@ public class UsuarioController {
     }
 
     @GetMapping("/auth0/{auth0Id}")
-    public ResponseEntity<?> getUsuarioByAuth0Id(@PathVariable String auth0Id) { // Devuelve DTO o Error
+    // public ResponseEntity<?> getUsuarioByAuth0Id(@PathVariable String auth0Id) { // Devuelve DTO o Error
+    //    try {
+    //        UsuarioResponseDTO usuarioDto = usuarioService.getByAuth0Id(auth0Id);
+    //        return ResponseEntity.ok(usuarioDto);
+    //   } catch (Exception e) {
+    //        Map<String, Object> errorResponse = new HashMap<>();
+    //        errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+    //        errorResponse.put("error", e.getMessage());
+    //        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    //    }
+    //}
+    public ResponseEntity<?> getUsuarioByAuth0Id(@PathVariable String auth0Id) {
         try {
-            UsuarioResponseDTO usuarioDto = usuarioService.getByAuth0Id(auth0Id);
+            // Extraer username y email del token en el frontend y pasarlos como headers/params
+            // es más robusto, pero para simplificar, llamaremos a findOrCreateUsuario
+            // y dejaremos que el servicio maneje los nulls para username/email si es solo para buscar/crear con defaults.
+            // El servicio findOrCreateUsuario ya tiene lógica para generar un username si es null.
+            Usuario usuario = usuarioService.findOrCreateUsuario(auth0Id, null, null); // Pasamos null para username y email
+            UsuarioResponseDTO usuarioDto = convertUsuarioToResponseDto(usuario); // Convierte la entidad a DTO
             return ResponseEntity.ok(usuarioDto);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
-            errorResponse.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+            errorResponse.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value()); // Podría ser un error diferente a NOT_FOUND ahora
+            errorResponse.put("error", "Error al obtener o crear usuario: " + e.getMessage());
+            e.printStackTrace(); // Importante para ver el error real en la consola del backend
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 

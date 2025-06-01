@@ -1,0 +1,21 @@
+@use "./_vars" as *
+
+// boton base
+=boton-base
+  background-color: $color-clay
+  color: white
+  border: none
+  padding: $p1
+  border-radius: 4px
+  margin: $m1
+  cursor: pointer
+  transition: all 0.3s ease
+  text-align: center
+
+// boton color
+=boton-variant($bg-color, $color)
+    background-color: $bg-color
+    color: $color
+    &:hover
+        background-color: $color
+        color: $bg-color

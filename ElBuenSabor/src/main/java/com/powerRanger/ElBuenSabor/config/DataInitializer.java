@@ -80,7 +80,7 @@ public class DataInitializer implements CommandLineRunner {
         harina.setUnidadMedida(umGramos); // Cambiado a Gramos
         harina.setCategoria(catInsumos); harina.setEstadoActivo(true); harina.setPrecioCompra(0.02); // Precio compra por gramo
         harina.setStockActual(10000.0); // 10kg en gramos
-        harina.setStockMaximo(20000.0); // 20kg en gramos
+        harina.setstockMinimo(20000.0); // 20kg en gramos
         harina.setEsParaElaborar(true);
         articuloInsumoRepository.save(harina);
 
@@ -89,7 +89,7 @@ public class DataInitializer implements CommandLineRunner {
         quesoMuzzaInsumo.setUnidadMedida(umGramos); // Cambiado a Gramos
         quesoMuzzaInsumo.setCategoria(catInsumos); quesoMuzzaInsumo.setEstadoActivo(true); quesoMuzzaInsumo.setPrecioCompra(0.10);
         quesoMuzzaInsumo.setStockActual(5000.0); // 5kg en gramos
-        quesoMuzzaInsumo.setStockMaximo(10000.0); // 10kg en gramos
+        quesoMuzzaInsumo.setstockMinimo(10000.0); // 10kg en gramos
         quesoMuzzaInsumo.setEsParaElaborar(true);
         articuloInsumoRepository.save(quesoMuzzaInsumo);
 
@@ -98,14 +98,14 @@ public class DataInitializer implements CommandLineRunner {
         tomateTriturado.setUnidadMedida(umGramos); // Usaremos Gramos como proxy para ml si no tienes um "ml"
         tomateTriturado.setCategoria(catInsumos); tomateTriturado.setEstadoActivo(true); tomateTriturado.setPrecioCompra(0.04);
         tomateTriturado.setStockActual(3000.0); // 3L en ml
-        tomateTriturado.setStockMaximo(6000.0); // 6L en ml
+        tomateTriturado.setstockMinimo(6000.0); // 6L en ml
         tomateTriturado.setEsParaElaborar(true);
         articuloInsumoRepository.save(tomateTriturado);
 
         ArticuloInsumo panHamburguesa = new ArticuloInsumo();
         panHamburguesa.setDenominacion("Pan de Hamburguesa"); panHamburguesa.setPrecioVenta(1.0); panHamburguesa.setUnidadMedida(umUnidad);
         panHamburguesa.setCategoria(catInsumos); panHamburguesa.setEstadoActivo(true); panHamburguesa.setPrecioCompra(0.5);
-        panHamburguesa.setStockActual(200.0); panHamburguesa.setStockMaximo(400.0); panHamburguesa.setEsParaElaborar(true);
+        panHamburguesa.setStockActual(200.0); panHamburguesa.setstockMinimo(400.0); panHamburguesa.setEsParaElaborar(true);
         articuloInsumoRepository.save(panHamburguesa);
 
         ArticuloInsumo carneMolidaGramos = new ArticuloInsumo(); // Carne en gramos
@@ -113,7 +113,7 @@ public class DataInitializer implements CommandLineRunner {
         carneMolidaGramos.setUnidadMedida(umGramos); // Cambiado a Gramos
         carneMolidaGramos.setCategoria(catInsumos); carneMolidaGramos.setEstadoActivo(true); carneMolidaGramos.setPrecioCompra(0.08);
         carneMolidaGramos.setStockActual(4000.0); // 4kg en gramos
-        carneMolidaGramos.setStockMaximo(8000.0); // 8kg en gramos
+        carneMolidaGramos.setstockMinimo(8000.0); // 8kg en gramos
         carneMolidaGramos.setEsParaElaborar(true);
         articuloInsumoRepository.save(carneMolidaGramos);
 
@@ -191,7 +191,7 @@ public class DataInitializer implements CommandLineRunner {
         ArticuloInsumo gaseosa = new ArticuloInsumo();
         gaseosa.setDenominacion("Gaseosa Cola 500ml"); gaseosa.setPrecioVenta(4.0); gaseosa.setUnidadMedida(umUnidad);
         gaseosa.setCategoria(catBebidas); gaseosa.setEstadoActivo(true); gaseosa.setPrecioCompra(1.5);
-        gaseosa.setStockActual(100.0); gaseosa.setStockMaximo(300.0); gaseosa.setEsParaElaborar(false);
+        gaseosa.setStockActual(100.0); gaseosa.setstockMinimo(300.0); gaseosa.setEsParaElaborar(false);
         articuloInsumoRepository.save(gaseosa);
 
         Promocion promo1Suc1 = new Promocion();

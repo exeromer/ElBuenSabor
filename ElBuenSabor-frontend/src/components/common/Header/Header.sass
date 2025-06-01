@@ -1,0 +1,19 @@
+@use '../../../../src/styles/vars' as *
+@use '../../../../src/styles/mixins' as *
+
+Navbar
+    background-color: $color-ivory
+
+.logo
+    width: 130px
+
+.boton
+    &-iniciar-sesion,
+    &-cerrar-sesion
+        +boton-base
+    
+    &-iniciar-sesion
+        +boton-variant($color-ivory, $color-grey)
+    
+    &-cerrar-sesion
+        +boton-variant($color-grey, $color-ivory)

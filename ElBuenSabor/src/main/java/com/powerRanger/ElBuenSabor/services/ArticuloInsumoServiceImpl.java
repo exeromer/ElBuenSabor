@@ -1,6 +1,7 @@
 package com.powerRanger.ElBuenSabor.services;
 
 import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoResponseDTO;
+import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoRequestDTO; // CAMBIO AQUÍ
 import com.powerRanger.ElBuenSabor.entities.ArticuloInsumo;
 import com.powerRanger.ElBuenSabor.entities.Categoria;
 import com.powerRanger.ElBuenSabor.entities.UnidadMedida;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -26,10 +28,46 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
     @Autowired private UnidadMedidaRepository unidadMedidaRepository;
     @Autowired private Mappers mappers; // Usar la clase Mappers
 
+    // Método helper para mapear el DTO de Request a la Entidad
+    private void mapDtoToEntity(ArticuloInsumoRequestDTO dto, ArticuloInsumo insumo) throws Exception {
+        insumo.setDenominacion(dto.getDenominacion());
+        insumo.setPrecioVenta(dto.getPrecioVenta());
+        insumo.setEstadoActivo(dto.getEstadoActivo());
+        insumo.setDenominacion(dto.getDenominacion());
+        insumo.setPrecioVenta(dto.getPrecioVenta());
+        insumo.setEstadoActivo(dto.getEstadoActivo());
+
+        Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
+                .orElseThrow(() -> new Exception("Categoría no encontrada con ID: " + dto.getCategoriaId()));
+        insumo.setCategoria(categoria);
+
+        UnidadMedida unidadMedida = unidadMedidaRepository.findById(dto.getUnidadMedidaId())
+                .orElseThrow(() -> new Exception("Unidad de medida no encontrada con ID: " + dto.getUnidadMedidaId()));
+        insumo.setUnidadMedida(unidadMedida);
+
+        insumo.setPrecioCompra(dto.getPrecioCompra());
+        insumo.setStockActual(dto.getStockActual());
+        insumo.setstockMinimo(dto.getstockMinimo());
+        insumo.setEsParaElaborar(dto.getEsParaElaborar());
+
+        // El manejo de imágenes (asociar por ID o subir nuevas) se haría aquí
+        // si ArticuloInsumoRequestDTO tuviera imagenIds o si la subida fuera parte de este flujo.
+        // Actualmente, tu ImagenService y FileUploadController se encargan de esto
+        // después de que el artículo es creado/actualizado y se le pasa el ID del artículo.
+    }
+
     @Override
     @Transactional(readOnly = true)
-    public List<ArticuloInsumoResponseDTO> getAllArticuloInsumo() {
-        return articuloInsumoRepository.findAll().stream()
+    public List<ArticuloInsumoResponseDTO> getAllArticuloInsumo(String searchTerm) {
+        List<ArticuloInsumo> insumos;
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            insumos = articuloInsumoRepository.searchByDenominacionActivos(searchTerm.trim());
+            System.out.println("DEBUG: Buscando insumos con término: '" + searchTerm.trim() + "', Encontrados: " + insumos.size());
+        } else {
+            insumos = articuloInsumoRepository.findByEstadoActivoTrue();
+            System.out.println("DEBUG: Obteniendo todos los insumos activos, Encontrados: " + insumos.size());
+        }
+        return insumos.stream()
                 .map(insumo -> (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(insumo))
                 .collect(Collectors.toList());
     }
@@ -44,60 +82,20 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
 
     @Override
     @Transactional
-    public ArticuloInsumoResponseDTO createArticuloInsumo(@Valid ArticuloInsumo articuloInsumo) throws Exception {
-        // Validar y asignar Categoria
-        if (articuloInsumo.getCategoria() == null || articuloInsumo.getCategoria().getId() == null) {
-            throw new Exception("La categoría es obligatoria para el artículo insumo.");
-        }
-        Categoria categoria = categoriaRepository.findById(articuloInsumo.getCategoria().getId())
-                .orElseThrow(() -> new Exception("Categoría no encontrada con ID: " + articuloInsumo.getCategoria().getId()));
-        articuloInsumo.setCategoria(categoria);
-
-        // Validar y asignar UnidadMedida
-        if (articuloInsumo.getUnidadMedida() == null || articuloInsumo.getUnidadMedida().getId() == null) {
-            throw new Exception("La unidad de medida es obligatoria para el artículo insumo.");
-        }
-        UnidadMedida unidadMedida = unidadMedidaRepository.findById(articuloInsumo.getUnidadMedida().getId())
-                .orElseThrow(() -> new Exception("Unidad de medida no encontrada con ID: " + articuloInsumo.getUnidadMedida().getId()));
-        articuloInsumo.setUnidadMedida(unidadMedida);
-
-        ArticuloInsumo guardado = articuloInsumoRepository.save(articuloInsumo);
+    public ArticuloInsumoResponseDTO createArticuloInsumo(@Valid ArticuloInsumoRequestDTO dto) throws Exception { // CAMBIO AQUÍ
+        ArticuloInsumo insumo = new ArticuloInsumo();
+        insumo.setImagenes(new ArrayList<>()); // Inicializar la lista si la entidad la tiene
+        mapDtoToEntity(dto, insumo); // Usar el helper
+        ArticuloInsumo guardado = articuloInsumoRepository.save(insumo);
         return (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(guardado);
     }
 
     @Override
     @Transactional
-    public ArticuloInsumoResponseDTO updateArticuloInsumo(Integer id, @Valid ArticuloInsumo articuloInsumoDetails) throws Exception {
+    public ArticuloInsumoResponseDTO updateArticuloInsumo(Integer id, @Valid ArticuloInsumoRequestDTO dto) throws Exception { // CAMBIO AQUÍ
         ArticuloInsumo insumoExistente = articuloInsumoRepository.findById(id)
                 .orElseThrow(() -> new Exception("Artículo Insumo no encontrado con ID: " + id));
-
-        // Actualizar campos de Articulo (superclase)
-        insumoExistente.setDenominacion(articuloInsumoDetails.getDenominacion());
-        insumoExistente.setPrecioVenta(articuloInsumoDetails.getPrecioVenta());
-        insumoExistente.setEstadoActivo(articuloInsumoDetails.getEstadoActivo());
-
-        if (articuloInsumoDetails.getCategoria() != null && articuloInsumoDetails.getCategoria().getId() != null) {
-            Categoria cat = categoriaRepository.findById(articuloInsumoDetails.getCategoria().getId())
-                    .orElseThrow(() -> new Exception("Categoría no encontrada con ID: " + articuloInsumoDetails.getCategoria().getId()));
-            insumoExistente.setCategoria(cat);
-        } else if (articuloInsumoDetails.getCategoria() == null) {
-            throw new Exception("La categoría es obligatoria para el artículo insumo.");
-        }
-
-        if (articuloInsumoDetails.getUnidadMedida() != null && articuloInsumoDetails.getUnidadMedida().getId() != null) {
-            UnidadMedida um = unidadMedidaRepository.findById(articuloInsumoDetails.getUnidadMedida().getId())
-                    .orElseThrow(() -> new Exception("Unidad de medida no encontrada con ID: " + articuloInsumoDetails.getUnidadMedida().getId()));
-            insumoExistente.setUnidadMedida(um);
-        } else if (articuloInsumoDetails.getUnidadMedida() == null) {
-            throw new Exception("La unidad de medida es obligatoria para el artículo insumo.");
-        }
-
-        // Actualizar campos específicos de ArticuloInsumo
-        insumoExistente.setPrecioCompra(articuloInsumoDetails.getPrecioCompra());
-        insumoExistente.setStockActual(articuloInsumoDetails.getStockActual());
-        insumoExistente.setStockMaximo(articuloInsumoDetails.getStockMaximo());
-        insumoExistente.setEsParaElaborar(articuloInsumoDetails.getEsParaElaborar());
-
+        mapDtoToEntity(dto, insumoExistente); // Usar el helper
         ArticuloInsumo actualizado = articuloInsumoRepository.save(insumoExistente);
         return (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(actualizado);
     }
@@ -105,10 +103,13 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
     @Override
     @Transactional
     public void deleteArticuloInsumo(Integer id) throws Exception {
-        if (!articuloInsumoRepository.existsById(id)) {
-            throw new Exception("Artículo Insumo no encontrado con ID: " + id + " para eliminar.");
-        }
-        // Aquí podrías añadir lógica para verificar si el insumo está en uso en ArticuloManufacturadoDetalle
-        articuloInsumoRepository.deleteById(id);
+        // ... (la lógica de delete no cambia fundamentalmente, pero asegúrate que exista el insumo)
+        ArticuloInsumo insumo = articuloInsumoRepository.findById(id)
+                .orElseThrow(() -> new Exception("Artículo Insumo no encontrado con ID: " + id + " para eliminar."));
+        // Considera si necesitas verificar si el insumo está en uso antes de borrarlo (ej. en ArticuloManufacturadoDetalle)
+        // if (!insumo.getDetallesManufacturados().isEmpty()) { // Necesitarías la relación inversa
+        //    throw new Exception("No se puede eliminar el insumo porque está siendo utilizado.");
+        // }
+        articuloInsumoRepository.delete(insumo);
     }
 }

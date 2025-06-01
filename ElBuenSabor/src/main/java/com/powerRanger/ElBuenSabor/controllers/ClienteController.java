@@ -40,14 +40,18 @@ public class ClienteController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ClienteResponseDTO>> getAllClientes() { // Devuelve Lista de DTOs
+    public ResponseEntity<List<ClienteResponseDTO>> getAllClientes(
+            @RequestParam(name = "searchTerm", required = false) String searchTerm
+    ) {
         try {
-            List<ClienteResponseDTO> clientes = clienteService.getAllClientes();
+            List<ClienteResponseDTO> clientes = clienteService.getAllClientes(searchTerm);
             if (clientes.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
             return ResponseEntity.ok(clientes);
         } catch (Exception e) {
+            System.err.println("Error en ClienteController - getAllClientes: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

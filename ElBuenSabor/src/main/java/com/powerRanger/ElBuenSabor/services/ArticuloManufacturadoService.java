@@ -7,7 +7,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 
 public interface ArticuloManufacturadoService {
-    List<ArticuloManufacturadoResponseDTO> getAllArticuloManufacturados();
+    List<ArticuloManufacturadoResponseDTO> getAllArticuloManufacturados(String searchTerm); // Modificado
     ArticuloManufacturadoResponseDTO getArticuloManufacturadoById(Integer id) throws Exception;
     ArticuloManufacturadoResponseDTO createArticuloManufacturado(@Valid ArticuloManufacturadoRequestDTO dto) throws Exception;
     ArticuloManufacturadoResponseDTO updateArticuloManufacturado(Integer id, @Valid ArticuloManufacturadoRequestDTO dto) throws Exception;

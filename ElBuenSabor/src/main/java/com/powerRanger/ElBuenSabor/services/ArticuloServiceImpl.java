@@ -85,7 +85,7 @@ public class ArticuloServiceImpl implements ArticuloService {
             ArticuloInsumoResponseDTO dto = new ArticuloInsumoResponseDTO();
             dto.setPrecioCompra(insumo.getPrecioCompra());
             dto.setStockActual(insumo.getStockActual());
-            dto.setStockMaximo(insumo.getStockMaximo());
+            dto.setstockMinimo(insumo.getstockMinimo());
             dto.setEsParaElaborar(insumo.getEsParaElaborar());
             baseDto = dto;
         } else if (articulo instanceof ArticuloManufacturado) {

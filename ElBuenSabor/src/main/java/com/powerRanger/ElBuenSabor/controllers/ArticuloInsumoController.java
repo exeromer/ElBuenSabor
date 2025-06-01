@@ -1,7 +1,8 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
+import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoResponseDTO; // DTO de respuesta
-import com.powerRanger.ElBuenSabor.entities.ArticuloInsumo; // Para el @RequestBody
+import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoResponseDTO;
 import com.powerRanger.ElBuenSabor.services.ArticuloInsumoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -25,11 +26,9 @@ public class ArticuloInsumoController {
     private ArticuloInsumoService articuloInsumoService;
 
     @PostMapping
-    public ResponseEntity<?> createArticuloInsumo(@Valid @RequestBody ArticuloInsumo articuloInsumo) {
-        // Este endpoint acepta la entidad ArticuloInsumo directamente.
-        // Podrías crear un ArticuloInsumoRequestDTO si necesitas más control.
+    public ResponseEntity<?> createArticuloInsumo(@Valid @RequestBody ArticuloInsumoRequestDTO dto) {
         try {
-            ArticuloInsumoResponseDTO nuevoInsumoDto = articuloInsumoService.createArticuloInsumo(articuloInsumo);
+            ArticuloInsumoResponseDTO nuevoInsumoDto = articuloInsumoService.createArticuloInsumo(dto);
             return new ResponseEntity<>(nuevoInsumoDto, HttpStatus.CREATED);
         } catch (ConstraintViolationException e) {
             return handleConstraintViolation(e);
@@ -39,17 +38,22 @@ public class ArticuloInsumoController {
     }
 
     @GetMapping
-    public ResponseEntity<List<ArticuloInsumoResponseDTO>> getAllArticuloInsumo() {
+    public ResponseEntity<List<ArticuloInsumoResponseDTO>> getAllArticuloInsumo(
+            @RequestParam(name = "denominacion", required = false) String searchTerm // Parámetro para búsqueda
+    ) {
         try {
-            List<ArticuloInsumoResponseDTO> insumos = articuloInsumoService.getAllArticuloInsumo();
+            List<ArticuloInsumoResponseDTO> insumos = articuloInsumoService.getAllArticuloInsumo(searchTerm);
             if (insumos.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
             return ResponseEntity.ok(insumos);
         } catch (Exception e) {
+            System.err.println("Error en ArticuloInsumoController - getAllArticuloInsumo: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
+
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getArticuloInsumoById(@PathVariable Integer id) {
@@ -62,9 +66,9 @@ public class ArticuloInsumoController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateArticuloInsumo(@PathVariable Integer id, @Valid @RequestBody ArticuloInsumo articuloInsumoDetails) {
+    public ResponseEntity<?> updateArticuloInsumo(@PathVariable Integer id, @Valid @RequestBody ArticuloInsumoRequestDTO dto) { // CAMBIO AQUÍ
         try {
-            ArticuloInsumoResponseDTO insumoActualizadoDto = articuloInsumoService.updateArticuloInsumo(id, articuloInsumoDetails);
+            ArticuloInsumoResponseDTO insumoActualizadoDto = articuloInsumoService.updateArticuloInsumo(id, dto); // CAMBIO AQUÍ
             return ResponseEntity.ok(insumoActualizadoDto);
         } catch (ConstraintViolationException e) {
             return handleConstraintViolation(e);

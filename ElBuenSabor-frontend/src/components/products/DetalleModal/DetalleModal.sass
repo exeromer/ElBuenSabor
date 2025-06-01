@@ -1,0 +1,102 @@
+@use "../../../styles/vars" as *
+
+.detalle-modal
+  .modal-content
+    border-radius: $br2 * 2 
+    box-shadow: 0 5px 15px $bg-transparent-dark
+
+  .detalle-modal-header
+    background-color: $color-clay
+    color: $color-ivory 
+    border-bottom: 1px solid $color-clay
+    padding: $p2
+
+    .detalle-modal-title
+      font-family: $f-f-uno
+      font-size: $f-s-3
+      font-weight: bold
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2)
+
+    .btn-close 
+      color: $color-ivory !important 
+      filter: invert(1) grayscale(1) brightness(2)
+      opacity: 0.8
+      &:hover
+        opacity: 1
+
+  .detalle-modal-body
+    background-color: $color-mist 
+    color: $color-grey
+    padding: $p2 * 1.5
+
+    .detalle-modal-image
+      border-radius: $br2 
+      border: 1px solid $color-stone 
+      max-height: 350px 
+      width: 100% 
+      object-fit: cover 
+      box-shadow: $shadow 
+
+    .detalle-modal-section-title
+      font-family: $f-f-uno
+      font-size: $f-s-2
+      color: $color-clay
+      margin-top: $m3
+      margin-bottom: $m2 / 2
+      font-weight: 600
+
+    .detalle-modal-description,
+    .detalle-modal-time,
+    .detalle-modal-preparacion
+      font-family: $f-f-dos
+      font-size: $f-s-1
+      line-height: 1.6
+      color: $color-grey
+      margin-bottom: $m2 
+
+    .detalle-modal-price
+      font-family: $f-f-uno
+      font-size: $f-s-3
+      font-weight: bold
+      color: $color-clay
+      margin-bottom: $m3
+
+
+  .detalle-modal-footer
+    background-color: $color-stone
+    border-top: 1px solid $color-stone
+    padding: $p2
+    justify-content: flex-end
+
+    .detalle-modal-close-button
+      background-color: $color-grey
+      border-color: $color-grey
+      color: $color-ivory
+      padding: $p1 $p2
+      border-radius: $br1
+
+      &:hover
+        background-color: $color-grey
+        border-color: $color-grey
+
+@media (max-width: $breakpoint-md)
+  .detalle-modal
+    .modal-body
+      .detalle-modal-image
+        margin-bottom: $m3
+
+@media (max-width: $breakpoint-sm)
+  .detalle-modal
+    .detalle-modal-header
+      .detalle-modal-title
+        font-size: $f-s-2
+    .detalle-modal-body
+      padding: $p2
+    .detalle-modal-section-title
+      font-size: 1.1rem
+    .detalle-modal-description,
+    .detalle-modal-time,
+    .detalle-modal-preparacion
+      font-size: 0.9rem
+    .detalle-modal-price
+      font-size: $f-s-2

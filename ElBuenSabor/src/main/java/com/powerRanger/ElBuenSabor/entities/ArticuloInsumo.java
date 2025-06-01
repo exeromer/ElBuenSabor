@@ -21,7 +21,7 @@ public class ArticuloInsumo extends Articulo {
 
     @Column(nullable = true) // Considera si el stock puede ser nulo
     @Min(value = 0, message = "El stock máximo no puede ser negativo")
-    private Double stockMaximo; // Cambiado a Double
+    private Double stockMinimo; // Cambiado a Double
 
     @Column(nullable = false) // Correcto si siempre debe tener un valor
     @NotNull(message = "Debe especificarse si es para elaborar")
@@ -34,11 +34,11 @@ public class ArticuloInsumo extends Articulo {
 
     public ArticuloInsumo(String denominacion, Double precioVenta, UnidadMedida unidadMedida,
                           Categoria categoria, Boolean estadoActivo, Double precioCompra,
-                          Double stockActual, Double stockMaximo, Boolean esParaElaborar) {
+                          Double stockActual, Double stockMinimo, Boolean esParaElaborar) {
         super(denominacion, precioVenta, unidadMedida, categoria, estadoActivo);
         this.precioCompra = precioCompra;
         this.stockActual = stockActual;
-        this.stockMaximo = stockMaximo;
+        this.stockMinimo = stockMinimo;
         this.esParaElaborar = esParaElaborar;
     }
 
@@ -47,8 +47,8 @@ public class ArticuloInsumo extends Articulo {
     public void setPrecioCompra(Double precioCompra) { this.precioCompra = precioCompra; }
     public Double getStockActual() { return stockActual; } // Devuelve Double
     public void setStockActual(Double stockActual) { this.stockActual = stockActual; } // Acepta Double
-    public Double getStockMaximo() { return stockMaximo; } // Devuelve Double
-    public void setStockMaximo(Double stockMaximo) { this.stockMaximo = stockMaximo; } // Acepta Double
+    public Double getstockMinimo() { return stockMinimo; } // Devuelve Double
+    public void setstockMinimo(Double stockMinimo) { this.stockMinimo = stockMinimo; } // Acepta Double
     public Boolean getEsParaElaborar() { return esParaElaborar; }
     public void setEsParaElaborar(Boolean esParaElaborar) { this.esParaElaborar = esParaElaborar; }
 
@@ -59,7 +59,7 @@ public class ArticuloInsumo extends Articulo {
                 super.toString() + // Incluye los campos de Articulo
                 ", precioCompra=" + precioCompra +
                 ", stockActual=" + stockActual +
-                ", stockMaximo=" + stockMaximo +
+                ", stockMinimo=" + stockMinimo +
                 ", esParaElaborar=" + esParaElaborar +
                 '}';
     }

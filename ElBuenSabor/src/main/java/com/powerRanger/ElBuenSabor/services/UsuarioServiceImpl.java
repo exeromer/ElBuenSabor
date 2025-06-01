@@ -36,9 +36,17 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UsuarioResponseDTO> getAll() {
-        return usuarioRepository.findAll().stream()
-                .map(this::convertToResponseDto)
+    public List<UsuarioResponseDTO> getAll(String searchTerm) { // Modificado
+        List<Usuario> usuarios;
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            usuarios = usuarioRepository.searchByUsernameActivos(searchTerm.trim());
+            System.out.println("DEBUG: Buscando Usuarios con término: '" + searchTerm.trim() + "', Encontrados: " + usuarios.size());
+        } else {
+            usuarios = usuarioRepository.findByEstadoActivoTrue();
+            System.out.println("DEBUG: Obteniendo todos los Usuarios activos, Encontrados: " + usuarios.size());
+        }
+        return usuarios.stream()
+                .map(this::convertToResponseDto) // Asumiendo que tienes convertToResponseDto para Usuario
                 .collect(Collectors.toList());
     }
 

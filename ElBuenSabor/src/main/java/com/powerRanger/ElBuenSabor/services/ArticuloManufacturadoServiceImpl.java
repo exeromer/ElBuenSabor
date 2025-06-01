@@ -67,11 +67,20 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
 
     @Override
     @Transactional(readOnly = true)
-    public List<ArticuloManufacturadoResponseDTO> getAllArticuloManufacturados() {
-        return manufacturadoRepository.findAll().stream()
-                .map(am -> (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(am))
+    public List<ArticuloManufacturadoResponseDTO> getAllArticuloManufacturados(String searchTerm) { // Modificado
+        List<ArticuloManufacturado> manufacturados;
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            manufacturados = manufacturadoRepository.searchByDenominacionActivos(searchTerm.trim());
+            System.out.println("DEBUG: Buscando ArticuloManufacturado con término: '" + searchTerm.trim() + "', Encontrados: " + manufacturados.size());
+        } else {
+            manufacturados = manufacturadoRepository.findByEstadoActivoTrue();
+            System.out.println("DEBUG: Obteniendo todos los ArticuloManufacturado activos, Encontrados: " + manufacturados.size());
+        }
+        return manufacturados.stream()
+                .map(am -> (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(am)) // Asegúrate que el mapper devuelva el tipo correcto
                 .collect(Collectors.toList());
     }
+
 
     @Override
     @Transactional(readOnly = true)

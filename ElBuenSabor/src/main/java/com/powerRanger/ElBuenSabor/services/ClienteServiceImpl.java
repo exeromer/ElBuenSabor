@@ -154,9 +154,17 @@ public class ClienteServiceImpl implements ClienteService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ClienteResponseDTO> getAllClientes() {
-        return clienteRepository.findAll().stream()
-                .map(this::convertToResponseDto)
+    public List<ClienteResponseDTO> getAllClientes(String searchTerm) { // Modificado
+        List<Cliente> clientes;
+        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
+            clientes = clienteRepository.searchActivosByTerm(searchTerm.trim());
+            System.out.println("DEBUG: Buscando Clientes con término: '" + searchTerm.trim() + "', Encontrados: " + clientes.size());
+        } else {
+            clientes = clienteRepository.findByEstadoActivoTrue();
+            System.out.println("DEBUG: Obteniendo todos los Clientes activos, Encontrados: " + clientes.size());
+        }
+        return clientes.stream()
+                .map(this::convertToResponseDto) // Asumiendo que tienes convertToResponseDto para Cliente
                 .collect(Collectors.toList());
     }
 
