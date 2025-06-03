@@ -33,9 +33,6 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
         insumo.setDenominacion(dto.getDenominacion());
         insumo.setPrecioVenta(dto.getPrecioVenta());
         insumo.setEstadoActivo(dto.getEstadoActivo());
-        insumo.setDenominacion(dto.getDenominacion());
-        insumo.setPrecioVenta(dto.getPrecioVenta());
-        insumo.setEstadoActivo(dto.getEstadoActivo());
 
         Categoria categoria = categoriaRepository.findById(dto.getCategoriaId())
                 .orElseThrow(() -> new Exception("Categoría no encontrada con ID: " + dto.getCategoriaId()));
@@ -58,14 +55,16 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<ArticuloInsumoResponseDTO> getAllArticuloInsumo(String searchTerm) {
+    public List<ArticuloInsumoResponseDTO> getAllArticuloInsumo(String searchTerm, Boolean estadoActivo) {
         List<ArticuloInsumo> insumos;
-        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
-            insumos = articuloInsumoRepository.searchByDenominacionActivos(searchTerm.trim());
-            System.out.println("DEBUG: Buscando insumos con término: '" + searchTerm.trim() + "', Encontrados: " + insumos.size());
+        String trimmedSearchTerm = (searchTerm != null && !searchTerm.trim().isEmpty()) ? searchTerm.trim() : null;
+
+        if (trimmedSearchTerm != null) {
+            insumos = articuloInsumoRepository.searchByDenominacionWithOptionalStatus(trimmedSearchTerm, estadoActivo);
+            System.out.println("DEBUG: Buscando insumos con término: '" + trimmedSearchTerm + "', Estado: " + estadoActivo + ", Encontrados: " + insumos.size());
         } else {
-            insumos = articuloInsumoRepository.findByEstadoActivoTrue();
-            System.out.println("DEBUG: Obteniendo todos los insumos activos, Encontrados: " + insumos.size());
+            insumos = articuloInsumoRepository.findAllWithOptionalStatus(estadoActivo);
+            System.out.println("DEBUG: Obteniendo insumos con Estado: " + estadoActivo + ", Encontrados: " + insumos.size());
         }
         return insumos.stream()
                 .map(insumo -> (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(insumo))

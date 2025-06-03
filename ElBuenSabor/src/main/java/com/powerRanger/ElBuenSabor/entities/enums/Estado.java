@@ -10,10 +10,10 @@ package com.powerRanger.ElBuenSabor.entities.enums;
  * @author Hitman
  */
 public enum Estado {
-    PREPARACION,
     PENDIENTE,
-    CANCELADO,
-    RECHAZADO,
+    PREPARACION,
     EN_CAMINO,
-    ENTREGADO
+    ENTREGADO,
+    RECHAZADO,
+    CANCELADO
 }

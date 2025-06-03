@@ -6,6 +6,9 @@ import com.powerRanger.ElBuenSabor.entities.enums.Estado; // Para validar estado
 import com.powerRanger.ElBuenSabor.entities.enums.EstadoFactura;
 import com.powerRanger.ElBuenSabor.repository.FacturaRepository;
 import com.powerRanger.ElBuenSabor.repository.PedidoRepository;
+import com.powerRanger.ElBuenSabor.repository.ArticuloInsumoRepository;
+import com.powerRanger.ElBuenSabor.repository.ArticuloRepository;
+import com.powerRanger.ElBuenSabor.repository.ArticuloManufacturadoRepository;
 // Asumiendo que Mappers.java existe o los mappers están aquí
 import com.powerRanger.ElBuenSabor.mappers.Mappers;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +19,7 @@ import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -25,6 +29,9 @@ public class FacturaServiceImpl implements FacturaService {
     @Autowired private FacturaRepository facturaRepository;
     @Autowired private PedidoRepository pedidoRepository;
     @Autowired private Mappers mappers; // Inyectar la clase Mappers
+    @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
+    @Autowired private ArticuloRepository articuloRepository;
+    @Autowired private ArticuloManufacturadoRepository articuloManufacturadoRepository;
 
     // --- MAPPERS (o usar la clase Mappers inyectada) ---
     // Si no tienes una clase Mappers, definirías los métodos convertTo...DTO aquí.
@@ -161,24 +168,86 @@ public class FacturaServiceImpl implements FacturaService {
     @Override
     @Transactional
     public FacturaResponseDTO anularFactura(Integer id) throws Exception {
-        Factura facturaAAnular = facturaRepository.findById(id) // Buscar sin importar estado para anular
+        // 1. Obtener la factura y validar su estado
+        Factura facturaAAnular = facturaRepository.findById(id)
                 .orElseThrow(() -> new Exception("Factura con ID " + id + " no encontrada."));
 
         if (facturaAAnular.getEstadoFactura() == EstadoFactura.ANULADA) {
             throw new Exception("La factura con ID " + id + " ya se encuentra anulada.");
         }
 
+        Pedido pedidoOriginal = facturaAAnular.getPedido();
+        if (pedidoOriginal == null) {
+            // Esto no debería ocurrir si la lógica de creación de factura es correcta.
+            throw new Exception("La factura con ID " + id + " no tiene un pedido asociado. No se puede procesar la anulación de stock.");
+        }
+
+        // Recargar el pedido para asegurar que los detalles y el estado estén frescos y completamente cargados
+        Pedido pedidoConDetalles = pedidoRepository.findById(pedidoOriginal.getId())
+                .orElseThrow(() -> new Exception("Pedido asociado con ID " + pedidoOriginal.getId() + " no pudo ser recargado para la anulación."));
+
+        // El estado del pedido al momento de la facturación era ENTREGADO.
+        // La lógica de reposición se basará principalmente en si el insumo es para elaborar o no.
+        System.out.println("DEBUG ANULACION: Anulando factura ID: " + id + " para Pedido ID: " + pedidoConDetalles.getId() + ". Estado original del pedido (al facturar): " + pedidoConDetalles.getEstado() + " (Se asume ENTREGADO para facturación).");
+
+        if (pedidoConDetalles.getDetalles() == null || pedidoConDetalles.getDetalles().isEmpty()) {
+            System.out.println("WARN ANULACION: El pedido ID " + pedidoConDetalles.getId() + " no tiene detalles. No se repondrá stock.");
+        } else {
+            System.out.println("DEBUG ANULACION: Número de detalles en pedidoConDetalles: " + pedidoConDetalles.getDetalles().size()); // LOG AÑADIDO
+            for (DetallePedido detallePedido : pedidoConDetalles.getDetalles()) {
+                Articulo articuloDelDetalleOriginal = detallePedido.getArticulo();
+                if (articuloDelDetalleOriginal == null) {
+                    System.err.println("WARN ANULACION: Detalle de pedido ID " + detallePedido.getId() + " no tiene un artículo asociado. Se omitirá para reposición.");
+                    continue;
+                }
+                int cantidadEnPedido = detallePedido.getCantidad();
+                // Log para ver qué tipo de proxy es inicialmente
+                System.out.println("DEBUG ANULACION: Procesando detalle para Artículo ID: " + articuloDelDetalleOriginal.getId() +
+                        ", Denominación: " + articuloDelDetalleOriginal.getDenominacion() +
+                        ", Cantidad en pedido: " + cantidadEnPedido +
+                        ", Tipo Original del Detalle: " + articuloDelDetalleOriginal.getClass().getName());
+
+                // Intentar obtener la instancia concreta
+                ArticuloInsumo insumoConcreto = null;
+                ArticuloManufacturado manufacturadoConcreto = null;
+
+                // Primero intenta como ArticuloInsumo
+                Optional<ArticuloInsumo> optInsumo = articuloInsumoRepository.findById(articuloDelDetalleOriginal.getId());
+                if (optInsumo.isPresent()) {
+                    insumoConcreto = optInsumo.get();
+                    System.out.println("DEBUG ANULACION:   Artículo es INSUMO. Denominación: " + insumoConcreto.getDenominacion() + ", esParaElaborar: " + insumoConcreto.getEsParaElaborar());
+
+                    if (insumoConcreto.getEsParaElaborar() != null && !insumoConcreto.getEsParaElaborar()) {
+                        double stockPrevio = insumoConcreto.getStockActual() != null ? insumoConcreto.getStockActual() : 0.0;
+                        insumoConcreto.setStockActual(stockPrevio + cantidadEnPedido);
+                        articuloInsumoRepository.save(insumoConcreto); // Guardar la instancia concreta
+                        System.out.println("DEBUG ANULACION:     Stock de Insumo (No para elaborar) " + insumoConcreto.getDenominacion() + " actualizado de " + stockPrevio + " a " + insumoConcreto.getStockActual());
+                    } else {
+                        System.out.println("DEBUG ANULACION:     Insumo " + insumoConcreto.getDenominacion() + " es para elaborar o flag es nulo. No se repone stock para factura de pedido entregado.");
+                    }
+                } else {
+                    // Si no es Insumo, intenta como ArticuloManufacturado
+                    Optional<ArticuloManufacturado> optManuf = articuloManufacturadoRepository.findById(articuloDelDetalleOriginal.getId());
+                    if (optManuf.isPresent()) {
+                        manufacturadoConcreto = optManuf.get();
+                        System.out.println("DEBUG ANULACION:   Es MANUFACTURADO: " + manufacturadoConcreto.getDenominacion() + ". Los componentes no se reponen para una factura de un pedido entregado.");
+                        // No se reponen componentes aquí para un pedido ENTREGADO.
+                    } else {
+                        // Si no es ninguno de los dos, es un Articulo base o un error.
+                        System.err.println("WARN ANULACION:   Artículo ID " + articuloDelDetalleOriginal.getId() + " no se encontró como Insumo ni como Manufacturado específico. No se procesa para reposición de stock.");
+                    }
+                }
+            }
+            System.out.println("DEBUG ANULACION: Procesamiento de reposición de stock (condicionada) completada para factura ID: " + id);
+        }
+
+        // 3. Actualizar estado de la factura
         facturaAAnular.setEstadoFactura(EstadoFactura.ANULADA);
         facturaAAnular.setFechaAnulacion(LocalDate.now());
-
-        // Opcional: Lógica de negocio al anular, ej. desvincular del pedido o cambiar estado del pedido.
-        // Pedido pedidoAsociado = facturaAAnular.getPedido();
-        // if (pedidoAsociado != null) {
-        //     pedidoAsociado.setFactura(null);
-        //     // pedidoAsociado.setEstado(Estado.PENDIENTE_DE_REFACTURACION); // Ejemplo
-        //     pedidoRepository.save(pedidoAsociado);
-        // }
         Factura facturaGuardada = facturaRepository.save(facturaAAnular);
+
+        System.out.println("INFO: Factura ID: " + id + " anulada correctamente.");
         return convertToResponseDto(facturaGuardada);
     }
+
 }

@@ -86,6 +86,7 @@ export interface ArticuloManufacturado extends Articulo {
   tiempoEstimadoMinutos: number;
   preparacion: string;
   manufacturadoDetalles: ArticuloManufacturadoDetalle[];
+  unidadesDisponiblesCalculadas?: number; 
 }
 
 /**

@@ -140,6 +140,10 @@
           display: flex
           align-items: center
           justify-content: center
+        .product-card.product-unavailable
+          opacity: 0.7;
+          .product-card-add-button, .product-card-control-button 
+          cursor: not-allowed;
 
           &:hover
             background-color: darken($color-stone, 10%)
@@ -171,3 +175,6 @@
             font-size: 0.75rem
             min-width: 30px
             height: 30px
+
+
+  

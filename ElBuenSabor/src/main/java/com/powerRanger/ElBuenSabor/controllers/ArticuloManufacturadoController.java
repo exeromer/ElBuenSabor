@@ -39,10 +39,11 @@ public class ArticuloManufacturadoController {
 
     @GetMapping
     public ResponseEntity<List<ArticuloManufacturadoResponseDTO>> getAllArticuloManufacturados(
-            @RequestParam(name = "denominacion", required = false) String searchTerm // O usa "searchTerm"
+            @RequestParam(name = "denominacion", required = false) String searchTerm,
+            @RequestParam(name = "estado", required = false) Boolean estadoActivo
     ) {
         try {
-            List<ArticuloManufacturadoResponseDTO> ams = manufacturadoService.getAllArticuloManufacturados(searchTerm);
+            List<ArticuloManufacturadoResponseDTO> ams = manufacturadoService.getAllArticuloManufacturados(searchTerm, estadoActivo);
             if (ams.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -86,22 +87,14 @@ public class ArticuloManufacturadoController {
             return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
     }
-// Métodos helper para manejo de errores
-private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
-    Map<String, Object> errorResponse = new HashMap<>();
-    errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-    errorResponse.put("error", "Error de validación");
-    errorResponse.put("mensajes", e.getConstraintViolations().stream()
-            .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-            .collect(Collectors.toList()));
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-}
-
-private ResponseEntity<Map<String, Object>> handleGenericException(Exception e, HttpStatus status) {
-    Map<String, Object> errorResponse = new HashMap<>();
-    errorResponse.put("status", status.value());
-    errorResponse.put("error", e.getMessage());
-    e.printStackTrace();
-    return ResponseEntity.status(status).body(errorResponse);
-}
+    // Métodos helper para manejo de errores
+    private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
+        errorResponse.put("error", "Error de validación");
+        errorResponse.put("mensajes", e.getConstraintViolations().stream()
+                .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
+                .collect(Collectors.toList()));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
 }

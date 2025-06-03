@@ -9,19 +9,20 @@ import java.util.List;
 
 public interface ArticuloInsumoRepository extends JpaRepository<ArticuloInsumo, Integer> {
 
-    /**
-     * Busca ArticuloInsumo activos cuya denominación contenga el término de búsqueda, ignorando mayúsculas/minúsculas.
-     * @param searchTerm El término a buscar en la denominación.
-     * @return Una lista de ArticuloInsumo que coinciden.
-     */
-    @Query("SELECT ai FROM ArticuloInsumo ai WHERE LOWER(ai.denominacion) LIKE LOWER(CONCAT('%', :searchTerm, '%')) AND ai.estadoActivo = true")
-    List<ArticuloInsumo> searchByDenominacionActivos(@Param("searchTerm") String searchTerm);
+    // Busca por denominación, filtrando opcionalmente por estadoActivo
+    @Query("SELECT ai FROM ArticuloInsumo ai WHERE " +
+            "LOWER(ai.denominacion) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+            "AND (:estadoActivoParam IS NULL OR ai.estadoActivo = :estadoActivoParam)")
+    List<ArticuloInsumo> searchByDenominacionWithOptionalStatus(
+            @Param("searchTerm") String searchTerm,
+            @Param("estadoActivoParam") Boolean estadoActivoParam
+    );
 
-    /**
-     * Encuentra todos los ArticuloInsumo que están activos.
-     * @return Una lista de ArticuloInsumo activos.
-     */
+    // Encuentra todos los ArticuloInsumo, filtrando opcionalmente por estadoActivo
+    @Query("SELECT ai FROM ArticuloInsumo ai WHERE (:estadoActivoParam IS NULL OR ai.estadoActivo = :estadoActivoParam)")
+    List<ArticuloInsumo> findAllWithOptionalStatus(@Param("estadoActivoParam") Boolean estadoActivoParam);
+
+    // Puedes mantener este si lo usas en otro lado específicamente para activos
     List<ArticuloInsumo> findByEstadoActivoTrue();
-
-
 }
+

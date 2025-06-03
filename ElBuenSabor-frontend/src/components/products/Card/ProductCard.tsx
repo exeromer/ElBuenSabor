@@ -11,7 +11,7 @@
  * @component `DetalleModal`: Modal para mostrar los detalles del producto.
  */
 import React, { useState } from 'react';
-import { Card, Button } from 'react-bootstrap';
+import { Card, Button,Badge } from 'react-bootstrap';
 import type { ArticuloManufacturado } from '../../../types/types';
 import { useCart } from '../../../context/CartContext';
 import { getImageUrl } from '../../../services/fileUploadService';
@@ -37,7 +37,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const quantity = getItemQuantity(product.id);
   const defaultImage = '/placeholder-food.png';
 
+  // Determinar disponibilidad
+  const isAvailable = product.estadoActivo && (typeof product.unidadesDisponiblesCalculadas === 'number' && product.unidadesDisponiblesCalculadas > 0);
+  // O si prefieres un booleano directo desde el backend: const isAvailable = product.disponible;
   const handleAddToCart = () => {
+    if (!isAvailable) return; // Doble chequeo
     addToCart(product, 1);
   };
 
@@ -73,7 +77,9 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         className="product-card-img"
       />
       <Card.Body className="d-flex flex-column product-card-body">
-        <Card.Title className="mb-2 product-card-title">{product.denominacion}</Card.Title>
+        <Card.Title className="mb-2 product-card-title" onClick={isAvailable ? handleShowDetailModal : undefined} style={{ cursor: isAvailable ? 'pointer' : 'default' }}>
+          {product.denominacion}
+        </Card.Title>
         <Card.Text className="text-muted flex-grow-1 overflow-hidden product-card-description">
           {product.descripcion}
         </Card.Text>
@@ -82,23 +88,28 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="mt-auto product-card-bottom-section">
           {/* Precio más grande y centrado */}
           <Card.Text className="product-card-price-display">${product.precioVenta.toFixed(2)}</Card.Text>
+                   {!product.estadoActivo ? (
+            <Badge bg="secondary" className="my-2">No Activo</Badge>
+          ) : !isAvailable ? (
+            <Badge bg="danger" className="my-2">No disponible</Badge>
+          ) : null}
 
           {/* Grupo de botones (Agregar o Controles de Cantidad) */}
           <div className="product-card-buttons-group">
             {quantity === 0 ? (
-              <Button variant="success" onClick={handleAddToCart} className="product-card-add-button">
+              <Button variant="success" onClick={handleAddToCart} className="product-card-add-button" disabled={!isAvailable}>
                 Agregar al Carrito
               </Button>
             ) : (
               <div className="product-card-controls-wrapper d-flex align-items-center justify-content-center">
-                <Button variant="outline-danger" onClick={handleRemoveFromCart} className="product-card-control-button product-card-remove-all">
+                <Button variant="outline-danger" onClick={handleRemoveFromCart} className="product-card-control-button product-card-remove-all" disabled={!isAvailable}>
                   <FontAwesomeIcon icon={faTrash} />
                 </Button>
-                <Button variant="outline-secondary" onClick={handleDecreaseQuantity} className="product-card-control-button product-card-minus-button">
+                <Button variant="outline-secondary" onClick={handleDecreaseQuantity} className="product-card-control-button product-card-minus-button" disabled={!isAvailable}>
                   <FontAwesomeIcon icon={faMinus} />
                 </Button>
                 <span className="mx-2 product-card-quantity-display">{quantity}</span>
-                <Button variant="outline-primary" onClick={handleIncreaseQuantity} className="product-card-control-button product-card-plus-button">
+                <Button variant="outline-primary" onClick={handleIncreaseQuantity} className="product-card-control-button product-card-plus-button" disabled={!isAvailable}>
                   <FontAwesomeIcon icon={faPlus} />
                 </Button>
               </div>
@@ -110,7 +121,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
         </div>
       </Card.Body>
-
       <DetalleModal product={product} show={showDetailModal} onHide={handleCloseDetailModal} />
     </Card>
   );

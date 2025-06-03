@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface ArticuloInsumoService {
 
-    List<ArticuloInsumoResponseDTO> getAllArticuloInsumo(String searchTerm);
+    List<ArticuloInsumoResponseDTO> getAllArticuloInsumo(String searchTerm, Boolean estadoActivo);
 
     ArticuloInsumoResponseDTO getArticuloInsumoById(Integer id) throws Exception;
     ArticuloInsumoResponseDTO createArticuloInsumo(@Valid ArticuloInsumoRequestDTO dto) throws Exception;

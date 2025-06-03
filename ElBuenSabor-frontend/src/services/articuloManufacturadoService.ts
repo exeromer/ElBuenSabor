@@ -15,18 +15,20 @@ import type { ArticuloManufacturado, ArticuloManufacturadoRequestDTO } from '../
  * @returns {Promise<ArticuloManufacturado[]>} Una promesa que resuelve con un array de artículos manufacturados.
  * @throws {Error} Si ocurre un error durante la petición.
  */
-export const getArticulosManufacturados = async (searchTerm?: string): Promise<ArticuloManufacturado[]> => { // Modificado para aceptar searchTerm
+export const getArticulosManufacturados = async (
+    searchTerm?: string,
+    estadoActivo?: boolean | null // Añadir estadoActivo
+): Promise<ArticuloManufacturado[]> => {
   try {
     const params: any = {};
     if (searchTerm) {
-      // Asegúrate que el backend para ArticuloManufacturado espera un parámetro llamado "denominacion"
-      // o el nombre genérico "searchTerm" que hayas decidido.
       params.denominacion = searchTerm; 
     }
+    if (estadoActivo !== undefined && estadoActivo !== null) {
+      params.estado = estadoActivo;
+    }
+    // Si estadoActivo es undefined o null, no se envía el parámetro 'estado'
     const response = await apiClient.get<ArticuloManufacturado[]>('/articulosmanufacturados', { params });
-    // El backend ya debería devolver solo los activos o los filtrados correctamente.
-    // Si necesitas filtrar por estadoActivo aquí en el frontend (no recomendado si el backend ya lo hace):
-    // return response.data.filter(am => am.estadoActivo);
     return response.data;
   } catch (error) {
     console.error('Error al obtener artículos manufacturados:', error);

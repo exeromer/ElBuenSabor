@@ -10,6 +10,7 @@ public class ArticuloManufacturadoResponseDTO extends ArticuloBaseResponseDTO {
     private Integer tiempoEstimadoMinutos;
     private String preparacion;
     private List<ArticuloManufacturadoDetalleResponseDTO> manufacturadoDetalles = new ArrayList<>();
+    private Integer unidadesDisponiblesCalculadas;
 
     // Getters y Setters
     public String getDescripcion() { return descripcion; }
@@ -20,4 +21,6 @@ public class ArticuloManufacturadoResponseDTO extends ArticuloBaseResponseDTO {
     public void setPreparacion(String preparacion) { this.preparacion = preparacion; }
     public List<ArticuloManufacturadoDetalleResponseDTO> getManufacturadoDetalles() { return manufacturadoDetalles; }
     public void setManufacturadoDetalles(List<ArticuloManufacturadoDetalleResponseDTO> manufacturadoDetalles) { this.manufacturadoDetalles = manufacturadoDetalles; }
+    public Integer getUnidadesDisponiblesCalculadas() {return unidadesDisponiblesCalculadas;}
+    public void setUnidadesDisponiblesCalculadas(Integer unidadesDisponiblesCalculadas) {this.unidadesDisponiblesCalculadas = unidadesDisponiblesCalculadas;}
 }

@@ -75,8 +75,11 @@ const ManageProductsPage: React.FC = () => {
    * @returns {Promise<ArticuloInsumo[]>}
    */
   const fetchInsumosFunction = useCallback((term: string) => {
-    return getArticulosInsumo(term);
-  }, []); // `getArticulosInsumo` es estable si es un import directo
+       // Por ahora, para que el admin vea todos, no pasamos el filtro de estado
+    // o pasamos null explícitamente si el servicio lo requiere.
+    // Si tu servicio `getArticulosInsumo` ahora espera un segundo argumento para el estado:
+    return getArticulosInsumo(term, null); // Pasa null para estadoActivo para obtener todos
+  }, []); 
 
   const insumoDataHook = useSearchableData<ArticuloInsumo>({ fetchData: fetchInsumosFunction });
 
@@ -152,10 +155,10 @@ const ManageProductsPage: React.FC = () => {
   * @description Función envuelta en useCallback que llama al servicio para obtener manufacturados.
   */
   const fetchManufacturadosFunction = useCallback((term: string) => {
-    return getArticulosManufacturados(term); // Asume que este servicio ya está adaptado
+    return getArticulosManufacturados(term, null); 
   }, []);
 
-  const manufacturadoDataHook = useSearchableData<ArticuloManufacturado>({ fetchData: fetchManufacturadosFunction });
+  const manufacturadoDataHook = useSearchableData<ArticuloManufacturado>({     fetchData: fetchManufacturadosFunction});
 
 
   /**
@@ -184,7 +187,8 @@ const ManageProductsPage: React.FC = () => {
   };
 
   const manufacturadoColumns: ColumnDefinition<ArticuloManufacturado>[] = [
-    { key: 'id', header: 'ID', renderCell: (am) => am.id },
+    {key: 'unidadesDisponibles', header: 'Unids. Disp.', renderCell: (am) => (
+      typeof am.unidadesDisponiblesCalculadas === 'number' ? am.unidadesDisponiblesCalculadas : 'N/A'),sortable: true},
     { key: 'denominacion', header: 'Denominación', renderCell: (am) => am.denominacion, sortable: true },
     { key: 'precioVenta', header: 'Precio Venta', renderCell: (am) => `$${am.precioVenta.toFixed(2)}` },
     { key: 'tiempoEstimado', header: 'Tiempo Estimado', renderCell: (am) => `${am.tiempoEstimadoMinutos} min` },
@@ -205,12 +209,21 @@ const ManageProductsPage: React.FC = () => {
    * @function handleTabSelect
    * @description Maneja el cambio de pestañas.
    */
-  const handleTabSelect = (key: string | null) => {
+const handleTabSelect = (key: string | null) => {
     if (key === 'insumos' || key === 'manufacturados') {
-      setActiveTab(key);
-      if (key === 'insumos') manufacturadoDataHook.setSearchTerm(''); else insumoDataHook.setSearchTerm('');
+        const newActiveTab = key as 'manufacturados' | 'insumos';
+        setActiveTab(newActiveTab);
+
+        // Forzar la recarga de datos para la pestaña que se está activando
+        if (newActiveTab === 'insumos') {
+            console.log("ManageProductsPage: Tab changed to Insumos, calling insumoDataHook.reload()");
+            insumoDataHook.reload(); 
+        } else if (newActiveTab === 'manufacturados') {
+            console.log("ManageProductsPage: Tab changed to Manufacturados, calling manufacturadoDataHook.reload()");
+            manufacturadoDataHook.reload();
+        }
     }
-  };
+};
 
   /**
    * @function handleFormSubmit

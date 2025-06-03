@@ -39,21 +39,22 @@ public class ArticuloInsumoController {
 
     @GetMapping
     public ResponseEntity<List<ArticuloInsumoResponseDTO>> getAllArticuloInsumo(
-            @RequestParam(name = "denominacion", required = false) String searchTerm // Parámetro para búsqueda
+            @RequestParam(name = "denominacion", required = false) String searchTerm,
+            @RequestParam(name = "estado", required = false) Boolean estadoActivo // 'true', 'false', o ausente para todos
     ) {
         try {
-            List<ArticuloInsumoResponseDTO> insumos = articuloInsumoService.getAllArticuloInsumo(searchTerm);
+            // Pasa el término de búsqueda y el estado al servicio
+            List<ArticuloInsumoResponseDTO> insumos = articuloInsumoService.getAllArticuloInsumo(searchTerm, estadoActivo);
             if (insumos.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
             return ResponseEntity.ok(insumos);
         } catch (Exception e) {
             System.err.println("Error en ArticuloInsumoController - getAllArticuloInsumo: " + e.getMessage());
-            e.printStackTrace();
+            e.printStackTrace(); // Para más detalle del error en el backend
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-
 
     @GetMapping("/{id}")
     public ResponseEntity<?> getArticuloInsumoById(@PathVariable Integer id) {

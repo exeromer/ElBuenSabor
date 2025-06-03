@@ -17,27 +17,25 @@ import type { ArticuloInsumo, ArticuloInsumoRequestDTO, ArticuloInsumoResponseDT
  */
 export const getArticulosInsumo = async (
     searchTerm?: string,
-    // page?: number, // Descomentar si implementas paginación en backend
-    // size?: number   // Descomentar si implementas paginación en backend
-): Promise<ArticuloInsumo[]> => { // O Promise<{ content: ArticuloInsumo[], totalElements: number }> si hay paginación
+    estadoActivo?: boolean | null // Añadir estadoActivo, puede ser null para "todos"
+): Promise<ArticuloInsumo[]> => {
   try {
     const params: any = {};
     if (searchTerm) {
-      params.denominacion = searchTerm; // O el nombre del parámetro que usa tu backend, ej. "searchTerm"
+      params.denominacion = searchTerm; 
     }
-    // if (page !== undefined) params.page = page;
-    // if (size !== undefined) params.size = size;
-
+    if (estadoActivo !== undefined && estadoActivo !== null) { // Solo añadir si no es undefined/null
+      params.estado = estadoActivo;
+    }
+    // Si estadoActivo es undefined o null, no se envía el parámetro 'estado' al backend,
+    // y el backend debería devolver todos.
     const response = await apiClient.get<ArticuloInsumo[]>('/articulosinsumo', { params });
-    // Si el backend devuelve un objeto Page, ajusta esto:
-    // return response.data; // Si devuelve Page, sería response.data o response.data.content
-    return response.data; // Asumiendo que devuelve la lista directamente por ahora
-  } catch (error) {
+    return response.data;
+  } catch (error) { 
     console.error('Error al obtener artículos insumo:', error);
     throw error;
   }
 };
-
 
 /**
  * @function createArticuloInsumo

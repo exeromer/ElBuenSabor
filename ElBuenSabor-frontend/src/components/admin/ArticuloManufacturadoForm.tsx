@@ -128,6 +128,12 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   /**
+   * @state isProductWrapper
+   * @description Estado para indicar si el producto es un wrapper.
+   */
+  const [isProductWrapper, setIsProductWrapper] = useState<boolean>(false);
+
+  /**
    * @hook useEffect
    * @description Hook que se ejecuta al montar el componente para cargar las listas de
    * categorías, unidades de medida y artículos insumo desde el backend.
@@ -196,6 +202,7 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
           manufacturadoDetalles: [],
         });
       }
+      setIsProductWrapper(false); // Limpia el estado de producto wrapper
       setSelectedFile(null); // Limpia cualquier archivo de imagen seleccionado previamente
       setError(null); // Limpia cualquier error anterior
     }
@@ -240,6 +247,10 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
    * Inicializa el nuevo detalle con el primer insumo disponible y una cantidad de 1.
    */
   const handleAddDetalle = () => {
+    if (isProductWrapper && formData.manufacturadoDetalles.length >= 1) {
+      alert("Para un producto simple (envoltorio de insumo), solo se permite un ingrediente.");
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       manufacturadoDetalles: [
@@ -351,6 +362,20 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
         // El `uploadFile` está diseñado para crear la entidad `Imagen` en la DB y asociarla
         // al artículo si se le pasa el `articuloId`.
         await uploadFile(selectedFile, token, newArticulo.id);
+      }
+      if (isProductWrapper) {
+        if (formData.manufacturadoDetalles.length !== 1) {
+          setError('Para productos simples (envoltorio de insumo), se requiere exactamente un ingrediente.');
+          setSubmitting(false);
+          return;
+        }
+        const unicoDetalle = formData.manufacturadoDetalles[0];
+        const insumoSeleccionado = insumos.find(i => i.id === unicoDetalle.articuloInsumoId);
+        if (insumoSeleccionado && insumoSeleccionado.esParaElaborar) {
+          setError('El ingrediente seleccionado para un producto simple debe ser un insumo no elaborable (ej. una bebida).');
+          setSubmitting(false);
+          return;
+        }
       }
 
       onSave(); // Llama al callback `onSave` para notificar al componente padre que se guardó
@@ -514,6 +539,34 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                   </Alert>
                 )}
               </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Check
+                  type="checkbox"
+                  label="Es un producto simple (basado en un solo insumo vendible, ej. Gaseosa)"
+                  checked={isProductWrapper}
+                  onChange={(e) => {
+                    setIsProductWrapper(e.target.checked);
+                    // Opcional: Si se marca, podrías limpiar los detalles existentes o limitar a uno.
+                    // Por ahora, solo cambia el estado.
+                    if (e.target.checked) {
+                      // Si se marca, limpiar detalles y añadir uno nuevo vacío,
+                      // o simplemente dejar que el usuario añada el único detalle.
+                      // También podrías deshabilitar "Añadir Ingrediente" si ya hay uno.
+                      setFormData(prev => ({
+                        ...prev,
+                        // Si se marca, quizá limpiar detalles si ya existen y son para elaborar.
+                        // Opcional: podrías forzar a que solo haya un detalle.
+                        manufacturadoDetalles: prev.manufacturadoDetalles.length > 0 && !prev.manufacturadoDetalles[0].articuloInsumoId ? prev.manufacturadoDetalles : []
+                      }));
+                    }
+                  }}
+                />
+                {isProductWrapper && formData.manufacturadoDetalles.length > 1 && (
+                  <Alert variant="warning" className="mt-1">
+                    Para productos simples, solo se espera un ingrediente. Se considerará el primero.
+                  </Alert>
+                )}
+              </Form.Group>
 
               {/* Sección de Detalles de Manufacturado (Ingredientes) */}
               <Card className="mt-4">
@@ -537,12 +590,15 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                         .filter(id => id !== 0 && id !== undefined); // Importante: no considerar IDs no válidos
 
                       // Opciones de insumos disponibles para ESTE detalle
-                      const opcionesDeInsumosDisponibles = insumos // 'insumos' es tu estado con TODOS los ArticuloInsumo
-                        .filter(insumo => insumo.esParaElaborar) // Punto 5: Solo mostrar los que son para elaborar
+                      const opcionesDeInsumosDisponibles = insumos
+                        .filter(insumo =>
+                          isProductWrapper ? !insumo.esParaElaborar : insumo.esParaElaborar // Lógica condicional
+                        )
                         .filter(insumoFiltrado =>
-                          !insumosYaEnOtrosDetalles.includes(insumoFiltrado.id) || // No está en otros detalles
-                          insumoFiltrado.id === detalle.articuloInsumoId // O es el actualmente seleccionado en ESTE detalle
+                          !insumosYaEnOtrosDetalles.includes(insumoFiltrado.id) ||
+                          insumoFiltrado.id === detalle.articuloInsumoId
                         );
+
                       return (
                         <ListGroup.Item key={index}>
                           <Row className="align-items-center">
@@ -553,7 +609,7 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                                   value={detalle.articuloInsumoId || ''}
                                   onChange={(e) => handleDetalleChange(index, 'articuloInsumoId', Number(e.target.value))}
                                   // Deshabilitar si no hay opciones o la lista original de insumos está vacía.
-                                  disabled={insumos.filter(i => i.esParaElaborar).length === 0}
+                                  disabled={opcionesDeInsumosDisponibles.length === 0}
                                   required
                                 >
                                   <option value="">Selecciona un insumo</option>

@@ -67,27 +67,39 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
 
     @Override
     @Transactional(readOnly = true)
-    public List<ArticuloManufacturadoResponseDTO> getAllArticuloManufacturados(String searchTerm) { // Modificado
+    public List<ArticuloManufacturadoResponseDTO> getAllArticuloManufacturados(String searchTerm, Boolean estadoActivo) {
         List<ArticuloManufacturado> manufacturados;
-        if (searchTerm != null && !searchTerm.trim().isEmpty()) {
-            manufacturados = manufacturadoRepository.searchByDenominacionActivos(searchTerm.trim());
-            System.out.println("DEBUG: Buscando ArticuloManufacturado con término: '" + searchTerm.trim() + "', Encontrados: " + manufacturados.size());
-        } else {
-            manufacturados = manufacturadoRepository.findByEstadoActivoTrue();
-            System.out.println("DEBUG: Obteniendo todos los ArticuloManufacturado activos, Encontrados: " + manufacturados.size());
-        }
-        return manufacturados.stream()
-                .map(am -> (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(am)) // Asegúrate que el mapper devuelva el tipo correcto
-                .collect(Collectors.toList());
-    }
+        String trimmedSearchTerm = (searchTerm != null && !searchTerm.trim().isEmpty()) ? searchTerm.trim() : null;
 
+        if (trimmedSearchTerm != null) {
+            manufacturados = manufacturadoRepository.searchByDenominacionWithOptionalStatus(trimmedSearchTerm, estadoActivo);
+        } else {
+            manufacturados = manufacturadoRepository.findAllWithOptionalStatus(estadoActivo);
+        }
+
+        return manufacturados.stream().map(am -> {
+            ArticuloManufacturadoResponseDTO dto = (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(am);
+            // Necesitamos la entidad completa con sus detalles para calcular las unidades disponibles
+            // Si el 'am' de la lista no tiene los detalles cargados (LAZY), hay que recargarlo.
+            // Esto puede ser ineficiente (N+1). Idealmente, la query del repositorio haría un JOIN FETCH.
+            // Por ahora, para asegurar que funciona:
+            ArticuloManufacturado amConDetalles = manufacturadoRepository.findById(am.getId()).orElse(am); // Recarga si es necesario
+            dto.setUnidadesDisponiblesCalculadas(calcularUnidadesDisponibles(amConDetalles));
+            return dto;
+        }).collect(Collectors.toList());
+    }
 
     @Override
     @Transactional(readOnly = true)
     public ArticuloManufacturadoResponseDTO getArticuloManufacturadoById(Integer id) throws Exception {
-        ArticuloManufacturado am = manufacturadoRepository.findById(id)
+        System.out.println("DEBUG SERVICE: getArticuloManufacturadoById llamado con ID: " + id);
+        ArticuloManufacturado manufacturado = manufacturadoRepository.findById(id)
                 .orElseThrow(() -> new Exception("Artículo Manufacturado no encontrado con ID: " + id));
-        return (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(am);
+
+        ArticuloManufacturadoResponseDTO dto = (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(manufacturado);
+        dto.setUnidadesDisponiblesCalculadas(calcularUnidadesDisponibles(manufacturado));
+        System.out.println("DEBUG SERVICE: Manufacturado ID: " + dto.getId() + " (" + dto.getDenominacion() + ") - Unidades Disponibles Asignadas al DTO: " + dto.getUnidadesDisponiblesCalculadas());
+        return dto;
     }
 
     @Override
@@ -123,4 +135,57 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
         // CascadeType.ALL y orphanRemoval=true en manufacturadoDetalles se encargarán de borrar detalles.
         manufacturadoRepository.deleteById(id);
     }
+
+    private Integer calcularUnidadesDisponibles(ArticuloManufacturado manufacturado) {
+        System.out.println("DEBUG CALC_UNID: Calculando unidades para manufacturado ID: " + manufacturado.getId() + " - " + manufacturado.getDenominacion());
+        if (manufacturado.getManufacturadoDetalles() == null || manufacturado.getManufacturadoDetalles().isEmpty()) {
+            // Si no tiene receta, no se puede fabricar (o se asume que no necesita insumos contables aquí)
+            // Podrías decidir devolver un número muy grande o 0 según la lógica de negocio.
+            // Devolver 0 si se espera que tenga receta.
+            System.out.println("DEBUG CALC_UNID: Manufacturado ID: " + manufacturado.getId() + " no tiene detalles de receta. Unidades disponibles: 0");
+            return 0;
+        }
+
+        int unidadesDisponiblesMinimo = Integer.MAX_VALUE; // Empezamos con un valor alto
+
+        for (ArticuloManufacturadoDetalle detalleReceta : manufacturado.getManufacturadoDetalles()) {
+            ArticuloInsumo insumoComponente = detalleReceta.getArticuloInsumo();
+            if (insumoComponente == null) { // Control por si el dato de la receta es inconsistente
+                System.err.println("WARN: Detalle de receta para " + manufacturado.getDenominacion() + " tiene un insumo nulo.");
+                return 0; // Si un insumo es nulo en la receta, no se puede fabricar
+            }
+            System.out.println("DEBUG CALC_UNID:   Procesando componente de receta: " + insumoComponente.getDenominacion() + " (ID: " + insumoComponente.getId() + ")");
+
+            // Es crucial obtener el stock actual FRESCO del insumo desde su repositorio
+            ArticuloInsumo insumoConStockActual = articuloInsumoRepository.findById(insumoComponente.getId())
+                    .orElse(null); // Manejar si el insumo de la receta ya no existe
+            if (insumoConStockActual == null || insumoConStockActual.getStockActual() == null) {
+                System.err.println("WARN: Insumo " + insumoComponente.getDenominacion() + " de receta no encontrado o sin stock actual definido.");
+                return 0; // Si un insumo no existe o no tiene stock definido, no se puede fabricar
+            }
+
+            double stockActual = insumoConStockActual.getStockActual();
+            double cantidadNecesariaPorUnidad = detalleReceta.getCantidad();
+            System.out.println("DEBUG CALC_UNID:     Insumo: " + insumoConStockActual.getDenominacion() + " - Stock Actual LEÍDO: " + stockActual + ", Cantidad Necesaria por Receta: " + cantidadNecesariaPorUnidad);
+            if (cantidadNecesariaPorUnidad <= 0) {
+                System.err.println("WARN CALC_UNID:    Insumo " + insumoConStockActual.getDenominacion() + " (ID: " + insumoConStockActual.getId() + ") tiene stockActual NULO. Unidades disponibles: 0");
+                continue; // Este insumo no se necesita o la receta tiene un error, no limita la producción.
+            }
+
+            if (stockActual < cantidadNecesariaPorUnidad) {
+                System.out.println("DEBUG CALC_UNID:     STOCK INSUFICIENTE para " + insumoConStockActual.getDenominacion() + ". Se necesitan " + cantidadNecesariaPorUnidad + ", disponibles " + stockActual + ". Unidades disponibles: 0");
+                return 0; // No hay suficiente stock de este insumo para hacer ni una unidad.
+            }
+
+            int unidadesConEsteInsumo = (int) Math.floor(stockActual / cantidadNecesariaPorUnidad);
+            System.out.println("DEBUG CALC_UNID:     Unidades que se pueden hacer con " + insumoConStockActual.getDenominacion() + ": " + unidadesConEsteInsumo);
+            if (unidadesConEsteInsumo < unidadesDisponiblesMinimo) {
+                unidadesDisponiblesMinimo = unidadesConEsteInsumo;
+            }
+        }
+        Integer resultadoFinal = (unidadesDisponiblesMinimo == Integer.MAX_VALUE) ? 0 : unidadesDisponiblesMinimo;
+        System.out.println("DEBUG CALC_UNID: Final para manufacturado ID: " + manufacturado.getId() + " - Unidades Disponibles Calculadas: " + resultadoFinal);
+        return resultadoFinal;
+    }
+
 }

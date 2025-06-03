@@ -10,9 +10,17 @@ import java.util.List;
 
 public interface ArticuloManufacturadoRepository extends JpaRepository<ArticuloManufacturado, Integer> {
 
-    @Query("SELECT am FROM ArticuloManufacturado am WHERE LOWER(am.denominacion) LIKE LOWER(CONCAT('%', :searchTerm, '%')) AND am.estadoActivo = true")
-    List<ArticuloManufacturado> searchByDenominacionActivos(@Param("searchTerm") String searchTerm);
+    @Query("SELECT am FROM ArticuloManufacturado am WHERE " +
+            "LOWER(am.denominacion) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+            "AND (:estadoActivoParam IS NULL OR am.estadoActivo = :estadoActivoParam)")
+    List<ArticuloManufacturado> searchByDenominacionWithOptionalStatus(
+            @Param("searchTerm") String searchTerm,
+            @Param("estadoActivoParam") Boolean estadoActivoParam
+    );
 
+    @Query("SELECT am FROM ArticuloManufacturado am WHERE (:estadoActivoParam IS NULL OR am.estadoActivo = :estadoActivoParam)")
+    List<ArticuloManufacturado> findAllWithOptionalStatus(@Param("estadoActivoParam") Boolean estadoActivoParam);
+
+    // Mantén este si es usado en otras partes, o puedes reemplazar su uso por findAllWithOptionalStatus(true)
     List<ArticuloManufacturado> findByEstadoActivoTrue();
-
 }
