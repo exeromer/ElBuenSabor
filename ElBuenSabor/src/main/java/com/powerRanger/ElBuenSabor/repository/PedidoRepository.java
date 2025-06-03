@@ -10,15 +10,20 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
-// Otros imports que puedas necesitar
+import java.util.Optional; // Importar Optional
 
 public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 
-    // --- MÉTODOS EXISTENTES QUE PUEDAS TENER ---
-    // ...
-
-    // 🟢 AÑADIR ESTE MÉTODO 👇
+    // --- MÉTODOS EXISTENTES ---
     List<Pedido> findByClienteIdAndEstadoActivoTrueOrderByFechaPedidoDesc(Integer clienteId);
+
+    // --- MÉTODO PARA BUSCAR PEDIDO POR MERCADO PAGO PREFERENCE ID ---
+    /**
+     * Encuentra un pedido basado en el ID de preferencia de Mercado Pago.
+     * @param mercadoPagoPreferenceId El ID de la preferencia de Mercado Pago.
+     * @return Un Optional conteniendo el Pedido si se encuentra, o un Optional vacío si no.
+     */
+    Optional<Pedido> findByMercadoPagoPreferenceId(String mercadoPagoPreferenceId);
 
     // --- NUEVOS MÉTODOS PARA RANKING DE CLIENTES ---
     @Query("SELECT NEW com.powerRanger.ElBuenSabor.dtos.ClienteRankingDTO(" +

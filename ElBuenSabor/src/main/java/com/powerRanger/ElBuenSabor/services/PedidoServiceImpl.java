@@ -3,8 +3,10 @@ package com.powerRanger.ElBuenSabor.services;
 import com.powerRanger.ElBuenSabor.dtos.*;
 import com.powerRanger.ElBuenSabor.entities.*;
 import com.powerRanger.ElBuenSabor.entities.enums.Estado;
-import com.powerRanger.ElBuenSabor.entities.enums.Rol;
+import com.powerRanger.ElBuenSabor.entities.enums.FormaPago;
+import com.powerRanger.ElBuenSabor.entities.enums.TipoEnvio;
 import com.powerRanger.ElBuenSabor.repository.*;
+// import com.powerRanger.ElBuenSabor.services.FacturaService; // Descomentar si tienes este servicio
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,9 +38,10 @@ public class PedidoServiceImpl implements PedidoService {
     @Autowired private CarritoService carritoService;
     @Autowired private ArticuloManufacturadoRepository articuloManufacturadoRepository;
     @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
-    @Autowired private LocalidadRepository localidadRepository; // Añadido para la nueva lógica de domicilio
+    @Autowired private LocalidadRepository localidadRepository;
+    // @Autowired private FacturaService facturaService; // Descomentar si tienes este servicio
 
-    // --- MAPPERS (Como los tenías) ---
+    // --- MAPPERS ---
     private ArticuloSimpleResponseDTO convertArticuloToSimpleDto(Articulo articulo) {
         if (articulo == null) return null;
         ArticuloSimpleResponseDTO dto = new ArticuloSimpleResponseDTO();
@@ -136,7 +139,17 @@ public class PedidoServiceImpl implements PedidoService {
         PedidoResponseDTO dto = new PedidoResponseDTO();
         dto.setId(pedido.getId());
         dto.setHoraEstimadaFinalizacion(pedido.getHoraEstimadaFinalizacion());
+
+        Double subTotalPedido = 0.0;
+        if (pedido.getDetalles() != null) {
+            for (DetallePedido detalle : pedido.getDetalles()) {
+                subTotalPedido += detalle.getSubTotal();
+            }
+        }
+        dto.setSubTotalPedido(subTotalPedido);
+        dto.setDescuentoAplicado(pedido.getDescuentoAplicado() != null ? pedido.getDescuentoAplicado() : 0.0);
         dto.setTotal(pedido.getTotal());
+
         dto.setTotalCosto(pedido.getTotalCosto());
         dto.setFechaPedido(pedido.getFechaPedido());
         dto.setEstado(pedido.getEstado());
@@ -159,6 +172,11 @@ public class PedidoServiceImpl implements PedidoService {
                     .map(this::convertDetallePedidoToDto)
                     .collect(Collectors.toList()));
         }
+
+        dto.setMercadoPagoPaymentId(pedido.getMercadoPagoPaymentId());
+        dto.setMercadoPagoPreferenceId(pedido.getMercadoPagoPreferenceId());
+        dto.setMercadoPagoPaymentStatus(pedido.getMercadoPagoPaymentStatus());
+
         return dto;
     }
 
@@ -177,7 +195,19 @@ public class PedidoServiceImpl implements PedidoService {
         }
     }
 
+    private void validarFormaDePago(TipoEnvio tipoEnvio, FormaPago formaPago) throws IllegalArgumentException {
+        if (tipoEnvio == TipoEnvio.DELIVERY && formaPago != FormaPago.MERCADO_PAGO) {
+            throw new IllegalArgumentException("Para pedidos con envío a domicilio (DELIVERY), la única forma de pago aceptada es Mercado Pago.");
+        }
+        if (tipoEnvio == TipoEnvio.TAKEAWAY &&
+                !(formaPago == FormaPago.EFECTIVO || formaPago == FormaPago.MERCADO_PAGO)) {
+            throw new IllegalArgumentException("Forma de pago no válida para retiro en local (TAKEAWAY). Opciones: EFECTIVO o MERCADO_PAGO.");
+        }
+    }
+
     private Pedido mapAndPreparePedido(PedidoRequestDTO dto, Cliente cliente) throws Exception {
+        validarFormaDePago(dto.getTipoEnvio(), dto.getFormaPago());
+
         Pedido pedido = new Pedido();
         pedido.setFechaPedido(LocalDate.now());
         pedido.setHoraEstimadaFinalizacion(parseTime(dto.getHoraEstimadaFinalizacion(), "hora estimada de finalización"));
@@ -186,6 +216,7 @@ public class PedidoServiceImpl implements PedidoService {
         pedido.setEstado(Estado.PENDIENTE);
         pedido.setEstadoActivo(true);
         pedido.setCliente(cliente);
+        pedido.setDescuentoAplicado(0.0);
 
         Domicilio domicilio = domicilioRepository.findById(dto.getDomicilioId())
                 .orElseThrow(() -> new Exception("Domicilio no encontrado con ID: " + dto.getDomicilioId()));
@@ -195,7 +226,7 @@ public class PedidoServiceImpl implements PedidoService {
                 .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + dto.getSucursalId()));
         pedido.setSucursal(sucursal);
 
-        double totalPedido = 0.0;
+        double subTotalPedido = 0.0;
         if (dto.getDetalles() == null || dto.getDetalles().isEmpty()) {
             throw new Exception("El pedido debe contener al menos un detalle.");
         }
@@ -212,12 +243,19 @@ public class PedidoServiceImpl implements PedidoService {
             if (articulo.getPrecioVenta() == null) {
                 throw new Exception("El artículo '" + articulo.getDenominacion() + "' (ID: " + articulo.getId() + ") no tiene un precio de venta asignado.");
             }
-            double subTotal = articulo.getPrecioVenta() * detalleDto.getCantidad();
-            detalle.setSubTotal(subTotal);
-            totalPedido += subTotal;
+            double subTotalItem = articulo.getPrecioVenta() * detalleDto.getCantidad();
+            detalle.setSubTotal(subTotalItem);
+            subTotalPedido += subTotalItem;
             pedido.addDetalle(detalle);
         }
-        pedido.setTotal(totalPedido);
+
+        if (pedido.getTipoEnvio() == TipoEnvio.TAKEAWAY) {
+            double descuento = subTotalPedido * 0.10;
+            pedido.setDescuentoAplicado(descuento);
+            pedido.setTotal(subTotalPedido - descuento);
+        } else {
+            pedido.setTotal(subTotalPedido);
+        }
         return pedido;
     }
 
@@ -256,6 +294,8 @@ public class PedidoServiceImpl implements PedidoService {
     public PedidoResponseDTO create(@Valid PedidoRequestDTO dto) throws Exception {
         Cliente cliente = clienteRepository.findById(dto.getClienteId()).orElseThrow(() -> new Exception("Cliente no encontrado con ID: " + dto.getClienteId()));
         Pedido pedido = mapAndPreparePedido(dto, cliente);
+        // Aquí faltaría la lógica de stock y costo que está en `crearPedidoDesdeCarrito`.
+        // Considerar refactorizar esa lógica a un método privado si create() también la necesita.
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
         return convertToResponseDto(pedidoGuardado);
     }
@@ -266,6 +306,7 @@ public class PedidoServiceImpl implements PedidoService {
         Usuario usuario = usuarioRepository.findByAuth0Id(auth0Id).orElseThrow(() -> new Exception("Usuario autenticado (Auth0 ID: " + auth0Id + ") no encontrado en el sistema."));
         Cliente cliente = clienteRepository.findByUsuarioId(usuario.getId()).orElseThrow(() -> new Exception("No se encontró un perfil de Cliente para el usuario: " + usuario.getUsername()));
         Pedido pedido = mapAndPreparePedido(dto, cliente);
+        // Idem comentario de arriba.
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
         return convertToResponseDto(pedidoGuardado);
     }
@@ -274,14 +315,14 @@ public class PedidoServiceImpl implements PedidoService {
     @Transactional
     public PedidoResponseDTO crearPedidoDesdeCarrito(Cliente cliente, @Valid CrearPedidoRequestDTO pedidoRequest) throws Exception {
         System.out.println("DEBUG: Iniciando crearPedidoDesdeCarrito para cliente ID: " + cliente.getId());
+        validarFormaDePago(pedidoRequest.getTipoEnvio(), pedidoRequest.getFormaPago());
+
         Carrito carrito = carritoRepository.findByCliente(cliente)
                 .orElseThrow(() -> new Exception("No se encontró un carrito para el cliente " + cliente.getEmail()));
         if (carrito.getItems() == null || carrito.getItems().isEmpty()) {
             throw new Exception("El carrito está vacío. No se puede generar el pedido.");
         }
-        System.out.println("DEBUG: Carrito ID: " + carrito.getId() + " con " + carrito.getItems().size() + " items.");
 
-        // --- Lógica de Domicilio: Buscar o Crear ---
         Domicilio domicilioParaElPedido;
         Localidad localidadDomicilio = localidadRepository.findById(pedidoRequest.getLocalidadIdDomicilio())
                 .orElseThrow(() -> new Exception("Localidad no encontrada para el domicilio con ID: " + pedidoRequest.getLocalidadIdDomicilio()));
@@ -295,7 +336,6 @@ public class PedidoServiceImpl implements PedidoService {
 
         if (optDomicilioExistente.isPresent()) {
             domicilioParaElPedido = optDomicilioExistente.get();
-            System.out.println("DEBUG: Usando domicilio existente encontrado ID: " + domicilioParaElPedido.getId());
         } else {
             Domicilio nuevoDomicilio = new Domicilio();
             nuevoDomicilio.setCalle(pedidoRequest.getCalleDomicilio());
@@ -303,21 +343,16 @@ public class PedidoServiceImpl implements PedidoService {
             nuevoDomicilio.setCp(pedidoRequest.getCpDomicilio());
             nuevoDomicilio.setLocalidad(localidadDomicilio);
             domicilioParaElPedido = domicilioRepository.save(nuevoDomicilio);
-            System.out.println("DEBUG: Creado nuevo domicilio ID: " + domicilioParaElPedido.getId());
         }
 
-        // Opcional: Asociar el domicilio al cliente si así se indica y no está ya asociado
         if (pedidoRequest.getGuardarDireccionEnPerfil() != null && pedidoRequest.getGuardarDireccionEnPerfil()) {
-            // Verificar si el cliente ya tiene este domicilio
             boolean yaTieneDomicilio = cliente.getDomicilios().stream()
                     .anyMatch(d -> d.getId().equals(domicilioParaElPedido.getId()));
             if (!yaTieneDomicilio) {
-                cliente.addDomicilio(domicilioParaElPedido); // Asumiendo que Cliente tiene un método addDomicilio
-                clienteRepository.save(cliente); // Guardar el cliente con el nuevo domicilio asociado
-                System.out.println("DEBUG: Domicilio ID " + domicilioParaElPedido.getId() + " asociado al perfil del cliente ID " + cliente.getId());
+                cliente.addDomicilio(domicilioParaElPedido);
+                clienteRepository.save(cliente);
             }
         }
-        // --- Fin Lógica de Domicilio ---
 
         Sucursal sucursalPedido = sucursalRepository.findById(pedidoRequest.getSucursalId())
                 .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + pedidoRequest.getSucursalId()));
@@ -326,179 +361,111 @@ public class PedidoServiceImpl implements PedidoService {
         }
 
         Map<Integer, Double> insumosAReducirMap = new HashMap<>();
-        System.out.println("DEBUG: Iniciando Pre-Verificación de Stock...");
+        double subTotalGeneralPedido = 0.0;
+        double costoTotalPedido = 0.0;
 
         for (CarritoItem item : carrito.getItems()) {
             Articulo articuloBaseDelCarrito = item.getArticulo();
             int cantidadPedida = item.getCantidad();
-            System.out.println("DEBUG: Verificando stock para CarritoItem ID: " + item.getId() +
-                    ", Articulo ID: " + articuloBaseDelCarrito.getId() +
-                    " (" + articuloBaseDelCarrito.getDenominacion() + ")" +
-                    ", Clase Proxy Inicial: " + articuloBaseDelCarrito.getClass().getName() +
-                    ", Cantidad: " + cantidadPedida);
+            Articulo articuloDelItem;
 
-            Articulo articuloVerificado;
-            Optional<ArticuloInsumo> optInsumoStock = articuloInsumoRepository.findById(articuloBaseDelCarrito.getId());
-            if (optInsumoStock.isPresent()) {
-                articuloVerificado = optInsumoStock.get();
-                ArticuloInsumo insumo = (ArticuloInsumo) articuloVerificado;
-                System.out.println("DEBUG: Es ArticuloInsumo (obtenido de repo para stock): " + insumo.getDenominacion() + ", Stock Actual: " + insumo.getStockActual());
+            Optional<ArticuloInsumo> optInsumo = articuloInsumoRepository.findById(articuloBaseDelCarrito.getId());
+            if (optInsumo.isPresent()) {
+                articuloDelItem = optInsumo.get();
+                ArticuloInsumo insumo = (ArticuloInsumo) articuloDelItem;
                 if (insumo.getEstadoActivo() == null || !insumo.getEstadoActivo()){
                     throw new Exception("El insumo '" + insumo.getDenominacion() + "' ya no está disponible.");
                 }
                 if (insumo.getStockActual() == null || insumo.getStockActual() < cantidadPedida) {
-                    throw new Exception("Stock insuficiente para el insumo: " + insumo.getDenominacion() + ". Solicitado: " + cantidadPedida + ", Disponible: " + (insumo.getStockActual() !=null ? insumo.getStockActual():0) );
+                    throw new Exception("Stock insuficiente para el insumo: " + insumo.getDenominacion());
                 }
                 insumosAReducirMap.merge(insumo.getId(), (double) cantidadPedida, Double::sum);
+                if (insumo.getPrecioCompra() == null) throw new Exception("El insumo '"+insumo.getDenominacion()+"' no tiene precio de compra.");
+                costoTotalPedido += cantidadPedida * insumo.getPrecioCompra();
             } else {
-                Optional<ArticuloManufacturado> optManufStock = articuloManufacturadoRepository.findById(articuloBaseDelCarrito.getId());
-                if (optManufStock.isPresent()) {
-                    articuloVerificado = optManufStock.get();
-                    ArticuloManufacturado manufacturado = (ArticuloManufacturado) articuloVerificado;
-                    System.out.println("DEBUG: Es ArticuloManufacturado (obtenido de repo para stock): " + manufacturado.getDenominacion());
+                Optional<ArticuloManufacturado> optManuf = articuloManufacturadoRepository.findById(articuloBaseDelCarrito.getId());
+                if (optManuf.isPresent()) {
+                    articuloDelItem = optManuf.get();
+                    ArticuloManufacturado manufacturado = (ArticuloManufacturado) articuloDelItem;
                     if (manufacturado.getEstadoActivo() == null || !manufacturado.getEstadoActivo()){
                         throw new Exception("El artículo manufacturado '" + manufacturado.getDenominacion() + "' ya no está disponible.");
                     }
-
                     List<ArticuloManufacturadoDetalle> detallesReceta = manufacturado.getManufacturadoDetalles();
                     if (detallesReceta == null || detallesReceta.isEmpty()) {
-                        ArticuloManufacturado manufacturadoRecargado = articuloManufacturadoRepository.findById(manufacturado.getId())
+                        detallesReceta = articuloManufacturadoRepository.findById(manufacturado.getId())
+                                .map(ArticuloManufacturado::getManufacturadoDetalles)
                                 .orElseThrow(() -> new Exception("No se pudo recargar el manufacturado " + manufacturado.getDenominacion()));
-                        detallesReceta = manufacturadoRecargado.getManufacturadoDetalles();
-                        if (detallesReceta == null || detallesReceta.isEmpty()) {
-                            throw new Exception("El artículo manufacturado '" + manufacturado.getDenominacion() + "' no tiene una receta definida (detalles vacíos o nulos incluso después de recargar).");
-                        }
                     }
-
-                    System.out.println("DEBUG: Receta para " + manufacturado.getDenominacion() + " tiene " + detallesReceta.size() + " insumos.");
+                    if (detallesReceta == null || detallesReceta.isEmpty()) {
+                        throw new Exception("El artículo manufacturado '" + manufacturado.getDenominacion() + "' no tiene una receta definida.");
+                    }
+                    double costoManufacturadoUnitario = 0.0;
                     for (ArticuloManufacturadoDetalle detalleRecetaItem : detallesReceta) {
-                        ArticuloInsumo insumoComponenteOriginal = detalleRecetaItem.getArticuloInsumo();
-                        if (insumoComponenteOriginal == null) throw new Exception ("Error en la receta de '"+manufacturado.getDenominacion()+"'.");
-
-                        ArticuloInsumo insumoCompFromDb = articuloInsumoRepository.findById(insumoComponenteOriginal.getId())
-                                .orElseThrow(() -> new Exception("Insumo " + insumoComponenteOriginal.getDenominacion() + " de receta no encontrado en DB."));
-
-                        System.out.println("DEBUG:   Insumo de receta: " + insumoCompFromDb.getDenominacion() + ", Stock Actual: " + insumoCompFromDb.getStockActual() + ", Cantidad Receta: " + detalleRecetaItem.getCantidad());
-                        if (insumoCompFromDb.getEstadoActivo() == null || !insumoCompFromDb.getEstadoActivo()){
-                            throw new Exception("El insumo componente '" + insumoCompFromDb.getDenominacion() + "' ya no está disponible.");
+                        ArticuloInsumo insumoComponente = articuloInsumoRepository.findById(detalleRecetaItem.getArticuloInsumo().getId())
+                                .orElseThrow(() -> new Exception("Insumo de receta no encontrado: " + detalleRecetaItem.getArticuloInsumo().getDenominacion()));
+                        if (insumoComponente.getEstadoActivo() == null || !insumoComponente.getEstadoActivo()){
+                            throw new Exception("El insumo componente '" + insumoComponente.getDenominacion() + "' ya no está disponible.");
                         }
-                        double cantidadNecesariaComponenteTotal = detalleRecetaItem.getCantidad() * cantidadPedida;
-                        if (insumoCompFromDb.getStockActual() == null || insumoCompFromDb.getStockActual() < cantidadNecesariaComponenteTotal) {
-                            throw new Exception("Stock insuficiente del insumo '" + insumoCompFromDb.getDenominacion() + "'. Solicitado: " + cantidadNecesariaComponenteTotal + ", Disponible: " + (insumoCompFromDb.getStockActual() != null ? insumoCompFromDb.getStockActual() : 0) );
+                        double cantidadNecesariaTotal = detalleRecetaItem.getCantidad() * cantidadPedida;
+                        if (insumoComponente.getStockActual() == null || insumoComponente.getStockActual() < cantidadNecesariaTotal) {
+                            throw new Exception("Stock insuficiente del insumo '" + insumoComponente.getDenominacion() + "'.");
                         }
-                        insumosAReducirMap.merge(insumoCompFromDb.getId(), cantidadNecesariaComponenteTotal, Double::sum);
+                        insumosAReducirMap.merge(insumoComponente.getId(), cantidadNecesariaTotal, Double::sum);
+                        if (insumoComponente.getPrecioCompra() == null) throw new Exception("El insumo componente '"+insumoComponente.getDenominacion()+"' no tiene precio de compra.");
+                        costoManufacturadoUnitario += detalleRecetaItem.getCantidad() * insumoComponente.getPrecioCompra();
                     }
+                    costoTotalPedido += cantidadPedida * costoManufacturadoUnitario;
                 } else {
-                    throw new Exception("Artículo con ID " + articuloBaseDelCarrito.getId() + " ("+articuloBaseDelCarrito.getDenominacion()+") no es ni Insumo ni Manufacturado, o no se encontró en repositorios específicos durante la verificación de stock.");
+                    throw new Exception("Artículo con ID " + articuloBaseDelCarrito.getId() + " no es ni Insumo ni Manufacturado.");
                 }
             }
+            if (articuloDelItem.getPrecioVenta() == null) {
+                throw new Exception("El artículo '" + articuloDelItem.getDenominacion() + "' no tiene un precio de venta asignado.");
+            }
+            subTotalGeneralPedido += cantidadPedida * articuloDelItem.getPrecioVenta();
         }
-        System.out.println("DEBUG: Pre-Verificación de Stock completada. Insumos a reducir: " + insumosAReducirMap);
 
         Pedido nuevoPedido = new Pedido();
         nuevoPedido.setCliente(cliente);
         nuevoPedido.setFechaPedido(LocalDate.now());
         nuevoPedido.setHoraEstimadaFinalizacion(parseTime(pedidoRequest.getHoraEstimadaFinalizacion(), "hora estimada de finalización"));
-        nuevoPedido.setDomicilio(domicilioParaElPedido); // Usar el domicilio encontrado o creado
+        nuevoPedido.setDomicilio(domicilioParaElPedido);
         nuevoPedido.setSucursal(sucursalPedido);
         nuevoPedido.setTipoEnvio(pedidoRequest.getTipoEnvio());
         nuevoPedido.setFormaPago(pedidoRequest.getFormaPago());
         nuevoPedido.setEstado(Estado.PENDIENTE);
         nuevoPedido.setEstadoActivo(true);
-        // nuevoPedido.setNotas(pedidoRequest.getNotasAdicionales()); // Si tienes campo notas en Pedido
-
-        double totalGeneralPedido = 0.0;
-        double costoTotalPedido = 0.0;
-        System.out.println("DEBUG: Iniciando cálculo de Total y TotalCosto. costoTotalPedido inicial: " + costoTotalPedido);
+        nuevoPedido.setTotalCosto(costoTotalPedido);
 
         for (CarritoItem item : carrito.getItems()) {
             DetallePedido detallePedido = new DetallePedido();
-            Articulo articuloDelItem;
-            Optional<ArticuloInsumo> optInsumo = articuloInsumoRepository.findById(item.getArticulo().getId());
-            if (optInsumo.isPresent()) {
-                articuloDelItem = optInsumo.get();
-            } else {
-                Optional<ArticuloManufacturado> optManuf = articuloManufacturadoRepository.findById(item.getArticulo().getId());
-                if (optManuf.isPresent()) {
-                    articuloDelItem = optManuf.get();
-                } else {
-                    throw new Exception("Artículo con ID " + item.getArticulo().getId() + " no encontrado en repositorios específicos al crear detalles de pedido.");
-                }
-            }
-
-            System.out.println("DEBUG: Procesando para DetallePedido: Articulo '" + articuloDelItem.getDenominacion() +
-                    "' (ID: " + articuloDelItem.getId() +
-                    "), Clase Real Obtenida: " + articuloDelItem.getClass().getName() +
-                    ", Cantidad: " + item.getCantidad());
-
+            Articulo articuloDelItem = articuloRepository.findById(item.getArticulo().getId())
+                    .orElseThrow(() -> new Exception("Artículo con ID " + item.getArticulo().getId() + " no encontrado al crear detalles."));
             detallePedido.setArticulo(articuloDelItem);
             detallePedido.setCantidad(item.getCantidad());
-            double subTotalItem = item.getCantidad() * item.getPrecioUnitarioAlAgregar();
-            detallePedido.setSubTotal(subTotalItem);
-            totalGeneralPedido += subTotalItem;
-
-            if (articuloDelItem instanceof ArticuloInsumo) {
-                ArticuloInsumo insumo = (ArticuloInsumo) articuloDelItem;
-                System.out.println("DEBUG:   Costo Insumo: " + insumo.getDenominacion() + ", PrecioCompra: " + insumo.getPrecioCompra() + ", Cantidad: " + item.getCantidad());
-                if (insumo.getPrecioCompra() == null) {
-                    System.err.println("ERROR CRITICO: Insumo '" + insumo.getDenominacion() + "' (ID: " + insumo.getId() + ") tiene precioCompra NULO.");
-                    throw new Exception("El insumo '"+insumo.getDenominacion()+"' no tiene precio de compra.");
-                }
-                costoTotalPedido += item.getCantidad() * insumo.getPrecioCompra();
-            } else if (articuloDelItem instanceof ArticuloManufacturado) {
-                ArticuloManufacturado manufacturado = (ArticuloManufacturado) articuloDelItem;
-                System.out.println("DEBUG:   Costo Manufacturado: " + manufacturado.getDenominacion());
-                double costoManufacturadoUnitario = 0.0;
-
-                List<ArticuloManufacturadoDetalle> detallesReceta = manufacturado.getManufacturadoDetalles();
-                if (detallesReceta == null || detallesReceta.isEmpty()) {
-                    ArticuloManufacturado manufacturadoRecargado = articuloManufacturadoRepository.findById(manufacturado.getId())
-                            .orElseThrow(() -> new Exception("No se pudo recargar el manufacturado " + manufacturado.getDenominacion() + " para obtener detalles de receta."));
-                    detallesReceta = manufacturadoRecargado.getManufacturadoDetalles();
-                    if (detallesReceta == null || detallesReceta.isEmpty()) {
-                        throw new Exception("El artículo manufacturado '" + manufacturado.getDenominacion() + "' (ID: " + manufacturado.getId() + ") no tiene detalles de receta para el cálculo de costo (incluso después de recargar).");
-                    }
-                }
-                for (ArticuloManufacturadoDetalle detalleRecetaItem : detallesReceta) {
-                    ArticuloInsumo insumoComponenteOriginal = detalleRecetaItem.getArticuloInsumo();
-                    if (insumoComponenteOriginal == null) {
-                        throw new Exception("Error en receta de '" + manufacturado.getDenominacion() + "': insumo nulo.");
-                    }
-                    ArticuloInsumo insumoCompConPrecio = articuloInsumoRepository.findById(insumoComponenteOriginal.getId())
-                            .orElseThrow(() -> new Exception("Insumo " + insumoComponenteOriginal.getDenominacion() + " de receta no encontrado en BD para costo."));
-
-                    System.out.println("DEBUG:     Receta Insumo: " + insumoCompConPrecio.getDenominacion() + ", PrecioCompra: " + insumoCompConPrecio.getPrecioCompra() + ", Cantidad Receta: " + detalleRecetaItem.getCantidad());
-                    if (insumoCompConPrecio.getPrecioCompra() == null) {
-                        System.err.println("ERROR CRITICO: Insumo de receta '" + insumoCompConPrecio.getDenominacion() + "' (ID: " + insumoCompConPrecio.getId() + ") tiene precioCompra NULO.");
-                        throw new Exception("El insumo componente '"+insumoCompConPrecio.getDenominacion()+"' no tiene precio de compra.");
-                    }
-                    costoManufacturadoUnitario += detalleRecetaItem.getCantidad() * insumoCompConPrecio.getPrecioCompra();
-                }
-                System.out.println("DEBUG:   Costo Manufacturado Unitario Calculado: " + costoManufacturadoUnitario);
-                costoTotalPedido += item.getCantidad() * costoManufacturadoUnitario;
-            } else {
-                System.err.println("WARN (Cálculo Costo): Articulo ID " + articuloDelItem.getId() + " (" + articuloDelItem.getDenominacion() + ") no es ni ArticuloInsumo ni ArticuloManufacturado. Clase Real Obtenida: " + articuloDelItem.getClass().getName());
+            if (articuloDelItem.getPrecioVenta() == null) { // Esta verificación ya está arriba, pero por seguridad.
+                throw new Exception("El artículo '" + articuloDelItem.getDenominacion() + "' no tiene un precio de venta asignado.");
             }
-            System.out.println("DEBUG:   costoTotalPedido acumulado: " + costoTotalPedido);
+            detallePedido.setSubTotal(item.getCantidad() * articuloDelItem.getPrecioVenta());
             nuevoPedido.addDetalle(detallePedido);
         }
 
-        nuevoPedido.setTotal(totalGeneralPedido);
-        nuevoPedido.setTotalCosto(costoTotalPedido);
-        System.out.println("DEBUG: Pedido Final - Total: " + nuevoPedido.getTotal() + ", TotalCosto: " + nuevoPedido.getTotalCosto());
+        if (nuevoPedido.getTipoEnvio() == TipoEnvio.TAKEAWAY) {
+            double descuento = subTotalGeneralPedido * 0.10;
+            nuevoPedido.setDescuentoAplicado(descuento);
+            nuevoPedido.setTotal(subTotalGeneralPedido - descuento);
+        } else {
+            nuevoPedido.setDescuentoAplicado(0.0);
+            nuevoPedido.setTotal(subTotalGeneralPedido);
+        }
 
         System.out.println("DEBUG: Iniciando Actualización de Stock...");
         for (Map.Entry<Integer, Double> entry : insumosAReducirMap.entrySet()) {
-            Integer insumoId = entry.getKey();
-            Double cantidadADescontar = entry.getValue();
-            ArticuloInsumo insumoAActualizar = articuloInsumoRepository.findById(insumoId)
-                    .orElseThrow(() -> new Exception("Insumo con ID " + insumoId + " no encontrado para actualizar stock."));
-
-            System.out.println("DEBUG:   Descontando Stock para Insumo ID: " + insumoId + " (" + insumoAActualizar.getDenominacion() + "), Cantidad a descontar: " + cantidadADescontar + ", Stock actual: " + insumoAActualizar.getStockActual());
+            ArticuloInsumo insumoAActualizar = articuloInsumoRepository.findById(entry.getKey())
+                    .orElseThrow(() -> new Exception("Insumo con ID " + entry.getKey() + " no encontrado para actualizar stock."));
             if(insumoAActualizar.getStockActual() == null) insumoAActualizar.setStockActual(0.0);
-            insumoAActualizar.setStockActual(insumoAActualizar.getStockActual() - cantidadADescontar);
+            insumoAActualizar.setStockActual(insumoAActualizar.getStockActual() - entry.getValue());
             articuloInsumoRepository.save(insumoAActualizar);
-            System.out.println("DEBUG:   Nuevo Stock para Insumo ID: " + insumoId + ": " + insumoAActualizar.getStockActual());
         }
         System.out.println("DEBUG: Actualización de Stock completada.");
 
@@ -511,23 +478,37 @@ public class PedidoServiceImpl implements PedidoService {
         return convertToResponseDto(pedidoGuardado);
     }
 
+
     @Override
     @Transactional
     public PedidoResponseDTO updateEstado(Integer id, Estado nuevoEstado) throws Exception {
         Pedido pedidoExistente = pedidoRepository.findById(id).orElseThrow(() -> new Exception("Pedido no encontrado con ID: " + id));
-        if (pedidoExistente.getEstado() == Estado.ENTREGADO) {
-            if (nuevoEstado == Estado.CANCELADO) throw new Exception("No se puede cancelar un pedido que ya fue entregado.");
-            if (nuevoEstado != Estado.ENTREGADO) throw new Exception("Un pedido entregado no puede cambiar a estado: " + nuevoEstado);
+        Estado estadoActual = pedidoExistente.getEstado();
+
+        if (estadoActual == nuevoEstado) return convertToResponseDto(pedidoExistente);
+
+        switch (estadoActual) {
+            case ENTREGADO:
+                if (nuevoEstado == Estado.CANCELADO) throw new Exception("No se puede cancelar un pedido que ya fue entregado.");
+                if (nuevoEstado != Estado.ENTREGADO) throw new Exception("Un pedido entregado no puede cambiar a otro estado.");
+                break;
+            case CANCELADO:
+                if (nuevoEstado != Estado.CANCELADO) throw new Exception("No se puede cambiar el estado de un pedido ya cancelado.");
+                break;
+            case RECHAZADO:
+                if (nuevoEstado != Estado.RECHAZADO) throw new Exception("No se puede cambiar el estado de un pedido ya rechazado.");
+                break;
+            case PENDIENTE:
+                if (nuevoEstado == Estado.ENTREGADO) throw new Exception("Un pedido PENDIENTE debe pasar por PAGADO/PREPARACION/EN_CAMINO antes de ser ENTREGADO.");
+                break;
+            case PAGADO:
+                if (nuevoEstado == Estado.PENDIENTE) throw new Exception("Un pedido PAGADO no puede volver a PENDIENTE.");
+                break;
+            default:
+                // Permitir otras transiciones si no están explícitamente prohibidas
+                break;
         }
-        if (pedidoExistente.getEstado() == Estado.CANCELADO && nuevoEstado != Estado.CANCELADO) {
-            throw new Exception("No se puede cambiar el estado de un pedido cancelado.");
-        }
-        if (pedidoExistente.getEstado() == Estado.RECHAZADO && nuevoEstado != Estado.RECHAZADO) {
-            throw new Exception("No se puede cambiar el estado de un pedido rechazado.");
-        }
-        if (pedidoExistente.getEstado() == Estado.PENDIENTE && (nuevoEstado == Estado.ENTREGADO )) { //  Quite EN_CAMINO para simplificar
-            throw new Exception("Un pedido pendiente debe pasar por preparación/listo antes de ser entregado.");
-        }
+
         pedidoExistente.setEstado(nuevoEstado);
         Pedido pedidoActualizado = pedidoRepository.save(pedidoExistente);
         return convertToResponseDto(pedidoActualizado);
@@ -540,11 +521,61 @@ public class PedidoServiceImpl implements PedidoService {
         if (pedido.getEstado() == Estado.ENTREGADO) {
             throw new Exception("No se puede eliminar (borrado lógico) un pedido que ya fue entregado.");
         }
+        if (pedido.getEstado() == Estado.EN_CAMINO || pedido.getEstado() == Estado.PREPARACION) {
+            throw new Exception("No se puede eliminar (borrado lógico) un pedido que está en " + pedido.getEstado() + ".");
+        }
+
         pedido.setEstadoActivo(false);
         pedido.setFechaBaja(LocalDate.now());
-        if (pedido.getEstado() != Estado.CANCELADO && pedido.getEstado() != Estado.RECHAZADO && pedido.getEstado() != Estado.ENTREGADO) {
+
+        if (pedido.getEstado() != Estado.RECHAZADO && pedido.getEstado() != Estado.CANCELADO) {
             pedido.setEstado(Estado.CANCELADO);
         }
+        pedidoRepository.save(pedido);
+    }
+
+    @Override
+    @Transactional
+    public PedidoResponseDTO procesarNotificacionMercadoPago(String paymentId, String status, String externalReference) throws Exception {
+        Pedido pedido;
+        // Intentar buscar por externalReference como ID de pedido
+        try {
+            Integer pedidoId = Integer.parseInt(externalReference);
+            pedido = pedidoRepository.findById(pedidoId)
+                    .orElseGet(() -> pedidoRepository.findByMercadoPagoPreferenceId(externalReference).orElse(null));
+        } catch (NumberFormatException e) {
+            // Si externalReference no es un número, asumimos que es un preferenceId
+            pedido = pedidoRepository.findByMercadoPagoPreferenceId(externalReference).orElse(null);
+        }
+
+        if (pedido == null) {
+            throw new Exception("Pedido no encontrado para la referencia externa de Mercado Pago: " + externalReference);
+        }
+
+        pedido.setMercadoPagoPaymentId(paymentId);
+        pedido.setMercadoPagoPaymentStatus(status);
+
+        if ("approved".equalsIgnoreCase(status)) {
+            pedido.setEstado(Estado.PAGADO);
+            System.out.println("INFO: Pedido ID " + pedido.getId() + " pagado exitosamente via Mercado Pago. Payment ID: " + paymentId);
+            // Lógica de factura...
+        } else if ("rejected".equalsIgnoreCase(status) || "cancelled".equalsIgnoreCase(status) || "in_mediation".equalsIgnoreCase(status) || "charged_back".equalsIgnoreCase(status) ) {
+            pedido.setEstado(Estado.RECHAZADO);
+            System.out.println("INFO: Pago para Pedido ID " + pedido.getId() + " fue " + status + " por Mercado Pago. Payment ID: " + paymentId);
+        } else {
+            System.out.println("INFO: Pedido ID " + pedido.getId() + " recibió notificación de Mercado Pago con estado: " + status + ". Payment ID: " + paymentId);
+        }
+
+        Pedido pedidoActualizado = pedidoRepository.save(pedido);
+        return convertToResponseDto(pedidoActualizado);
+    }
+
+    @Override
+    @Transactional
+    public void actualizarPreferenciaMercadoPago(Integer pedidoId, String preferenceId) throws Exception {
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new Exception("Pedido no encontrado con ID: " + pedidoId + " para actualizar preferenceId de MP."));
+        pedido.setMercadoPagoPreferenceId(preferenceId);
         pedidoRepository.save(pedido);
     }
 }

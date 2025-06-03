@@ -1,12 +1,13 @@
 package com.powerRanger.ElBuenSabor.services;
 
-import com.powerRanger.ElBuenSabor.dtos.CrearPedidoRequestDTO; // Importar el nuevo DTO
+import com.powerRanger.ElBuenSabor.dtos.CrearPedidoRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.PedidoRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.PedidoResponseDTO;
-import com.powerRanger.ElBuenSabor.entities.Cliente; // Importar la entidad Cliente
+import com.powerRanger.ElBuenSabor.entities.Cliente;
 import com.powerRanger.ElBuenSabor.entities.enums.Estado;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map; // Para la respuesta de MP
 
 public interface PedidoService {
     List<PedidoResponseDTO> getAll();
@@ -17,16 +18,22 @@ public interface PedidoService {
     PedidoResponseDTO create(@Valid PedidoRequestDTO dto) throws Exception;
     PedidoResponseDTO createForAuthenticatedClient(String auth0Id, @Valid PedidoRequestDTO dto) throws Exception;
 
-    /**
-     * Crea un nuevo Pedido a partir del carrito activo del Cliente y la información proporcionada.
-     * Este proceso incluye la validación de stock, cálculo de costos, y limpieza del carrito.
-     * @param cliente El Cliente que realiza el pedido.
-     * @param pedidoRequest DTO con la información adicional para el pedido (domicilio, envío, pago, sucursal).
-     * @return PedidoResponseDTO del pedido recién creado.
-     * @throws Exception Si el carrito está vacío, hay stock insuficiente, o cualquier otro error de validación/proceso.
-     */
-    PedidoResponseDTO crearPedidoDesdeCarrito(Cliente cliente, @Valid CrearPedidoRequestDTO pedidoRequest) throws Exception; // Nuevo método
+    PedidoResponseDTO crearPedidoDesdeCarrito(Cliente cliente, @Valid CrearPedidoRequestDTO pedidoRequest) throws Exception;
 
     PedidoResponseDTO updateEstado(Integer id, Estado nuevoEstado) throws Exception;
     void softDelete(Integer id) throws Exception;
+
+    /**
+     * Procesa una notificación de Mercado Pago.
+     * @param paymentId El ID del pago en Mercado Pago.
+     * @param status El estado del pago.
+     * @param externalReference La referencia externa (ID de nuestro pedido o preferencia).
+     * @return PedidoResponseDTO del pedido actualizado.
+     * @throws Exception Si ocurre un error.
+     */
+    PedidoResponseDTO procesarNotificacionMercadoPago(String paymentId, String status, String externalReference) throws Exception;
+
+    // Método para que el controller llame y guarde el preferenceId en el pedido
+    // Es una alternativa a que el controller lo haga directamente con el repositorio
+    void actualizarPreferenciaMercadoPago(Integer pedidoId, String preferenceId) throws Exception;
 }

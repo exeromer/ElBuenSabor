@@ -82,14 +82,29 @@ public class Pedido {
     @NotNull(message = "El estado activo es obligatorio")
     private Boolean estadoActivo = true;
 
+    // Campos para Mercado Pago
+    @Column(name = "mp_payment_id")
+    private String mercadoPagoPaymentId;
+
+    @Column(name = "mp_preference_id")
+    private String mercadoPagoPreferenceId;
+
+    @Column(name = "mp_payment_status")
+    private String mercadoPagoPaymentStatus;
+
+    @Column(name = "descuento_aplicado") // Para el 10% de descuento en Take Away
+    private Double descuentoAplicado;
+
+
     public Pedido() {
         this.detalles = new ArrayList<>();
         this.fechaPedido = LocalDate.now();
-        this.estado = Estado.PENDIENTE;
+        this.estado = Estado.PENDIENTE; // Estado inicial "A confirmar"
         this.estadoActivo = true;
+        this.descuentoAplicado = 0.0; // Por defecto no hay descuento
     }
 
-    // Getters y Setters (completos)
+    // Getters y Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
     public LocalTime getHoraEstimadaFinalizacion() { return horaEstimadaFinalizacion; }
@@ -120,6 +135,18 @@ public class Pedido {
     public void setFechaBaja(LocalDate fechaBaja) { this.fechaBaja = fechaBaja; }
     public Boolean getEstadoActivo() { return estadoActivo; }
     public void setEstadoActivo(Boolean estadoActivo) { this.estadoActivo = estadoActivo; }
+
+    // Getters y Setters para Mercado Pago
+    public String getMercadoPagoPaymentId() { return mercadoPagoPaymentId; }
+    public void setMercadoPagoPaymentId(String mercadoPagoPaymentId) { this.mercadoPagoPaymentId = mercadoPagoPaymentId; }
+    public String getMercadoPagoPreferenceId() { return mercadoPagoPreferenceId; }
+    public void setMercadoPagoPreferenceId(String mercadoPagoPreferenceId) { this.mercadoPagoPreferenceId = mercadoPagoPreferenceId; }
+    public String getMercadoPagoPaymentStatus() { return mercadoPagoPaymentStatus; }
+    public void setMercadoPagoPaymentStatus(String mercadoPagoPaymentStatus) { this.mercadoPagoPaymentStatus = mercadoPagoPaymentStatus; }
+
+    public Double getDescuentoAplicado() { return descuentoAplicado; }
+    public void setDescuentoAplicado(Double descuentoAplicado) { this.descuentoAplicado = descuentoAplicado; }
+
 
     // Métodos Helper
     public void addDetalle(DetallePedido detalle) {
