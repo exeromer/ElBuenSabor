@@ -1,4 +1,6 @@
+/*
 package com.powerRanger.ElBuenSabor.config;
+
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -40,7 +42,7 @@ public class SecurityConfig {
      * Aunque estemos permitiendo todo, es bueno mantener la configuración de CORS
      * por si la necesitas más adelante o si tu navegador hace comprobaciones.
      */
-    @Bean
+    /*@Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         // Orígenes permitidos (ajusta según tu frontend en desarrollo/producción)
@@ -55,8 +57,8 @@ public class SecurityConfig {
         return source;
     }
 }
+*/
 
-/*
 package com.powerRanger.ElBuenSabor.config;
 
 import com.powerRanger.ElBuenSabor.entities.Usuario;
@@ -65,6 +67,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -82,14 +85,15 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity(prePostEnabled = true) // Habilita @PreAuthorize, @PostAuthorize en métodos
+@Profile("!dev") // No se activará si el perfil "dev" está activo
 public class SecurityConfig {
+
 
     @Autowired
     private UsuarioService usuarioService;
@@ -115,6 +119,10 @@ public class SecurityConfig {
                                 // ENDPOINTS PÚBLICOS (ejemplos, ajusta según tus necesidades)
                                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
+                                // Permitir a cualquier usuario AUTENTICADO intentar acceder a su propio detalle vía auth0Id.
+                                // La lógica de @PreAuthorize en el controlador se encargará de la autorización fina.
+                                .requestMatchers(HttpMethod.GET, "/api/usuarios/auth0/{auth0Id}").authenticated()
+
 
                                 // Permitir GET para ciertas entidades de catálogo sin autenticación
                                 .requestMatchers(HttpMethod.GET, "/api/categorias/**").permitAll()
@@ -123,7 +131,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/articulosinsumo/**").permitAll() // GET general de insumos
                                 .requestMatchers(HttpMethod.GET, "/api/articulosmanufacturados/**").permitAll() // GET general de manufacturados
 
-                                // REGLAS DE AUTORIZACIÓN ESPECÍFICAS (EJEMPLOS)
+                                // REGLAS DE AUTORIZACIÓN ESPECÍFICAS
                                 // Para crear, modificar o borrar se necesita un rol específico
                                 .requestMatchers(HttpMethod.POST, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.PUT, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
@@ -134,18 +142,48 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.DELETE, "/api/articulos/**", "/api/articulosinsumo/**", "/api/articulosmanufacturados/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
 
                                 // Gestión de usuarios solo por ADMIN (el endpoint de creación directa)
-                                .requestMatchers("/api/usuarios/**").hasAuthority("ROLE_ADMIN")
+                                // Reglas más específicas para otras operaciones de /api/usuarios (generalmente admin)
+                                .requestMatchers(HttpMethod.GET, "/api/usuarios").hasAuthority("ROLE_ADMIN") // Listar todos los usuarios
+                                .requestMatchers(HttpMethod.POST, "/api/usuarios").hasAuthority("ROLE_ADMIN") // Crear usuario (vía admin)
+                                .requestMatchers(HttpMethod.PUT, "/api/usuarios/{id}").hasAuthority("ROLE_ADMIN") // Actualizar usuario (vía admin por ID numérico)
+                                .requestMatchers(HttpMethod.DELETE, "/api/usuarios/{id}").hasAuthority("ROLE_ADMIN") // Borrar usuario (vía admin por ID numérico)
 
                                 // Pedidos: Clientes pueden crear y ver sus pedidos, empleados/admin pueden ver todos/gestionar
                                 .requestMatchers(HttpMethod.POST, "/api/pedidos").hasAuthority("ROLE_CLIENTE")
-                                .requestMatchers(HttpMethod.GET, "/api/pedidos/cliente/{clienteId}").hasAuthority("ROLE_CLIENTE") // Un cliente solo sus pedidos
+                                .requestMatchers(HttpMethod.POST, "/api/pedidos/cliente/{clienteId}/desde-carrito").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.GET, "/api/pedidos/mis-pedidos").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.GET, "/api/pedidos/cliente/{clienteId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN") // Un cliente solo sus pedidos
                                 .requestMatchers(HttpMethod.GET, "/api/pedidos/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO") // Admin/Empleado ven todos
                                 .requestMatchers(HttpMethod.PUT, "/api/pedidos/estado/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO") // Cambiar estado
+                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/{id}/estado").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO") // Cambiar estado (por ID
+
+                                //Carrito: Cliente Visualiza carrito
+                                .requestMatchers(HttpMethod.GET, "/api/clientes/{clienteId}/carrito").hasAuthority("ROLE_CLIENTE") // Cliente ve/crea SU carrito
+                                .requestMatchers(HttpMethod.POST, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE") // Cliente añade a SU carrito
+                                .requestMatchers(HttpMethod.PUT, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE") // Cliente actualiza en SU carrito
+                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE") // Cliente borra de SU carrito
+                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE") // Cliente vacía SU carrito
 
                                 // Clientes: Un cliente puede ver/modificar su propio perfil. Admin puede gestionar todos.
                                 .requestMatchers(HttpMethod.GET, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE") // Endpoint para que el cliente obtenga su perfil
                                 .requestMatchers(HttpMethod.PUT, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE") // Endpoint para que el cliente actualice su perfil
+                                .requestMatchers(HttpMethod.POST,"/api/domicilios/").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
+                                .requestMatchers(HttpMethod.PUT,"/api/domicilios/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
+                                .requestMatchers(HttpMethod.DELETE,"/api/domicilios/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
                                 .requestMatchers("/api/clientes/**").hasAuthority("ROLE_ADMIN")
+
+                                //Facturas: Cliente puede ver sus facturas. Admin y Cajero tambien
+                                .requestMatchers(HttpMethod.GET,"/api/facturas/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.PUT,"/api/facturas/anular/{id}").hasAnyAuthority("ROLE_ADMIN","ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.POST,"/api/facturas/generar-desde-pedido").hasAnyAuthority("ROLE_ADMIN","ROLE_EMPLEADO")
+
+                                //Imagenes
+                                .requestMatchers(HttpMethod.POST, "/api/files/upload").hasAnyAuthority( "ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.GET, "/api/files/view/{filename}").permitAll()
+
+                                //Estadisticas
+                                .requestMatchers(HttpMethod.GET, "/api/estadisticas/**").hasAuthority("ROLE_ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/api/estadisticas/**").hasAuthority("ROLE_ADMIN")
 
 
                                 // Cualquier otra petición requiere autenticación
@@ -178,34 +216,39 @@ public class SecurityConfig {
         // para buscar o crear el usuario local y obtener sus roles de NUESTRA base de datos.
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
             String auth0Id = jwt.getSubject(); // 'sub' claim es el auth0Id
-
             // Extraer información adicional del token si está disponible y la necesitas
             // El claim 'email' es estándar, 'nickname' puede o no estar. Ajusta según los claims de tu token de Auth0.
             String username = jwt.getClaimAsString("nickname");
             String email = jwt.getClaimAsString("email");
 
-            if (username == null && email != null) { // Usar email como username si nickname no está
-                username = email;
+            if (username == null && email != null) {
+                username = email.split("@")[0]; // Ajuste para tomar solo la parte antes del @
             }
+            // Si username sigue siendo null o vacío, genera uno a partir del auth0Id
+            if (username == null || username.trim().isEmpty()) {
+                username = "user_" + auth0Id.replaceAll("[^a-zA-Z0-9]", "").substring(0, Math.min(10, auth0Id.length()));
+            }
+
 
             Collection<GrantedAuthority> authorities = new HashSet<>();
             try {
                 // Lógica de Just-In-Time Provisioning: Busca o crea el usuario en nuestra BD
-                Usuario usuario = usuarioService.findOrCreateUsuario(auth0Id, username, email);
+                System.out.println("JWT_CONVERTER: Llamando a findOrCreateUsuario con auth0Id: " + auth0Id + ", username: " + username + ", email: " + email);
+                Usuario usuario = usuarioService.findOrCreateUsuario(auth0Id, username, email); // Esta es la llamada CRUCIAL
 
                 if (usuario != null && usuario.getRol() != null && Boolean.TRUE.equals(usuario.getEstadoActivo())) {
                     authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name()));
-                    System.out.println("Usuario '" + (usuario.getUsername() != null ? usuario.getUsername() : auth0Id) + "' autenticado con rol: " + usuario.getRol().name());
+                    System.out.println("JWT_CONVERTER: Usuario '" + (usuario.getUsername() != null ? usuario.getUsername() : auth0Id) + "' autenticado con rol: " + usuario.getRol().name());
                 } else if (usuario != null && !Boolean.TRUE.equals(usuario.getEstadoActivo())) {
-                    System.out.println("Intento de login de usuario inactivo/dado de baja: " + (usuario.getUsername() != null ? usuario.getUsername() : auth0Id));
-                    // No se asignan roles. La autorización fallará.
+                    System.out.println("JWT_CONVERTER: Intento de login de usuario inactivo/dado de baja: " + (usuario.getUsername() != null ? usuario.getUsername() : auth0Id));
                 } else {
-                    System.out.println("No se pudo encontrar/crear usuario o no tiene rol para auth0Id: " + auth0Id);
+                    // Este caso (usuario == null) no debería ocurrir si findOrCreateUsuario siempre devuelve un usuario o lanza excepción.
+                    // Si findOrCreateUsuario PUEDE devolver null sin lanzar excepción, este log es importante.
+                    System.out.println("JWT_CONVERTER: No se pudo encontrar/crear usuario, o no tiene rol/estado activo para auth0Id: " + auth0Id + ". Usuario devuelto por servicio: " + usuario);
                 }
             } catch (Exception e) {
-                System.err.println("Error en findOrCreateUsuario para auth0Id '" + auth0Id + "': " + e.getMessage());
-                // Esto podría significar que el usuario no puede ser autenticado correctamente en tu sistema.
-                // Se podría lanzar una AuthenticationServiceException aquí.
+                System.err.println("JWT_CONVERTER_ERROR: Error en findOrCreateUsuario para auth0Id '" + auth0Id + "': " + e.getMessage());
+                e.printStackTrace(); // Muy importante para ver la traza completa del error del servicio
             }
             return authorities;
         });
@@ -217,7 +260,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         // Orígenes permitidos para tu frontend (ej. localhost:3000, localhost:5173 para desarrollo)
         // En producción, reemplaza esto con el dominio real de tu frontend.
-        configuration.setAllowedOrigins(List.of("http://localhost:3000", "http://localhost:8080")); //ACA VA LA URL DEL FRONTEND (OSEA LIVESERVER)
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8080")); //ACA VA LA URL DEL FRONTEND (OSEA LIVESERVER)
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "X-Auth-Token"));
         configuration.setAllowCredentials(true); // Importante si tu frontend necesita enviar cookies o cabeceras de autorización
@@ -228,5 +271,3 @@ public class SecurityConfig {
         return source;
     }
 }
-
-*/

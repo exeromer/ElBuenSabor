@@ -111,4 +111,5 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
         // }
         articuloInsumoRepository.delete(insumo);
     }
+
 }

@@ -50,4 +50,6 @@ public interface CarritoService {
      * @throws Exception Si ocurre un error al acceder o modificar el carrito.
      */
     CarritoResponseDTO vaciarCarrito(Cliente cliente) throws Exception;
+
+
 }
