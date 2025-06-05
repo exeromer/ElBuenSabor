@@ -101,18 +101,27 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
         System.out.println("DEBUG SERVICE: Manufacturado ID: " + dto.getId() + " (" + dto.getDenominacion() + ") - Unidades Disponibles Asignadas al DTO: " + dto.getUnidadesDisponiblesCalculadas());
         return dto;
     }
-
     @Override
     @Transactional
     public ArticuloManufacturadoResponseDTO createArticuloManufacturado(@Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
         ArticuloManufacturado am = new ArticuloManufacturado();
-        // Asegurar que las listas estén inicializadas antes de mapDtoToEntity
-        am.setImagenes(new ArrayList<>()); // Heredado de Articulo
+        am.setImagenes(new ArrayList<>());
         am.setManufacturadoDetalles(new ArrayList<>());
 
-        mapRequestDtoToEntity(dto, am);
+        mapRequestDtoToEntity(dto, am); // Esto mapea del RequestDTO a la Entidad
         ArticuloManufacturado amGuardado = manufacturadoRepository.save(am);
-        return (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(amGuardado);
+
+        // Convertir la entidad guardada a ResponseDTO
+        ArticuloManufacturadoResponseDTO responseDto = (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(amGuardado);
+
+        // Calcular y asignar las unidades disponibles AL RESPONSE DTO
+        if (responseDto != null && amGuardado.getEstadoActivo()) { // Verifica que sea ResponseDTO y esté activo
+            responseDto.setUnidadesDisponiblesCalculadas(calcularUnidadesDisponibles(amGuardado));
+        } else if (responseDto != null) {
+            responseDto.setUnidadesDisponiblesCalculadas(0);
+        }
+
+        return responseDto;
     }
 
     @Override
@@ -121,9 +130,20 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
         ArticuloManufacturado amExistente = manufacturadoRepository.findById(id)
                 .orElseThrow(() -> new Exception("Artículo Manufacturado no encontrado con ID: " + id));
 
-        mapRequestDtoToEntity(dto, amExistente);
+        mapRequestDtoToEntity(dto, amExistente); // Mapea del RequestDTO a la Entidad
         ArticuloManufacturado amActualizado = manufacturadoRepository.save(amExistente);
-        return (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(amActualizado);
+
+        // Convertir la entidad actualizada a ResponseDTO
+        ArticuloManufacturadoResponseDTO responseDto = (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(amActualizado);
+
+        // Calcular y asignar las unidades disponibles AL RESPONSE DTO
+        if (responseDto != null && amActualizado.getEstadoActivo()) { // Verifica que sea ResponseDTO y esté activo
+            responseDto.setUnidadesDisponiblesCalculadas(calcularUnidadesDisponibles(amActualizado));
+        } else if (responseDto != null) {
+            responseDto.setUnidadesDisponiblesCalculadas(0);
+        }
+
+        return responseDto;
     }
 
     @Override

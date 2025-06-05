@@ -177,6 +177,22 @@ public class ClienteServiceImpl implements ClienteService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public ClienteResponseDTO getMyProfile(String auth0Id) throws Exception {
+        if (auth0Id == null || auth0Id.trim().isEmpty()) {
+            throw new Exception("Auth0 ID no proporcionado para obtener el perfil.");
+        }
+
+        Usuario usuario = usuarioRepository.findByAuth0Id(auth0Id)
+                .orElseThrow(() -> new Exception("Usuario no encontrado con Auth0 ID: " + auth0Id + ". No se puede obtener el perfil del cliente."));
+
+        Cliente cliente = clienteRepository.findByUsuarioId(usuario.getId())
+                .orElseThrow(() -> new Exception("Perfil de Cliente no encontrado para el usuario: " + usuario.getUsername()));
+
+        return convertToResponseDto(cliente);
+    }
+
+    @Override
     @Transactional
     public ClienteResponseDTO createCliente(@Valid ClienteRequestDTO dto) throws Exception {
         if (dto.getEmail() != null) { // Solo validar si el email se proporciona

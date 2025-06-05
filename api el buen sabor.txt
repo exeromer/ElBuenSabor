@@ -14,3 +14,19 @@ El Buen Sabor API
 
 Identifier:
 https://api.elbuensabor.com
+
+
+-------------------------
+
+## Configuración de Autenticación y Autorización con Auth0
+
+### Variables de Entorno del Frontend
+
+Asegúrate de tener un archivo `.env` en la raíz del proyecto frontend (`el-buen-sabor-frontend/.env`) con las siguientes variables configuradas correctamente:
+
+```env
+VITE_API_URL=http://localhost:8080/api
+VITE_AUTH0_DOMAIN=tu-dominio-auth0.us.auth0.com
+VITE_AUTH0_CLIENT_ID=tu_client_id_de_spa
+VITE_AUTH0_AUDIENCE=[https://api.elbuensabor.com](https://api.elbuensabor.com)
+VITE_AUTH0_SCOPE=openid profile email

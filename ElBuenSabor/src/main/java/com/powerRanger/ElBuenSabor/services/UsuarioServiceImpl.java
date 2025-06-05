@@ -6,6 +6,7 @@ import com.powerRanger.ElBuenSabor.entities.Usuario;
 import com.powerRanger.ElBuenSabor.entities.enums.Rol;
 import com.powerRanger.ElBuenSabor.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
@@ -71,7 +72,7 @@ public class UsuarioServiceImpl implements UsuarioService {
     public UsuarioResponseDTO getByAuth0Id(String auth0Id) throws Exception {
         Usuario usuario = usuarioRepository.findByAuth0Id(auth0Id)
                 .orElseThrow(() -> new Exception("Usuario no encontrado con Auth0 ID: " + auth0Id));
-        return convertToResponseDto(usuario);
+        return convertToResponseDto(usuario); // Asegúrate que convertToResponseDto está definido y es robusto
     }
 
     // Implementación del nuevo método
@@ -117,7 +118,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         }
         if (dto.getAuth0Id() != null && !dto.getAuth0Id().equals(usuarioExistente.getAuth0Id())) {
             usuarioRepository.findByAuth0Id(dto.getAuth0Id()).ifPresent(u -> {
-                if(!u.getId().equals(id)){
+                if (!u.getId().equals(id)) {
                     throw new RuntimeException("El Auth0 ID '" + dto.getAuth0Id() + "' ya está registrado por otro usuario.");
                 }
             });
@@ -146,52 +147,82 @@ public class UsuarioServiceImpl implements UsuarioService {
     @Override
     @Transactional
     public Usuario findOrCreateUsuario(String auth0Id, String username, String email) throws Exception {
+        if (auth0Id == null || auth0Id.trim().isEmpty()) {
+            throw new IllegalArgumentException("Auth0 ID no puede ser nulo o vacío.");
+        }
+
         Optional<Usuario> optionalUsuario = usuarioRepository.findByAuth0Id(auth0Id);
 
         if (optionalUsuario.isPresent()) {
             Usuario usuarioExistente = optionalUsuario.get();
-            // Opcional: actualizar username o email si han cambiado en Auth0
-            // y si tu lógica de negocio lo permite.
-            boolean modificado = false;
-            if (username != null && !username.isEmpty() && !username.equals(usuarioExistente.getUsername())) {
-                // Antes de cambiar el username, verificar si el nuevo ya existe para OTRO auth0Id
-                Optional<Usuario> userWithNewUsername = usuarioRepository.findByUsername(username);
-                if(userWithNewUsername.isPresent() && !userWithNewUsername.get().getAuth0Id().equals(auth0Id)){
-                    // El nuevo username ya está tomado por otro usuario, manejar el conflicto
-                    // Por ejemplo, podrías añadir un sufijo o lanzar una excepción.
-                    // Aquí, para simplificar, no lo cambiamos si hay conflicto.
-                    System.err.println("Intento de actualizar a username '" + username + "' que ya existe para otro usuario.");
-                } else if (!userWithNewUsername.isPresent() || userWithNewUsername.get().getAuth0Id().equals(auth0Id)) {
-                    usuarioExistente.setUsername(username);
-                    modificado = true;
-                }
-            }
-            // Lógica similar para el email si lo guardas y quieres sincronizarlo
-            if (modificado) {
-                return usuarioRepository.save(usuarioExistente);
-            }
+            System.out.println("FIND_OR_CREATE: Usuario encontrado con auth0Id: " + auth0Id + ", username: " + usuarioExistente.getUsername());
+
+            // Opcional: Lógica para actualizar username/email si han cambiado en Auth0
+            // y si tu lógica de negocio lo permite y deseas sincronizarlo.
+            // Por ejemplo:
+            // boolean modificado = false;
+            // if (username != null && !username.isEmpty() && !username.equals(usuarioExistente.getUsername())) {
+            //     // Validar unicidad del nuevo username antes de cambiarlo si es necesario
+            //     if (!usuarioRepository.findByUsername(username).filter(u -> !u.getAuth0Id().equals(auth0Id)).isPresent()) {
+            //         usuarioExistente.setUsername(username);
+            //         modificado = true;
+            //     } else {
+            //        System.out.println("FIND_OR_CREATE: Nuevo username " + username + " ya existe para otro usuario. No se actualiza.");
+            //     }
+            // }
+            // if (modificado) {
+            //     return usuarioRepository.save(usuarioExistente);
+            // }
             return usuarioExistente;
         } else {
+            System.out.println("FIND_OR_CREATE: Usuario NO encontrado con auth0Id: " + auth0Id + ". Creando nuevo usuario.");
+
             String finalUsername = username;
+            // Asegurar que el username no sea nulo y sea único
             if (finalUsername == null || finalUsername.trim().isEmpty()) {
-                finalUsername = (email != null && !email.isEmpty()) ? email.split("@")[0] : "user_" + auth0Id.replaceAll("[^a-zA-Z0-9]", "").substring(0, Math.min(10, auth0Id.length()));
+                // Generar un username si no se proveyó uno válido (ej. a partir del email o auth0Id)
+                if (email != null && !email.isEmpty() && email.contains("@")) {
+                    finalUsername = email.split("@")[0];
+                } else {
+                    // Remueve caracteres no alfanuméricos de auth0Id para un username base
+                    String baseAuth0Id = auth0Id.replaceAll("[^a-zA-Z0-9]", "");
+                    finalUsername = "user_" + baseAuth0Id.substring(0, Math.min(15, baseAuth0Id.length())); // Limita longitud
+                }
             }
 
+            // Verificar unicidad del username y añadir sufijo si es necesario
             if (usuarioRepository.findByUsername(finalUsername).isPresent()) {
                 String baseUsername = finalUsername;
                 int count = 1;
                 do {
                     finalUsername = baseUsername + "_" + count++;
                 } while (usuarioRepository.findByUsername(finalUsername).isPresent());
+                System.out.println("FIND_OR_CREATE: Username original '" + baseUsername + "' ya existía. Nuevo username generado: '" + finalUsername + "'");
             }
 
             Usuario nuevoUsuario = new Usuario();
             nuevoUsuario.setAuth0Id(auth0Id);
             nuevoUsuario.setUsername(finalUsername);
-            nuevoUsuario.setRol(Rol.CLIENTE);
+            nuevoUsuario.setRol(Rol.CLIENTE); // Rol por defecto para nuevos usuarios
             nuevoUsuario.setEstadoActivo(true);
-            // nuevoUsuario.setEmail(email); // Si tienes campo email en Usuario y lo quieres guardar
-            return usuarioRepository.save(nuevoUsuario);
+            // nuevoUsuario.setEmail(email); // Si tienes un campo email en tu entidad Usuario y quieres persistirlo
+
+            System.out.println("FIND_OR_CREATE: Guardando nuevo usuario: auth0Id=" + auth0Id + ", username=" + finalUsername + ", rol=" + nuevoUsuario.getRol());
+            try {
+                Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
+                System.out.println("FIND_OR_CREATE: Nuevo usuario guardado con ID de BD: " + usuarioGuardado.getId());
+                return usuarioGuardado;
+            } catch (DataIntegrityViolationException e) {
+                // Esto podría ocurrir si, a pesar de las verificaciones, hay una condición de carrera
+                // al insertar un username/auth0Id que justo se volvió no único.
+                System.err.println("FIND_OR_CREATE_ERROR: DataIntegrityViolationException al guardar nuevo usuario para auth0Id: " + auth0Id + ". ¿Posible duplicado no detectado antes de save?");
+                // Intentar buscar de nuevo por si acaso se creó en otra transacción concurrente
+                return usuarioRepository.findByAuth0Id(auth0Id)
+                        .orElseThrow(() -> new Exception("Error crítico: Falló la creación del usuario y no se encontró después de DataIntegrityViolationException para auth0Id: " + auth0Id, e));
+            } catch (Exception e) {
+                System.err.println("FIND_OR_CREATE_ERROR: Excepción general al guardar nuevo usuario para auth0Id: " + auth0Id);
+                throw new Exception("Error al guardar el nuevo usuario: " + e.getMessage(), e);
+            }
         }
     }
 }

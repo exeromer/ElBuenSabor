@@ -7,6 +7,7 @@ import com.powerRanger.ElBuenSabor.services.UsuarioService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -103,32 +104,21 @@ public class UsuarioController {
     }
 
     @GetMapping("/auth0/{auth0Id}")
-    // public ResponseEntity<?> getUsuarioByAuth0Id(@PathVariable String auth0Id) { // Devuelve DTO o Error
-    //    try {
-    //        UsuarioResponseDTO usuarioDto = usuarioService.getByAuth0Id(auth0Id);
-    //        return ResponseEntity.ok(usuarioDto);
-    //   } catch (Exception e) {
-    //        Map<String, Object> errorResponse = new HashMap<>();
-    //        errorResponse.put("status", HttpStatus.NOT_FOUND.value());
-    //        errorResponse.put("error", e.getMessage());
-    //        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
-    //    }
-    //}
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (isAuthenticated() and #auth0Id == principal.claims['sub'])")
     public ResponseEntity<?> getUsuarioByAuth0Id(@PathVariable String auth0Id) {
         try {
-            // Extraer username y email del token en el frontend y pasarlos como headers/params
-            // es más robusto, pero para simplificar, llamaremos a findOrCreateUsuario
-            // y dejaremos que el servicio maneje los nulls para username/email si es solo para buscar/crear con defaults.
-            // El servicio findOrCreateUsuario ya tiene lógica para generar un username si es null.
-            Usuario usuario = usuarioService.findOrCreateUsuario(auth0Id, null, null); // Pasamos null para username y email
-            UsuarioResponseDTO usuarioDto = convertUsuarioToResponseDto(usuario); // Convierte la entidad a DTO
+            // Usar el método para OBTENER, no para crear/o obtener.
+            // La creación ya sucedió (o debió suceder) en el JwtAuthenticationConverter.
+            UsuarioResponseDTO usuarioDto = usuarioService.getByAuth0Id(auth0Id);
             return ResponseEntity.ok(usuarioDto);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
-            errorResponse.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value()); // Podría ser un error diferente a NOT_FOUND ahora
-            errorResponse.put("error", "Error al obtener o crear usuario: " + e.getMessage());
-            e.printStackTrace(); // Importante para ver el error real en la consola del backend
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
+            // Considera si el status debería ser diferente si el usuario simplemente no se encuentra
+            // vs. un error interno. ResourceNotFoundException de tu paquete exceptions podría ser útil.
+            errorResponse.put("status", HttpStatus.NOT_FOUND.value());
+            errorResponse.put("error", "Error al obtener usuario por Auth0 ID: " + e.getMessage());
+             e.printStackTrace(); // Útil para depuración en consola del servidor
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
         }
     }
 

@@ -87,6 +87,7 @@ public class ArticuloManufacturadoController {
             return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
     }
+
     // Métodos helper para manejo de errores
     private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
         Map<String, Object> errorResponse = new HashMap<>();
@@ -96,5 +97,13 @@ public class ArticuloManufacturadoController {
                 .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
                 .collect(Collectors.toList()));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
+    }
+
+    private ResponseEntity<Map<String, Object>> handleGenericException(Exception e, HttpStatus status) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity.status(status).body(errorResponse);
     }
 }

@@ -8,6 +8,8 @@ import com.powerRanger.ElBuenSabor.services.ClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -53,6 +55,26 @@ public class ClienteController {
             System.err.println("Error en ClienteController - getAllClientes: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/perfil")
+    public ResponseEntity<?> getMiPerfil(Authentication authentication) {
+        try {
+            if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+                // Este caso no debería ocurrir si el endpoint está protegido por .authenticated() o .hasAuthority()
+                // y el token es un JWT válido, pero es una buena verificación.
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "No autenticado o token inválido."));
+            }
+            Jwt jwt = (Jwt) authentication.getPrincipal();
+            String auth0Id = jwt.getSubject();
+
+            ClienteResponseDTO clienteDto = clienteService.getMyProfile(auth0Id);
+            return ResponseEntity.ok(clienteDto);
+        } catch (Exception e) {
+            // Usar tu handleGenericException o uno más específico si es necesario
+            return handleGenericException(e, e.getMessage().contains("no encontrado") ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 

@@ -3,17 +3,16 @@ package com.powerRanger.ElBuenSabor.services;
 import com.powerRanger.ElBuenSabor.dtos.AddItemToCartRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.CarritoItemResponseDTO;
 import com.powerRanger.ElBuenSabor.dtos.CarritoResponseDTO;
-import com.powerRanger.ElBuenSabor.entities.Articulo;
-import com.powerRanger.ElBuenSabor.entities.Carrito;
-import com.powerRanger.ElBuenSabor.entities.CarritoItem;
-import com.powerRanger.ElBuenSabor.entities.Cliente;
-import com.powerRanger.ElBuenSabor.repository.ArticuloRepository;
-import com.powerRanger.ElBuenSabor.repository.CarritoItemRepository;
-import com.powerRanger.ElBuenSabor.repository.CarritoRepository;
+import com.powerRanger.ElBuenSabor.entities.*;
+import com.powerRanger.ElBuenSabor.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -30,37 +29,40 @@ public class CarritoServiceImpl implements CarritoService {
     @Autowired
     private ArticuloRepository articuloRepository;
 
-    @Override
-    @Transactional
-    public CarritoResponseDTO getOrCreateCarrito(Cliente cliente) throws Exception {
-        if (cliente == null || cliente.getId() == null) {
-            throw new Exception("Cliente no válido para obtener o crear carrito.");
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
+    private ClienteRepository clienteRepository;
+
+    private void validarPropietarioCliente(Cliente clienteDelPath) throws AccessDeniedException {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String auth0Id = null;
+
+        if (authentication != null && authentication.getPrincipal() instanceof Jwt) {
+            Jwt jwt = (Jwt) authentication.getPrincipal();
+            auth0Id = jwt.getSubject();
         }
 
-        Optional<Carrito> carritoOpt = carritoRepository.findByCliente(cliente);
-        Carrito carrito;
-
-        if (carritoOpt.isPresent()) {
-            carrito = carritoOpt.get();
-            // No actualizamos fechaUltimaModificacion solo por obtenerlo,
-            // se actualizará cuando haya cambios reales.
-        } else {
-            carrito = new Carrito();
-            carrito.setCliente(cliente);
-            carrito = carritoRepository.save(carrito);
+        if (auth0Id == null) {
+            throw new AccessDeniedException("No se pudo determinar el usuario autenticado.");
         }
-        return mapCarritoToDto(carrito);
+
+        Usuario usuarioAutenticado = usuarioRepository.findByAuth0Id(auth0Id)
+                .orElseThrow(() -> new AccessDeniedException("Usuario autenticado no encontrado en la BD."));
+
+        Cliente clienteDelToken = clienteRepository.findByUsuarioId(usuarioAutenticado.getId())
+                .orElseThrow(() -> new AccessDeniedException("Perfil de cliente no encontrado para el usuario autenticado."));
+
+        if (!clienteDelToken.getId().equals(clienteDelPath.getId())) {
+            throw new AccessDeniedException("Acceso denegado: No puedes realizar esta acción en recursos de otro cliente.");
+        }
     }
 
     @Override
     @Transactional
-    public CarritoResponseDTO addItemAlCarrito(Cliente cliente, AddItemToCartRequestDTO itemRequest) throws Exception {
-        if (cliente == null || cliente.getId() == null) {
-            throw new Exception("Cliente no válido para agregar items al carrito.");
-        }
-        if (itemRequest == null || itemRequest.getArticuloId() == null || itemRequest.getCantidad() == null || itemRequest.getCantidad() <= 0) {
-            throw new Exception("Datos del ítem inválidos.");
-        }
+    public CarritoResponseDTO getOrCreateCarrito(Cliente cliente) throws Exception { // Firma coincide con la interfaz
+        validarPropietarioCliente(cliente); // Validación de propiedad
 
         Optional<Carrito> carritoOpt = carritoRepository.findByCliente(cliente);
         Carrito carrito;
@@ -72,38 +74,96 @@ public class CarritoServiceImpl implements CarritoService {
             // fechaCreacion y fechaUltimaModificacion se establecen en el constructor/save de Carrito
             carrito = carritoRepository.save(carrito);
         }
+        return mapCarritoToDto(carrito); // Asegúrate que mapCarritoToDto esté definido
+    }
+
+    @Override
+    @Transactional
+    public CarritoResponseDTO addItemAlCarrito(Cliente cliente, AddItemToCartRequestDTO itemRequest) throws Exception {
+        validarPropietarioCliente(cliente); // Asumiendo que tienes este método
+
+        if (itemRequest == null || itemRequest.getArticuloId() == null || itemRequest.getCantidad() == null || itemRequest.getCantidad() <= 0) {
+            throw new Exception("Datos del ítem inválidos.");
+        }
 
         Articulo articulo = articuloRepository.findById(itemRequest.getArticuloId())
                 .orElseThrow(() -> new Exception("Artículo no encontrado con ID: " + itemRequest.getArticuloId()));
 
         if (articulo.getEstadoActivo() == null || !articulo.getEstadoActivo()) {
-            throw new Exception("El artículo '" + articulo.getDenominacion() + "' no está disponible.");
+            throw new Exception("El artículo '" + articulo.getDenominacion() + "' no está disponible (inactivo).");
         }
 
-        Optional<CarritoItem> carritoItemOpt = carritoItemRepository.findByCarritoAndArticulo(carrito, articulo);
+        int cantidadSolicitada = itemRequest.getCantidad();
+        CarritoItem itemExistente = null;
+        Optional<Carrito> carritoOpt = carritoRepository.findByCliente(cliente);
+        Carrito carrito;
 
-        CarritoItem item;
-        if (carritoItemOpt.isPresent()) {
-            item = carritoItemOpt.get();
-            item.setCantidad(item.getCantidad() + itemRequest.getCantidad());
-            carritoItemRepository.save(item);
+        if (carritoOpt.isPresent()) {
+            carrito = carritoOpt.get();
+            Optional<CarritoItem> carritoItemOpt = carritoItemRepository.findByCarritoAndArticulo(carrito, articulo);
+            if (carritoItemOpt.isPresent()) {
+                itemExistente = carritoItemOpt.get();
+                cantidadSolicitada = itemExistente.getCantidad() + itemRequest.getCantidad(); // Cantidad total si ya existe
+            }
         } else {
-            item = new CarritoItem();
-            item.setArticulo(articulo);
-            item.setCantidad(itemRequest.getCantidad());
-            item.setPrecioUnitarioAlAgregar(articulo.getPrecioVenta());
-            carrito.addItem(item); // El helper se encarga de la relación bidireccional
+            carrito = new Carrito();
+            carrito.setCliente(cliente);
+            // No es necesario guardar el carrito aquí todavía, se guardará con el item o al final.
+        }
+
+        // --- Validación de Stock en Backend ---
+        if (articulo instanceof ArticuloInsumo) {
+            ArticuloInsumo insumo = (ArticuloInsumo) articulo;
+            if (insumo.getStockActual() == null || insumo.getStockActual() < cantidadSolicitada) {
+                throw new Exception("Stock insuficiente para el insumo: " + insumo.getDenominacion() +
+                        ". Solicitado total: " + cantidadSolicitada +
+                        ", Disponible: " + (insumo.getStockActual() != null ? insumo.getStockActual() : 0));
+            }
+        } else if (articulo instanceof ArticuloManufacturado) {
+            ArticuloManufacturado manufacturado = (ArticuloManufacturado) articulo;
+            // La validación de estadoActivo ya está hecha arriba para todos los artículos.
+            // Aquí, podrías decidir NO hacer una verificación profunda de stock de componentes,
+            // ya que el frontend ya tuvo la información de unidadesDisponiblesCalculadas
+            // y la validación final y atómica ocurrirá en PedidoServiceImpl.crearPedidoDesdeCarrito.
+            // Esto evita duplicar la lógica compleja o añadir dependencias de servicio innecesarias aquí.
+            System.out.println("INFO: Añadiendo ArticuloManufacturado '" + manufacturado.getDenominacion() +
+                    "' al carrito. El stock de componentes se validará exhaustivamente al confirmar el pedido.");
+
+            // Si quisieras una verificación LIGERA aquí, podrías cargar el manufacturado con sus detalles
+            // y usar tu método `calcularUnidadesDisponibles` (si lo hicieras accesible o lo replicaras de forma simplificada).
+            // Pero por ahora, para no complicar `CarritoService` con la lógica de cálculo de manufacturados,
+            // podemos confiar en la validación de `PedidoService`.
+        }
+        // --- Fin Validación de Stock ---
+
+
+        if (itemExistente != null) {
+            itemExistente.setCantidad(cantidadSolicitada);
+            carritoItemRepository.save(itemExistente);
+        } else {
+            itemExistente = new CarritoItem();
+            itemExistente.setArticulo(articulo);
+            itemExistente.setCantidad(itemRequest.getCantidad()); // Cantidad inicial a agregar
+            itemExistente.setPrecioUnitarioAlAgregar(articulo.getPrecioVenta());
+            // Es importante asegurar que el carrito se guarde si es nuevo antes de añadir items, para manejar la persistencia en cascada.
+            if (carrito.getId() == null) { // Si el carrito era nuevo y no se guardó
+                carrito = carritoRepository.save(carrito);
+            }
+            itemExistente.setCarrito(carrito); // Establecer la relación
+            carrito.addItem(itemExistente); // El método addItem puede ya hacer item.setCarrito(this)
         }
 
         carrito.setFechaUltimaModificacion(LocalDateTime.now());
-        Carrito carritoGuardado = carritoRepository.save(carrito);
+        Carrito carritoGuardado = carritoRepository.save(carrito); // Guarda el carrito y por cascada los items nuevos/modificados
 
         return mapCarritoToDto(carritoGuardado);
     }
 
+
     @Override
     @Transactional
     public CarritoResponseDTO actualizarCantidadItem(Cliente cliente, Long carritoItemId, int nuevaCantidad) throws Exception {
+        validarPropietarioCliente(cliente);
         if (cliente == null || cliente.getId() == null) {
             throw new Exception("Cliente no válido.");
         }
@@ -140,6 +200,8 @@ public class CarritoServiceImpl implements CarritoService {
     @Override
     @Transactional
     public CarritoResponseDTO eliminarItemDelCarrito(Cliente cliente, Long carritoItemId) throws Exception {
+        validarPropietarioCliente(cliente);
+
         if (cliente == null || cliente.getId() == null) {
             throw new Exception("Cliente no válido.");
         }
@@ -173,6 +235,7 @@ public class CarritoServiceImpl implements CarritoService {
     @Override
     @Transactional
     public CarritoResponseDTO vaciarCarrito(Cliente cliente) throws Exception {
+        validarPropietarioCliente(cliente);
         if (cliente == null || cliente.getId() == null) {
             throw new Exception("Cliente no válido.");
         }
