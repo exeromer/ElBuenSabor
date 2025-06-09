@@ -7,6 +7,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -25,50 +26,50 @@ public class ClienteController {
     private ClienteService clienteService;
 
     @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')") // Solo admin puede crear clientes directamente
     public ResponseEntity<ClienteResponseDTO> createCliente(@Valid @RequestBody ClienteRequestDTO dto) throws Exception {
         ClienteResponseDTO nuevoClienteDto = clienteService.createCliente(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevoClienteDto);
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')") // Solo admin puede ver todos los clientes
     public ResponseEntity<List<ClienteResponseDTO>> getAllClientes(@RequestParam(name = "searchTerm", required = false) String searchTerm) {
         List<ClienteResponseDTO> clientes = clienteService.findAllClientes(searchTerm);
         return ResponseEntity.ok(clientes);
     }
 
     @GetMapping("/perfil")
-    public ResponseEntity<?> getMiPerfil(Authentication authentication) {
-        try {
-            if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
-                // Este caso no debería ocurrir si el endpoint está protegido por .authenticated() o .hasAuthority()
-                // y el token es un JWT válido, pero es una buena verificación.
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(Map.of("error", "No autenticado o token inválido."));
-            }
-            Jwt jwt = (Jwt) authentication.getPrincipal();
-            String auth0Id = jwt.getSubject();
-
-            ClienteResponseDTO clienteDto = clienteService.getMyProfile(auth0Id);
-            return ResponseEntity.ok(clienteDto);
-        } catch (Exception e) {
-            // Usar tu handleGenericException o uno más específico si es necesario
-            return handleGenericException(e, e.getMessage().contains("no encontrado") ? HttpStatus.NOT_FOUND : HttpStatus.INTERNAL_SERVER_ERROR);
+    // El usuario autenticado puede pedir su propio perfil
+    public ResponseEntity<ClienteResponseDTO> getMiPerfil(Authentication authentication) throws Exception {
+        // --- CÓDIGO CORREGIDO ---
+        // Se elimina el try-catch. Si algo falla, GlobalExceptionHandler lo atrapará.
+        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+            throw new Exception("No autenticado o token inválido.");
         }
+        Jwt jwt = (Jwt) authentication.getPrincipal();
+        String auth0Id = jwt.getSubject();
+
+        ClienteResponseDTO clienteDto = clienteService.getMyProfile(auth0Id);
+        return ResponseEntity.ok(clienteDto);
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')") // Solo admin puede ver perfiles por ID
     public ResponseEntity<ClienteResponseDTO> getClienteById(@PathVariable Integer id) throws Exception {
         ClienteResponseDTO clienteDto = clienteService.findClienteById(id);
         return ResponseEntity.ok(clienteDto);
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN') or (isAuthenticated() and #id == @clienteServiceImpl.getMyProfile(principal.claims['sub']).getId())")
     public ResponseEntity<ClienteResponseDTO> updateCliente(@PathVariable Integer id, @Valid @RequestBody ClienteRequestDTO dto) throws Exception {
         ClienteResponseDTO clienteActualizadoDto = clienteService.updateCliente(id, dto);
         return ResponseEntity.ok(clienteActualizadoDto);
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')") // Solo admin puede borrar clientes
     public ResponseEntity<?> softDeleteCliente(@PathVariable Integer id) throws Exception {
         clienteService.softDeleteCliente(id);
         Map<String, String> response = new HashMap<>();
