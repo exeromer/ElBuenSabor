@@ -6,8 +6,8 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PastOrPresent; // Para fechaNacimiento
-import jakarta.validation.constraints.Size;       // Para telefono
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -18,10 +18,7 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class Cliente {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+public class Cliente extends BaseEntity {
 
     @Column(nullable = false)
     @NotEmpty(message = "El nombre no puede estar vacío")
@@ -31,7 +28,7 @@ public class Cliente {
     @NotEmpty(message = "El apellido no puede estar vacío")
     private String apellido;
 
-    @Column(length = 20) // Aumentar longitud para incluir prefijos internacionales si es necesario
+    @Column(length = 20)
     @Size(min = 7, max = 20, message = "El teléfono debe tener entre 7 y 20 caracteres")
     private String telefono;
 
@@ -43,7 +40,6 @@ public class Cliente {
     @PastOrPresent(message = "La fecha de nacimiento no puede ser futura")
     private LocalDate fechaNacimiento;
 
-    // Dueño de la relación ManyToMany con Domicilio
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
     @JoinTable(
             name = "cliente_domicilio",
@@ -52,17 +48,17 @@ public class Cliente {
     )
     private List<Domicilio> domicilios = new ArrayList<>();
 
-    @OneToMany(mappedBy = "cliente", cascade = {CascadeType.REFRESH}, fetch = FetchType.LAZY) // No PERSIST/MERGE desde aquí usualmente
+    @OneToMany(mappedBy = "cliente", cascade = {CascadeType.REFRESH}, fetch = FetchType.LAZY)
     private List<Pedido> pedidos = new ArrayList<>();
 
-    @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH}) // Guardar/actualizar Usuario con Cliente
-    @JoinColumn(name = "usuario_id", referencedColumnName = "id", unique = true) // Asegurar que un usuario solo se asocie a un cliente
+    @OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE, CascadeType.REFRESH})
+    @JoinColumn(name = "usuario_id", referencedColumnName = "id", unique = true)
     @NotNull(message = "El usuario es obligatorio")
     private Usuario usuario;
 
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true) // Imagen es completamente dependiente del Cliente
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
     @JoinColumn(name = "imagen_id", referencedColumnName = "id")
-    private Imagen imagen; // Puede ser null si el cliente no tiene imagen
+    private Imagen imagen;
 
     @Column(name = "fechaBaja")
     private LocalDate fechaBaja;
@@ -76,9 +72,7 @@ public class Cliente {
         this.pedidos = new ArrayList<>();
     }
 
-    // Getters y Setters (como los tenías)
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    // Getters y Setters
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
     public String getApellido() { return apellido; }
@@ -102,53 +96,36 @@ public class Cliente {
     public Boolean getEstadoActivo() { return estadoActivo; }
     public void setEstadoActivo(Boolean estadoActivo) { this.estadoActivo = estadoActivo; }
 
-    // Métodos Helper para relaciones
     public void addDomicilio(Domicilio domicilio) {
         if (this.domicilios == null) {
             this.domicilios = new ArrayList<>();
         }
         this.domicilios.add(domicilio);
-        // Si Domicilio tiene una lista de Clientes y quieres mantenerla sincronizada:
-        // if (domicilio.getClientes() == null) {
-        //     domicilio.setClientes(new ArrayList<>());
-        // }
-        // domicilio.getClientes().add(this);
     }
 
     public void removeDomicilio(Domicilio domicilio) {
         if (this.domicilios != null) {
             this.domicilios.remove(domicilio);
-            // Si Domicilio tiene una lista de Clientes:
-            // domicilio.getClientes().remove(this);
         }
     }
-
-    // Pedidos usualmente se añaden desde el servicio de Pedido
-    // public void addPedido(Pedido pedido) {
-    //     if (this.pedidos == null) {
-    //         this.pedidos = new ArrayList<>();
-    //     }
-    //     this.pedidos.add(pedido);
-    //     pedido.setCliente(this);
-    // }
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Cliente cliente = (Cliente) o;
-        return Objects.equals(id, cliente.id);
+        return Objects.equals(this.getId(), cliente.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(this.getId());
     }
 
     @Override
     public String toString() {
         return "Cliente{" +
-                "id=" + id +
+                "id=" + this.getId() +
                 ", nombre='" + nombre + '\'' +
                 ", apellido='" + apellido + '\'' +
                 ", email='" + email + '\'' +

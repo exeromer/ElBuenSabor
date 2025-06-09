@@ -4,28 +4,19 @@ import com.powerRanger.ElBuenSabor.dtos.ClienteRankingDTO;
 import com.powerRanger.ElBuenSabor.entities.Pedido;
 import com.powerRanger.ElBuenSabor.entities.enums.Estado;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional; // Importar Optional
+import java.util.Optional;
 
-public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
+public interface PedidoRepository extends BaseRepository<Pedido, Integer> { // Cambiado a BaseRepository
 
-    // --- MÉTODOS EXISTENTES ---
     List<Pedido> findByClienteIdAndEstadoActivoTrueOrderByFechaPedidoDesc(Integer clienteId);
 
-    // --- MÉTODO PARA BUSCAR PEDIDO POR MERCADO PAGO PREFERENCE ID ---
-    /**
-     * Encuentra un pedido basado en el ID de preferencia de Mercado Pago.
-     * @param mercadoPagoPreferenceId El ID de la preferencia de Mercado Pago.
-     * @return Un Optional conteniendo el Pedido si se encuentra, o un Optional vacío si no.
-     */
     Optional<Pedido> findByMercadoPagoPreferenceId(String mercadoPagoPreferenceId);
 
-    // --- NUEVOS MÉTODOS PARA RANKING DE CLIENTES ---
     @Query("SELECT NEW com.powerRanger.ElBuenSabor.dtos.ClienteRankingDTO(" +
             "c.id, CONCAT(c.nombre, ' ', c.apellido), c.email, " +
             "COUNT(p.id) AS cantidadPedidos, " +

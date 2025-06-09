@@ -33,13 +33,6 @@ public class FacturaServiceImpl implements FacturaService {
     @Autowired private ArticuloRepository articuloRepository;
     @Autowired private ArticuloManufacturadoRepository articuloManufacturadoRepository;
 
-    // --- MAPPERS (o usar la clase Mappers inyectada) ---
-    // Si no tienes una clase Mappers, definirías los métodos convertTo...DTO aquí.
-    // Por ejemplo:
-    // private ArticuloSimpleResponseDTO convertArticuloToSimpleDto(Articulo articulo) { ... }
-    // private FacturaDetalleResponseDTO convertFacturaDetalleToDto(FacturaDetalle detalle) { ... }
-    // private PedidoSimpleResponseDTO convertPedidoToSimpleDto(Pedido pedido) { ... }
-    // etc.
 
     private FacturaResponseDTO convertToResponseDto(Factura factura) {
         if (factura == null) return null;

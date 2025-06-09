@@ -1,11 +1,11 @@
 package com.powerRanger.ElBuenSabor.services;
 
+import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoResponseDTO;
-import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoRequestDTO; // CAMBIO AQUÍ
 import com.powerRanger.ElBuenSabor.entities.ArticuloInsumo;
 import com.powerRanger.ElBuenSabor.entities.Categoria;
 import com.powerRanger.ElBuenSabor.entities.UnidadMedida;
-import com.powerRanger.ElBuenSabor.mappers.Mappers; // Asumiendo que Mappers está en este paquete
+import com.powerRanger.ElBuenSabor.mappers.Mappers;
 import com.powerRanger.ElBuenSabor.repository.ArticuloInsumoRepository;
 import com.powerRanger.ElBuenSabor.repository.CategoriaRepository;
 import com.powerRanger.ElBuenSabor.repository.UnidadMedidaRepository;
@@ -21,14 +21,58 @@ import java.util.stream.Collectors;
 
 @Service
 @Validated
-public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
+public class ArticuloInsumoServiceImpl extends BaseServiceImpl<ArticuloInsumo, ArticuloInsumoRepository> implements ArticuloInsumoService {
 
-    @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
     @Autowired private CategoriaRepository categoriaRepository;
     @Autowired private UnidadMedidaRepository unidadMedidaRepository;
-    @Autowired private Mappers mappers; // Usar la clase Mappers
+    @Autowired private Mappers mappers;
 
-    // Método helper para mapear el DTO de Request a la Entidad
+    public ArticuloInsumoServiceImpl(ArticuloInsumoRepository articuloInsumoRepository) {
+        super(articuloInsumoRepository);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ArticuloInsumoResponseDTO> findAllInsumos(String searchTerm, Boolean estadoActivo) {
+        List<ArticuloInsumo> insumos;
+        String trimmedSearchTerm = (searchTerm != null && !searchTerm.trim().isEmpty()) ? searchTerm.trim() : null;
+
+        if (trimmedSearchTerm != null) {
+            insumos = baseRepository.searchByDenominacionWithOptionalStatus(trimmedSearchTerm, estadoActivo);
+        } else {
+            insumos = baseRepository.findAllWithOptionalStatus(estadoActivo);
+        }
+        return insumos.stream()
+                .map(insumo -> (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(insumo))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ArticuloInsumoResponseDTO findInsumoById(Integer id) throws Exception {
+        ArticuloInsumo insumo = super.findById(id);
+        return (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(insumo);
+    }
+
+    @Override
+    @Transactional
+    public ArticuloInsumoResponseDTO createArticuloInsumo(@Valid ArticuloInsumoRequestDTO dto) throws Exception {
+        ArticuloInsumo insumo = new ArticuloInsumo();
+        insumo.setImagenes(new ArrayList<>());
+        mapDtoToEntity(dto, insumo);
+        ArticuloInsumo guardado = super.save(insumo);
+        return (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(guardado);
+    }
+
+    @Override
+    @Transactional
+    public ArticuloInsumoResponseDTO updateArticuloInsumo(Integer id, @Valid ArticuloInsumoRequestDTO dto) throws Exception {
+        ArticuloInsumo insumoExistente = super.findById(id);
+        mapDtoToEntity(dto, insumoExistente);
+        ArticuloInsumo actualizado = super.update(id, insumoExistente);
+        return (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(actualizado);
+    }
+
     private void mapDtoToEntity(ArticuloInsumoRequestDTO dto, ArticuloInsumo insumo) throws Exception {
         insumo.setDenominacion(dto.getDenominacion());
         insumo.setPrecioVenta(dto.getPrecioVenta());
@@ -46,69 +90,5 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
         insumo.setStockActual(dto.getStockActual());
         insumo.setstockMinimo(dto.getstockMinimo());
         insumo.setEsParaElaborar(dto.getEsParaElaborar());
-
-        // El manejo de imágenes (asociar por ID o subir nuevas) se haría aquí
-        // si ArticuloInsumoRequestDTO tuviera imagenIds o si la subida fuera parte de este flujo.
-        // Actualmente, tu ImagenService y FileUploadController se encargan de esto
-        // después de que el artículo es creado/actualizado y se le pasa el ID del artículo.
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ArticuloInsumoResponseDTO> getAllArticuloInsumo(String searchTerm, Boolean estadoActivo) {
-        List<ArticuloInsumo> insumos;
-        String trimmedSearchTerm = (searchTerm != null && !searchTerm.trim().isEmpty()) ? searchTerm.trim() : null;
-
-        if (trimmedSearchTerm != null) {
-            insumos = articuloInsumoRepository.searchByDenominacionWithOptionalStatus(trimmedSearchTerm, estadoActivo);
-            System.out.println("DEBUG: Buscando insumos con término: '" + trimmedSearchTerm + "', Estado: " + estadoActivo + ", Encontrados: " + insumos.size());
-        } else {
-            insumos = articuloInsumoRepository.findAllWithOptionalStatus(estadoActivo);
-            System.out.println("DEBUG: Obteniendo insumos con Estado: " + estadoActivo + ", Encontrados: " + insumos.size());
-        }
-        return insumos.stream()
-                .map(insumo -> (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(insumo))
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ArticuloInsumoResponseDTO getArticuloInsumoById(Integer id) throws Exception {
-        ArticuloInsumo insumo = articuloInsumoRepository.findById(id)
-                .orElseThrow(() -> new Exception("Artículo Insumo no encontrado con ID: " + id));
-        return (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(insumo);
-    }
-
-    @Override
-    @Transactional
-    public ArticuloInsumoResponseDTO createArticuloInsumo(@Valid ArticuloInsumoRequestDTO dto) throws Exception { // CAMBIO AQUÍ
-        ArticuloInsumo insumo = new ArticuloInsumo();
-        insumo.setImagenes(new ArrayList<>()); // Inicializar la lista si la entidad la tiene
-        mapDtoToEntity(dto, insumo); // Usar el helper
-        ArticuloInsumo guardado = articuloInsumoRepository.save(insumo);
-        return (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(guardado);
-    }
-
-    @Override
-    @Transactional
-    public ArticuloInsumoResponseDTO updateArticuloInsumo(Integer id, @Valid ArticuloInsumoRequestDTO dto) throws Exception { // CAMBIO AQUÍ
-        ArticuloInsumo insumoExistente = articuloInsumoRepository.findById(id)
-                .orElseThrow(() -> new Exception("Artículo Insumo no encontrado con ID: " + id));
-        mapDtoToEntity(dto, insumoExistente); // Usar el helper
-        ArticuloInsumo actualizado = articuloInsumoRepository.save(insumoExistente);
-        return (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(actualizado);
-    }
-
-    @Override
-    @Transactional
-    public void deleteArticuloInsumo(Integer id) throws Exception {
-        // ... (la lógica de delete no cambia fundamentalmente, pero asegúrate que exista el insumo)
-        ArticuloInsumo insumo = articuloInsumoRepository.findById(id)
-                .orElseThrow(() -> new Exception("Artículo Insumo no encontrado con ID: " + id + " para eliminar."));
-        // Considera si necesitas verificar si el insumo está en uso antes de borrarlo (ej. en ArticuloManufacturadoDetalle)
-        // if (!insumo.getDetallesManufacturados().isEmpty()) { // Necesitarías la relación inversa
-        //    throw new Exception("No se puede eliminar el insumo porque está siendo utilizado.");
-        // }
-        articuloInsumoRepository.delete(insumo);
     }
 }

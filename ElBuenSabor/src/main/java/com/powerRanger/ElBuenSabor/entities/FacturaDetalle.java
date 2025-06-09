@@ -14,10 +14,7 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class FacturaDetalle {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+public class FacturaDetalle extends BaseEntity { // HEREDA DE BaseEntity
 
     @NotNull(message = "La cantidad es obligatoria")
     @Min(value = 1, message = "La cantidad debe ser al menos 1")
@@ -42,8 +39,6 @@ public class FacturaDetalle {
     @JoinColumn(name = "factura_id", nullable = false)
     private Factura factura;
 
-    // Referencia al artículo original. Es nullable = true porque si el artículo se borra del catálogo,
-    // la factura debe seguir existiendo con los datos históricos.
     @ManyToOne(fetch = FetchType.LAZY, optional = true)
     @JoinColumn(name = "articulo_id", nullable = true)
     private Articulo articulo;
@@ -51,9 +46,7 @@ public class FacturaDetalle {
     public FacturaDetalle() {
     }
 
-    // Getters y Setters (como los tenías)
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    // Getters y Setters
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
     public String getDenominacionArticulo() { return denominacionArticulo; }
@@ -72,15 +65,14 @@ public class FacturaDetalle {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         FacturaDetalle that = (FacturaDetalle) o;
-        return Objects.equals(id, that.id);
+        return Objects.equals(this.getId(), that.getId());
     }
 
     @Override
-    public int hashCode() { return Objects.hash(id); }
+    public int hashCode() { return Objects.hash(this.getId()); }
 
     @Override
     public String toString() {
-        return "FacturaDetalle{" + "id=" + id + ", cantidad=" + cantidad + ", denominacionArticulo='" + denominacionArticulo + '\'' +
-                ", subTotal=" + subTotal + ", facturaId=" + (factura != null ? factura.getId() : "null") + '}';
+        return "FacturaDetalle{" + "id=" + this.getId() + ", denominacionArticulo='" + denominacionArticulo + '\'' + '}';
     }
 }

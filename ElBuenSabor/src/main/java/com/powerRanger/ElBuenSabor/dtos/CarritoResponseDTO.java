@@ -1,26 +1,24 @@
 package com.powerRanger.ElBuenSabor.dtos;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.ArrayList;
+import java.util.List;
 
 public class CarritoResponseDTO {
-    private Long id; // ID del Carrito
-    private Integer clienteId; // Asumiendo que siempre hay un cliente asociado
+
+    private Integer id;
+    private Integer clienteId;
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaUltimaModificacion;
     private List<CarritoItemResponseDTO> items = new ArrayList<>();
-    private Double totalCarrito; // Calculado: suma de todos los subtotalItem
-
-    public CarritoResponseDTO() {
-    }
+    private Double totalCarrito;
 
     // Getters y Setters
-    public Long getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Integer id) { // <-- CAMBIO AQUÍ: de Long a Integer
         this.id = id;
     }
 

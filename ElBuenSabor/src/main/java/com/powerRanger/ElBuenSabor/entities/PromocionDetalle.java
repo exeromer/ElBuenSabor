@@ -8,15 +8,11 @@ import jakarta.validation.constraints.NotNull;
 import java.util.Objects;
 
 @Entity
-@Table(name = "promocion_detalle") // Nombre de tabla ya estaba bien
+@Table(name = "promocion_detalle")
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class PromocionDetalle {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+public class PromocionDetalle extends BaseEntity { // HEREDA DE BaseEntity
 
     @NotNull(message = "La cantidad es obligatoria")
     @Min(value = 1, message = "La cantidad debe ser al menos 1")
@@ -30,14 +26,12 @@ public class PromocionDetalle {
     @NotNull(message = "El artículo es obligatorio para el detalle")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "articulo_id", nullable = false)
-    private Articulo articulo; // Puede ser ArticuloInsumo o ArticuloManufacturado
+    private Articulo articulo;
 
     public PromocionDetalle() {
     }
 
-    // Getters y Setters (sin cambios)
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    // Getters y Setters
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
     public Promocion getPromocion() { return promocion; }
@@ -50,16 +44,14 @@ public class PromocionDetalle {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         PromocionDetalle that = (PromocionDetalle) o;
-        return Objects.equals(id, that.id);
+        return Objects.equals(this.getId(), that.getId());
     }
 
     @Override
-    public int hashCode() { return Objects.hash(id); }
+    public int hashCode() { return Objects.hash(this.getId()); }
 
     @Override
     public String toString() {
-        return "PromocionDetalle{" + "id=" + id + ", cantidad=" + cantidad +
-                ", promocionId=" + (promocion != null ? promocion.getId() : "null") +
-                ", articuloId=" + (articulo != null ? articulo.getId() : "null") + '}';
+        return "PromocionDetalle{" + "id=" + this.getId() + ", cantidad=" + cantidad + '}';
     }
 }

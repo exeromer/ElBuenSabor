@@ -1,7 +1,7 @@
 package com.powerRanger.ElBuenSabor.entities;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIdentityReference; // Asegúrate de importar esto
+import com.fasterxml.jackson.annotation.JsonIdentityReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Min;
@@ -12,25 +12,22 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class ArticuloManufacturadoDetalle {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+public class ArticuloManufacturadoDetalle extends BaseEntity { // HEREDA DE BaseEntity
 
     @NotNull(message = "La cantidad es obligatoria")
-    @Min(value = 1, message = "La cantidad debe ser al menos 1") // O Double y @DecimalMin("0.001")
+    @Min(value = 1, message = "La cantidad debe ser al menos 1")
     private Double cantidad;
 
     @NotNull(message = "El artículo insumo es obligatorio")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "articulo_insumo_id", nullable = false)
-    @JsonIdentityReference(alwaysAsId = true) // AÑADIR ESTO
+    @JsonIdentityReference(alwaysAsId = true)
     private ArticuloInsumo articuloInsumo;
 
     @NotNull(message = "El artículo manufacturado es obligatorio")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "articulo_manufacturado_id", nullable = false)
-    @JsonIdentityReference(alwaysAsId = true) // AÑADIR ESTO
+    @JsonIdentityReference(alwaysAsId = true)
     private ArticuloManufacturado articuloManufacturado;
 
     @Column(name = "estadoActivo")
@@ -39,9 +36,7 @@ public class ArticuloManufacturadoDetalle {
 
     public ArticuloManufacturadoDetalle() {}
 
-    // Getters y Setters (sin cambios)
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    // Getters y Setters
     public Double getCantidad() { return cantidad; }
     public void setCantidad(Double cantidad) { this.cantidad = cantidad; }
     public ArticuloInsumo getArticuloInsumo() { return articuloInsumo; }
@@ -56,22 +51,19 @@ public class ArticuloManufacturadoDetalle {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         ArticuloManufacturadoDetalle that = (ArticuloManufacturadoDetalle) o;
-        return Objects.equals(id, that.id);
+        return Objects.equals(this.getId(), that.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(this.getId());
     }
 
     @Override
     public String toString() {
         return "ArticuloManufacturadoDetalle{" +
-                "id=" + id +
+                "id=" + this.getId() +
                 ", cantidad=" + cantidad +
-                ", articuloInsumoId=" + (articuloInsumo != null ? articuloInsumo.getId() : "null") + // Mostrar ID
-                ", estadoActivo=" + estadoActivo +
-                ", articuloManufacturadoId=" + (articuloManufacturado != null ? articuloManufacturado.getId() : "null") +
                 '}';
     }
 }

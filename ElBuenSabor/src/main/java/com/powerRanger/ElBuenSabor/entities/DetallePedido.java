@@ -13,10 +13,7 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class DetallePedido {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+public class DetallePedido extends BaseEntity { // HEREDA DE BaseEntity
 
     @NotNull(message = "La cantidad es obligatoria")
     @Min(value = 1, message = "La cantidad debe ser al menos 1")
@@ -36,14 +33,9 @@ public class DetallePedido {
     @JoinColumn(name = "pedido_id", nullable = false)
     private Pedido pedido;
 
-    // Eliminamos estadoActivo y pagoRealizado de aquí, ya que no los estamos usando y son más propios del Pedido.
-    // Si los necesitas, puedes volver a añadirlos con @NotNull.
-
     public DetallePedido() {}
 
     // Getters y Setters
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
     public Double getSubTotal() { return subTotal; }
@@ -58,16 +50,14 @@ public class DetallePedido {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DetallePedido that = (DetallePedido) o;
-        return Objects.equals(id, that.id);
+        return Objects.equals(this.getId(), that.getId());
     }
 
     @Override
-    public int hashCode() { return Objects.hash(id); }
+    public int hashCode() { return Objects.hash(this.getId()); }
 
     @Override
     public String toString() {
-        return "DetallePedido{" + "id=" + id + ", cantidad=" + cantidad + ", subTotal=" + subTotal +
-                ", articuloId=" + (articulo != null ? articulo.getId() : "null") +
-                ", pedidoId=" + (pedido != null ? pedido.getId() : "null") + '}';
+        return "DetallePedido{" + "id=" + this.getId() + ", cantidad=" + cantidad + ", subTotal=" + subTotal + '}';
     }
 }

@@ -9,11 +9,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "carrito")
-public class Carrito {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id; // Usar Long para IDs es una buena práctica
+public class Carrito extends BaseEntity { // HEREDA DE BaseEntity Y USA ID INTEGER
 
     @NotNull(message = "El cliente es obligatorio para el carrito")
     @ManyToOne(fetch = FetchType.LAZY)
@@ -26,10 +22,6 @@ public class Carrito {
     @Column(name = "fecha_ultima_modificacion", nullable = false)
     private LocalDateTime fechaUltimaModificacion;
 
-    // orphanRemoval=true asegura que si un CarritoItem se quita de esta lista
-    // y se guarda el Carrito, el CarritoItem huérfano se elimina de la BD.
-    // CascadeType.ALL propaga todas las operaciones (PERSIST, MERGE, REMOVE, REFRESH, DETACH)
-    // a los CarritoItem asociados.
     @OneToMany(mappedBy = "carrito", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<CarritoItem> items = new ArrayList<>();
 
@@ -39,14 +31,6 @@ public class Carrito {
     }
 
     // Getters y Setters
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
     public Cliente getCliente() {
         return cliente;
     }
@@ -79,7 +63,7 @@ public class Carrito {
         this.items = items;
     }
 
-    // Métodos Helper para sincronizar la relación bidireccional
+    // Métodos Helper
     public void addItem(CarritoItem item) {
         items.add(item);
         item.setCarrito(this);
@@ -97,12 +81,12 @@ public class Carrito {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Carrito carrito = (Carrito) o;
-        return Objects.equals(id, carrito.id);
+        return Objects.equals(this.getId(), carrito.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(this.getId());
     }
 
     @PreUpdate

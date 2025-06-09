@@ -20,10 +20,7 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class Promocion {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+public class Promocion extends BaseEntity {
 
     @Column(nullable = false, unique = true)
     @NotEmpty(message = "La denominación de la promoción no puede estar vacía")
@@ -60,10 +57,6 @@ public class Promocion {
     @OneToMany(mappedBy = "promocion", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<PromocionDetalle> detallesPromocion = new ArrayList<>();
 
-    // Si la relación fuera bidireccional y Promocion tuviera conocimiento de sus sucursales:
-    // @ManyToMany(mappedBy = "promociones", fetch = FetchType.LAZY)
-    // private List<Sucursal> sucursales = new ArrayList<>();
-
     @Column(name = "estadoActivo", nullable = false)
     @NotNull(message = "El estado activo es obligatorio")
     private Boolean estadoActivo = true;
@@ -71,12 +64,9 @@ public class Promocion {
     public Promocion() {
         this.imagenes = new ArrayList<>();
         this.detallesPromocion = new ArrayList<>();
-        // if (this.sucursales == null) this.sucursales = new ArrayList<>(); // Si se descomenta sucursales
     }
 
     // Getters y Setters
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
     public String getDenominacion() { return denominacion; }
     public void setDenominacion(String denominacion) { this.denominacion = denominacion; }
     public LocalDate getFechaDesde() { return fechaDesde; }
@@ -97,8 +87,6 @@ public class Promocion {
     public void setDetallesPromocion(List<PromocionDetalle> detallesPromocion) { this.detallesPromocion = detallesPromocion; }
     public Boolean getEstadoActivo() { return estadoActivo; }
     public void setEstadoActivo(Boolean estadoActivo) { this.estadoActivo = estadoActivo; }
-    // public List<Sucursal> getSucursales() { return sucursales; } // Si se descomenta sucursales
-    // public void setSucursales(List<Sucursal> sucursales) { this.sucursales = sucursales; } // Si se descomenta sucursales
 
     // Métodos Helper
     public void addImagen(Imagen imagen) {
@@ -119,29 +107,20 @@ public class Promocion {
         if (this.detallesPromocion != null) this.detallesPromocion.remove(detalle);
         detalle.setPromocion(null);
     }
-    // Si se descomenta sucursales:
-    // public void addSucursal(Sucursal sucursal) {
-    //    if (this.sucursales == null) this.sucursales = new ArrayList<>();
-    //    if (!this.sucursales.contains(sucursal)) this.sucursales.add(sucursal);
-    // }
-    // public void removeSucursal(Sucursal sucursal) {
-    //    if (this.sucursales != null) this.sucursales.remove(sucursal);
-    // }
-
 
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Promocion promocion = (Promocion) o;
-        return Objects.equals(id, promocion.id);
+        return Objects.equals(this.getId(), promocion.getId());
     }
 
     @Override
-    public int hashCode() { return Objects.hash(id); }
+    public int hashCode() { return Objects.hash(this.getId()); }
 
     @Override
     public String toString() {
-        return "Promocion{" + "id=" + id + ", denominacion='" + denominacion + '\'' + ", estadoActivo=" + estadoActivo + '}';
+        return "Promocion{" + "id=" + this.getId() + ", denominacion='" + denominacion + '\'' + ", estadoActivo=" + estadoActivo + '}';
     }
 }

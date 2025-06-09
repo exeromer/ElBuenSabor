@@ -23,14 +23,7 @@ public interface PedidoService {
     PedidoResponseDTO updateEstado(Integer id, Estado nuevoEstado) throws Exception;
     void softDelete(Integer id) throws Exception;
 
-    /**
-     * Procesa una notificación de Mercado Pago.
-     * @param paymentId El ID del pago en Mercado Pago.
-     * @param status El estado del pago.
-     * @param externalReference La referencia externa (ID de nuestro pedido o preferencia).
-     * @return PedidoResponseDTO del pedido actualizado.
-     * @throws Exception Si ocurre un error.
-     */
+
     PedidoResponseDTO procesarNotificacionMercadoPago(String paymentId, String status, String externalReference) throws Exception;
 
     // Método para que el controller llame y guarde el preferenceId en el pedido

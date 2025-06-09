@@ -1,7 +1,7 @@
 package com.powerRanger.ElBuenSabor.entities;
 
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
-import com.fasterxml.jackson.annotation.JsonIdentityReference; // Asegúrate de importar esto
+import com.fasterxml.jackson.annotation.JsonIdentityReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.DecimalMin;
@@ -17,10 +17,7 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class Articulo {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+public class Articulo extends BaseEntity {
 
     @Column(nullable = false)
     @NotEmpty(message = "La denominación no puede estar vacía")
@@ -34,7 +31,7 @@ public class Articulo {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "unidad_medida_id")
     @NotNull(message = "La unidad de medida es obligatoria")
-    @JsonIdentityReference(alwaysAsId = true) // Deserializará/Serializará solo el ID
+    @JsonIdentityReference(alwaysAsId = true)
     private UnidadMedida unidadMedida;
 
     @OneToMany(mappedBy = "articulo", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
@@ -43,7 +40,7 @@ public class Articulo {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "categoria_id")
     @NotNull(message = "La categoría es obligatoria")
-    @JsonIdentityReference(alwaysAsId = true) // Deserializará/Serializará solo el ID
+    @JsonIdentityReference(alwaysAsId = true)
     private Categoria categoria;
 
     @OneToMany(mappedBy = "articulo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -68,8 +65,6 @@ public class Articulo {
     }
 
     // Getters y Setters
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
     public String getDenominacion() { return denominacion; }
     public void setDenominacion(String denominacion) { this.denominacion = denominacion; }
     public Double getPrecioVenta() { return precioVenta; }
@@ -92,22 +87,22 @@ public class Articulo {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Articulo articulo = (Articulo) o;
-        return Objects.equals(id, articulo.id);
+        return Objects.equals(this.getId(), articulo.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return Objects.hash(this.getId());
     }
 
     @Override
     public String toString() {
         return "Articulo{" +
-                "id=" + id +
+                "id=" + this.getId() +
                 ", denominacion='" + denominacion + '\'' +
                 ", precioVenta=" + precioVenta +
-                ", categoriaId=" + (categoria != null ? categoria.getId() : "N/A") + // Mostrar ID por JsonIdentityReference
-                ", unidadMedidaId=" + (unidadMedida != null ? unidadMedida.getId() : "N/A") + // Mostrar ID
+                ", categoriaId=" + (categoria != null ? categoria.getId() : "N/A") +
+                ", unidadMedidaId=" + (unidadMedida != null ? unidadMedida.getId() : "N/A") +
                 ", estadoActivo=" + estadoActivo +
                 '}';
     }

@@ -1,35 +1,31 @@
 package com.powerRanger.ElBuenSabor.entities;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.Min;    // Para números
-import jakarta.validation.constraints.NotNull; // Para objetos y Boolean
-// No necesitas importar Size o Objects aquí si no los usas directamente en esta subclase.
-// Lombok fue eliminado, lo cual está bien ya que estamos definiendo getters/setters manualmente.
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
-// @JsonIdentityInfo ya está en la superclase Articulo, por lo que se hereda.
-// No es necesario repetirlo aquí a menos que quieras una configuración diferente para la subclase.
 public class ArticuloInsumo extends Articulo {
 
-    @Column(nullable = true) // Considera si el precio de compra puede ser nulo
-    @Min(value = 0, message = "El precio de compra no puede ser negativo") // Permite 0 si es posible
+    @Column(nullable = true)
+    @Min(value = 0, message = "El precio de compra no puede ser negativo")
     private Double precioCompra;
 
-    @Column(nullable = true) // Considera si el stock puede ser nulo
+    @Column(nullable = true)
     @Min(value = 0, message = "El stock actual no puede ser negativo")
-    private Double stockActual; // Cambiado a Double para consistencia con precioCompra y para permitir decimales
+    private Double stockActual;
 
-    @Column(nullable = true) // Considera si el stock puede ser nulo
+    @Column(nullable = true)
     @Min(value = 0, message = "El stock máximo no puede ser negativo")
-    private Double stockMinimo; // Cambiado a Double
+    private Double stockMinimo;
 
-    @Column(nullable = false) // Correcto si siempre debe tener un valor
+    @Column(nullable = false)
     @NotNull(message = "Debe especificarse si es para elaborar")
     private Boolean esParaElaborar;
 
-    // Constructores
+
     public ArticuloInsumo() {
-        super(); // Llama al constructor de Articulo
+        super();
     }
 
     public ArticuloInsumo(String denominacion, Double precioVenta, UnidadMedida unidadMedida,

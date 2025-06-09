@@ -7,7 +7,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.ArrayList;
 import java.util.List;
-// com.fasterxml.jackson.annotation.JsonIdentityInfo se hereda de Articulo
 
 @Entity
 public class ArticuloManufacturado extends Articulo {

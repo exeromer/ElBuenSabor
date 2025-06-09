@@ -1,18 +1,16 @@
 package com.powerRanger.ElBuenSabor.entities;
 
-import com.fasterxml.jackson.annotation.JsonIdentityInfo; // Importa esta
-import com.fasterxml.jackson.annotation.ObjectIdGenerators; // Importa esta
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class Provincia {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Integer id;
+public class Provincia extends BaseEntity { // HEREDA DE BaseEntity
 
     @Column(nullable = true)
     private String nombre;
@@ -22,15 +20,26 @@ public class Provincia {
     private Pais pais;
 
     @OneToMany(mappedBy = "provincia", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Localidad> localidades; // Asumo que Localidad también podría necesitar @JsonIdentityInfo si tiene relaciones bidireccionales
+    private List<Localidad> localidades;
 
-    // Getters y Setters...
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    // Getters y Setters
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
     public Pais getPais() { return pais; }
     public void setPais(Pais pais) { this.pais = pais; }
     public List<Localidad> getLocalidades() { return localidades; }
     public void setLocalidades(List<Localidad> localidades) { this.localidades = localidades; }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Provincia provincia = (Provincia) o;
+        return Objects.equals(this.getId(), provincia.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(this.getId());
+    }
 }
