@@ -8,8 +8,11 @@ import java.util.List;
 
 public interface ClienteService extends BaseService<Cliente, Integer> {
 
-    List<ClienteResponseDTO> findAllClientes(String searchTerm); // Renombrado para claridad
-    ClienteResponseDTO findClienteById(Integer id) throws Exception; // Renombrado
+    List<ClienteResponseDTO> findAllClientes(String searchTerm);
+    ClienteResponseDTO findClienteById(Integer id) throws Exception;
+
+    ClienteResponseDTO getMyProfile(String auth0Id) throws Exception;
+
     ClienteResponseDTO createCliente(@Valid ClienteRequestDTO dto) throws Exception;
     ClienteResponseDTO updateCliente(Integer id, @Valid ClienteRequestDTO dto) throws Exception;
     void softDeleteCliente(Integer id) throws Exception;

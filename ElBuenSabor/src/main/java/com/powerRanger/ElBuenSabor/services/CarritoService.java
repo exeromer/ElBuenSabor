@@ -15,4 +15,6 @@ public interface CarritoService {
     CarritoResponseDTO eliminarItemDelCarrito(Cliente cliente, Integer carritoItemId) throws Exception;
 
     CarritoResponseDTO vaciarCarrito(Cliente cliente) throws Exception;
+
+
 }

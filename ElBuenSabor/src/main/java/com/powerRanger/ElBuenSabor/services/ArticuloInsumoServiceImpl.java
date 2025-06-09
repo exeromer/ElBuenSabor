@@ -91,4 +91,5 @@ public class ArticuloInsumoServiceImpl extends BaseServiceImpl<ArticuloInsumo, A
         insumo.setstockMinimo(dto.getstockMinimo());
         insumo.setEsParaElaborar(dto.getEsParaElaborar());
     }
+
 }

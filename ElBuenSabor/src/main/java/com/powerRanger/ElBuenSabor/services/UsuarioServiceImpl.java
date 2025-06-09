@@ -5,6 +5,7 @@ import com.powerRanger.ElBuenSabor.dtos.UsuarioResponseDTO;
 import com.powerRanger.ElBuenSabor.entities.Usuario;
 import com.powerRanger.ElBuenSabor.entities.enums.Rol;
 import com.powerRanger.ElBuenSabor.repository.UsuarioRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
@@ -74,13 +75,11 @@ public class UsuarioServiceImpl extends BaseServiceImpl<Usuario, UsuarioReposito
         if (dto.getAuth0Id() != null && baseRepository.findByAuth0Id(dto.getAuth0Id()).isPresent()) {
             throw new Exception("El Auth0 ID '" + dto.getAuth0Id() + "' ya está registrado.");
         }
-
         Usuario usuario = new Usuario();
         usuario.setAuth0Id(dto.getAuth0Id());
         usuario.setUsername(dto.getUsername());
         usuario.setRol(dto.getRol());
         usuario.setEstadoActivo(dto.getEstadoActivo() != null ? dto.getEstadoActivo() : true);
-
         return convertToResponseDto(super.save(usuario));
     }
 
@@ -88,7 +87,6 @@ public class UsuarioServiceImpl extends BaseServiceImpl<Usuario, UsuarioReposito
     @Transactional
     public UsuarioResponseDTO updateUsuario(Integer id, @Valid UsuarioRequestDTO dto) throws Exception {
         Usuario usuarioExistente = super.findById(id);
-
         if (!usuarioExistente.getUsername().equals(dto.getUsername())) {
             baseRepository.findByUsername(dto.getUsername()).ifPresent(u -> {
                 if (!u.getId().equals(id)) {
@@ -103,12 +101,10 @@ public class UsuarioServiceImpl extends BaseServiceImpl<Usuario, UsuarioReposito
                 }
             });
         }
-
         usuarioExistente.setAuth0Id(dto.getAuth0Id());
         usuarioExistente.setUsername(dto.getUsername());
         usuarioExistente.setRol(dto.getRol());
         usuarioExistente.setEstadoActivo(dto.getEstadoActivo() != null ? dto.getEstadoActivo() : usuarioExistente.getEstadoActivo());
-
         return convertToResponseDto(super.update(id, usuarioExistente));
     }
 
@@ -124,19 +120,44 @@ public class UsuarioServiceImpl extends BaseServiceImpl<Usuario, UsuarioReposito
     @Override
     @Transactional
     public Usuario findOrCreateUsuario(String auth0Id, String username, String email) throws Exception {
+        if (auth0Id == null || auth0Id.trim().isEmpty()) {
+            throw new IllegalArgumentException("Auth0 ID no puede ser nulo o vacío.");
+        }
         Optional<Usuario> optionalUsuario = baseRepository.findByAuth0Id(auth0Id);
-
         if (optionalUsuario.isPresent()) {
-            // ... lógica de actualización si es necesario ...
+            System.out.println("FIND_OR_CREATE: Usuario encontrado con auth0Id: " + auth0Id);
             return optionalUsuario.get();
         } else {
-            // ... lógica para crear nuevo usuario y evitar conflicto de username ...
+            System.out.println("FIND_OR_CREATE: Usuario NO encontrado con auth0Id: " + auth0Id + ". Creando nuevo usuario.");
             String finalUsername = username;
-            if (baseRepository.findByUsername(finalUsername).isPresent()) {
-                finalUsername = email; // Simplificación, podrías añadir un número
+            if (finalUsername == null || finalUsername.trim().isEmpty()) {
+                if (email != null && !email.isEmpty() && email.contains("@")) {
+                    finalUsername = email.split("@")[0];
+                } else {
+                    String baseAuth0Id = auth0Id.replaceAll("[^a-zA-Z0-9]", "");
+                    finalUsername = "user_" + baseAuth0Id.substring(0, Math.min(15, baseAuth0Id.length()));
+                }
             }
-            Usuario nuevoUsuario = new Usuario(auth0Id, finalUsername, Rol.CLIENTE);
-            return super.save(nuevoUsuario);
+            if (baseRepository.findByUsername(finalUsername).isPresent()) {
+                String baseUsername = finalUsername;
+                int count = 1;
+                do {
+                    finalUsername = baseUsername + "_" + count++;
+                } while (baseRepository.findByUsername(finalUsername).isPresent());
+                System.out.println("FIND_OR_CREATE: Username original '" + baseUsername + "' ya existía. Nuevo username generado: '" + finalUsername + "'");
+            }
+            Usuario nuevoUsuario = new Usuario();
+            nuevoUsuario.setAuth0Id(auth0Id);
+            nuevoUsuario.setUsername(finalUsername);
+            nuevoUsuario.setRol(Rol.CLIENTE);
+            nuevoUsuario.setEstadoActivo(true);
+            try {
+                return super.save(nuevoUsuario);
+            } catch (DataIntegrityViolationException e) {
+                System.err.println("FIND_OR_CREATE_ERROR: DataIntegrityViolationException al guardar nuevo usuario.");
+                return baseRepository.findByAuth0Id(auth0Id)
+                        .orElseThrow(() -> new Exception("Error crítico: Falló la creación del usuario para auth0Id: " + auth0Id, e));
+            }
         }
     }
 

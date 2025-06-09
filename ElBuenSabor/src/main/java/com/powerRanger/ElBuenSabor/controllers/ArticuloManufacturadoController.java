@@ -49,5 +49,13 @@ public class ArticuloManufacturadoController {
     public ResponseEntity<?> deleteArticuloManufacturado(@PathVariable Integer id) throws Exception {
         manufacturadoService.delete(id);
         return ResponseEntity.noContent().build();
+
+
+    private ResponseEntity<Map<String, Object>> handleGenericException(Exception e, HttpStatus status) {
+        Map<String, Object> errorResponse = new HashMap<>();
+        errorResponse.put("status", status.value());
+        errorResponse.put("error", e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity.status(status).body(errorResponse);
     }
 }

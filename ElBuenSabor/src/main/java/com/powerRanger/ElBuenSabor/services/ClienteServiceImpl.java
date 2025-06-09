@@ -52,22 +52,33 @@ public class ClienteServiceImpl extends BaseServiceImpl<Cliente, ClienteReposito
         return convertToResponseDto(cliente);
     }
 
+    // AÑADIDO: Método de la rama Exe_Auth0
+    @Override
+    @Transactional(readOnly = true)
+    public ClienteResponseDTO getMyProfile(String auth0Id) throws Exception {
+        if (auth0Id == null || auth0Id.trim().isEmpty()) {
+            throw new Exception("Auth0 ID no proporcionado para obtener el perfil.");
+        }
+        Usuario usuario = usuarioRepository.findByAuth0Id(auth0Id)
+                .orElseThrow(() -> new Exception("Usuario no encontrado con Auth0 ID: " + auth0Id));
+        Cliente cliente = baseRepository.findByUsuarioId(usuario.getId())
+                .orElseThrow(() -> new Exception("Perfil de Cliente no encontrado para el usuario: " + usuario.getUsername()));
+        return convertToResponseDto(cliente);
+    }
+
     @Override
     @Transactional
     public ClienteResponseDTO createCliente(@Valid ClienteRequestDTO dto) throws Exception {
         if (dto.getEmail() != null) {
-            // CORRECCIÓN: Usar baseRepository en lugar de clienteRepository
             baseRepository.findByEmail(dto.getEmail()).ifPresent(c -> {
                 throw new RuntimeException("El email '" + dto.getEmail() + "' ya está registrado.");
             });
         }
         if (dto.getUsuarioId() != null) {
-            // CORRECCIÓN: Usar baseRepository en lugar de clienteRepository
             baseRepository.findByUsuarioId(dto.getUsuarioId()).ifPresent(c -> {
                 throw new RuntimeException("El Usuario ID " + dto.getUsuarioId() + " ya está asociado a otro cliente.");
             });
         }
-
         Cliente cliente = new Cliente();
         mapRequestDtoToEntity(dto, cliente);
         Cliente clienteGuardado = super.save(cliente);
@@ -78,17 +89,13 @@ public class ClienteServiceImpl extends BaseServiceImpl<Cliente, ClienteReposito
     @Transactional
     public ClienteResponseDTO updateCliente(Integer id, @Valid ClienteRequestDTO dto) throws Exception {
         Cliente clienteExistente = super.findById(id);
-
         if (dto.getEmail() != null && !dto.getEmail().equals(clienteExistente.getEmail())) {
-            // CORRECCIÓN: Usar baseRepository en lugar de clienteRepository
             baseRepository.findByEmail(dto.getEmail()).ifPresent(c -> {
-                // CORRECCIÓN: Ahora c.getId() se resolverá correctamente
                 if (!c.getId().equals(id)) {
                     throw new RuntimeException("El email '" + dto.getEmail() + "' ya está registrado por otro cliente.");
                 }
             });
         }
-
         mapRequestDtoToEntity(dto, clienteExistente);
         Cliente clienteActualizado = super.update(id, clienteExistente);
         return convertToResponseDto(clienteActualizado);
@@ -103,7 +110,6 @@ public class ClienteServiceImpl extends BaseServiceImpl<Cliente, ClienteReposito
         super.save(clienteEntidad);
     }
 
-    // --- MAPPERS Y LÓGICA PRIVADA (SIN CAMBIOS) ---
     private ClienteResponseDTO convertToResponseDto(Cliente cliente) {
         if (cliente == null) return null;
         ClienteResponseDTO dto = new ClienteResponseDTO();
@@ -115,13 +121,11 @@ public class ClienteServiceImpl extends BaseServiceImpl<Cliente, ClienteReposito
         dto.setFechaNacimiento(cliente.getFechaNacimiento());
         dto.setEstadoActivo(cliente.getEstadoActivo());
         dto.setFechaBaja(cliente.getFechaBaja());
-
         if (cliente.getUsuario() != null) {
             dto.setUsuarioId(cliente.getUsuario().getId());
             dto.setUsername(cliente.getUsuario().getUsername());
             dto.setRolUsuario(cliente.getUsuario().getRol());
         }
-
         if (cliente.getDomicilios() != null) {
             dto.setDomicilios(cliente.getDomicilios().stream()
                     .map(this::convertDomicilioToDto)
@@ -137,7 +141,6 @@ public class ClienteServiceImpl extends BaseServiceImpl<Cliente, ClienteReposito
         cliente.setEmail(dto.getEmail());
         cliente.setFechaNacimiento(dto.getFechaNacimiento());
         cliente.setEstadoActivo(dto.getEstadoActivo() != null ? dto.getEstadoActivo() : true);
-
         if (dto.getUsuarioId() != null) {
             Usuario usuario = usuarioRepository.findById(dto.getUsuarioId())
                     .orElseThrow(() -> new Exception("Usuario no encontrado con ID: " + dto.getUsuarioId()));
@@ -174,6 +177,7 @@ public class ClienteServiceImpl extends BaseServiceImpl<Cliente, ClienteReposito
         }
         return dto;
     }
+
     private LocalidadResponseDTO convertLocalidadToDto(Localidad localidad) {
         if (localidad == null) return null;
         LocalidadResponseDTO dto = new LocalidadResponseDTO();
@@ -184,6 +188,7 @@ public class ClienteServiceImpl extends BaseServiceImpl<Cliente, ClienteReposito
         }
         return dto;
     }
+
     private ProvinciaResponseDTO convertProvinciaToDto(Provincia provincia) {
         if (provincia == null) return null;
         ProvinciaResponseDTO dto = new ProvinciaResponseDTO();
@@ -194,6 +199,7 @@ public class ClienteServiceImpl extends BaseServiceImpl<Cliente, ClienteReposito
         }
         return dto;
     }
+
     private PaisResponseDTO convertPaisToDto(Pais pais) {
         if (pais == null) return null;
         PaisResponseDTO dto = new PaisResponseDTO();
