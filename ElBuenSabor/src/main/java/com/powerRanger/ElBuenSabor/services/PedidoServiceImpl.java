@@ -6,8 +6,8 @@ import com.powerRanger.ElBuenSabor.entities.enums.Estado;
 import com.powerRanger.ElBuenSabor.entities.enums.FormaPago;
 import com.powerRanger.ElBuenSabor.entities.enums.TipoEnvio;
 import com.powerRanger.ElBuenSabor.repository.*;
-// import com.powerRanger.ElBuenSabor.services.FacturaService; // Descomentar si tienes este servicio
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate; // <-- WEBSOCKETS: Import necesario
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
@@ -39,9 +39,11 @@ public class PedidoServiceImpl implements PedidoService {
     @Autowired private ArticuloManufacturadoRepository articuloManufacturadoRepository;
     @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
     @Autowired private LocalidadRepository localidadRepository;
-    // @Autowired private FacturaService facturaService; // Descomentar si tienes este servicio
 
-    // --- MAPPERS ---
+    // <-- WEBSOCKETS: Inyección del template para enviar mensajes
+    @Autowired private SimpMessagingTemplate messagingTemplate;
+
+    // --- MAPPERS (Sin cambios en los mappers) ---
     private ArticuloSimpleResponseDTO convertArticuloToSimpleDto(Articulo articulo) {
         if (articulo == null) return null;
         ArticuloSimpleResponseDTO dto = new ArticuloSimpleResponseDTO();
@@ -180,6 +182,7 @@ public class PedidoServiceImpl implements PedidoService {
         return dto;
     }
 
+    // --- LÓGICA DE SERVICIO (Sin cambios en los métodos privados de ayuda) ---
     private LocalTime parseTime(String timeString, String fieldName) throws Exception {
         if (timeString == null || timeString.trim().isEmpty()) {
             throw new Exception("El " + fieldName + " no puede estar vacío.");
@@ -259,6 +262,8 @@ public class PedidoServiceImpl implements PedidoService {
         return pedido;
     }
 
+    // --- MÉTODOS PÚBLICOS DEL SERVICIO ---
+
     @Override
     @Transactional(readOnly = true)
     public List<PedidoResponseDTO> getAll() {
@@ -294,9 +299,12 @@ public class PedidoServiceImpl implements PedidoService {
     public PedidoResponseDTO create(@Valid PedidoRequestDTO dto) throws Exception {
         Cliente cliente = clienteRepository.findById(dto.getClienteId()).orElseThrow(() -> new Exception("Cliente no encontrado con ID: " + dto.getClienteId()));
         Pedido pedido = mapAndPreparePedido(dto, cliente);
-        // Aquí faltaría la lógica de stock y costo que está en `crearPedidoDesdeCarrito`.
-        // Considerar refactorizar esa lógica a un método privado si create() también la necesita.
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
+
+        // <-- WEBSOCKETS: Notificar la creación del nuevo pedido.
+        messagingTemplate.convertAndSend("/topic/pedidos-cocina", convertToResponseDto(pedidoGuardado));
+        messagingTemplate.convertAndSend("/topic/pedidos-cajero", convertToResponseDto(pedidoGuardado));
+
         return convertToResponseDto(pedidoGuardado);
     }
 
@@ -306,14 +314,19 @@ public class PedidoServiceImpl implements PedidoService {
         Usuario usuario = usuarioRepository.findByAuth0Id(auth0Id).orElseThrow(() -> new Exception("Usuario autenticado (Auth0 ID: " + auth0Id + ") no encontrado en el sistema."));
         Cliente cliente = clienteRepository.findByUsuarioId(usuario.getId()).orElseThrow(() -> new Exception("No se encontró un perfil de Cliente para el usuario: " + usuario.getUsername()));
         Pedido pedido = mapAndPreparePedido(dto, cliente);
-        // Idem comentario de arriba.
         Pedido pedidoGuardado = pedidoRepository.save(pedido);
+
+        // <-- WEBSOCKETS: Notificar la creación del nuevo pedido.
+        messagingTemplate.convertAndSend("/topic/pedidos-cocina", convertToResponseDto(pedidoGuardado));
+        messagingTemplate.convertAndSend("/topic/pedidos-cajero", convertToResponseDto(pedidoGuardado));
+
         return convertToResponseDto(pedidoGuardado);
     }
 
     @Override
     @Transactional
     public PedidoResponseDTO crearPedidoDesdeCarrito(Cliente cliente, @Valid CrearPedidoRequestDTO pedidoRequest) throws Exception {
+        // ... (lógica de validación, creación de domicilio, etc. sin cambios) ...
         System.out.println("DEBUG: Iniciando crearPedidoDesdeCarrito para cliente ID: " + cliente.getId());
         validarFormaDePago(pedidoRequest.getTipoEnvio(), pedidoRequest.getFormaPago());
 
@@ -443,7 +456,7 @@ public class PedidoServiceImpl implements PedidoService {
                     .orElseThrow(() -> new Exception("Artículo con ID " + item.getArticulo().getId() + " no encontrado al crear detalles."));
             detallePedido.setArticulo(articuloDelItem);
             detallePedido.setCantidad(item.getCantidad());
-            if (articuloDelItem.getPrecioVenta() == null) { // Esta verificación ya está arriba, pero por seguridad.
+            if (articuloDelItem.getPrecioVenta() == null) {
                 throw new Exception("El artículo '" + articuloDelItem.getDenominacion() + "' no tiene un precio de venta asignado.");
             }
             detallePedido.setSubTotal(item.getCantidad() * articuloDelItem.getPrecioVenta());
@@ -475,9 +488,12 @@ public class PedidoServiceImpl implements PedidoService {
         carritoService.vaciarCarrito(cliente);
         System.out.println("DEBUG: Carrito vaciado para cliente ID: " + cliente.getId());
 
+        // <-- WEBSOCKETS: Notificar la creación del nuevo pedido.
+        messagingTemplate.convertAndSend("/topic/pedidos-cocina", convertToResponseDto(pedidoGuardado));
+        messagingTemplate.convertAndSend("/topic/pedidos-cajero", convertToResponseDto(pedidoGuardado));
+
         return convertToResponseDto(pedidoGuardado);
     }
-
 
     @Override
     @Transactional
@@ -487,6 +503,7 @@ public class PedidoServiceImpl implements PedidoService {
 
         if (estadoActual == nuevoEstado) return convertToResponseDto(pedidoExistente);
 
+        // ... (lógica de validación de estados sin cambios) ...
         switch (estadoActual) {
             case ENTREGADO:
                 if (nuevoEstado == Estado.CANCELADO) throw new Exception("No se puede cancelar un pedido que ya fue entregado.");
@@ -505,12 +522,16 @@ public class PedidoServiceImpl implements PedidoService {
                 if (nuevoEstado == Estado.PENDIENTE) throw new Exception("Un pedido PAGADO no puede volver a PENDIENTE.");
                 break;
             default:
-                // Permitir otras transiciones si no están explícitamente prohibidas
                 break;
         }
 
         pedidoExistente.setEstado(nuevoEstado);
         Pedido pedidoActualizado = pedidoRepository.save(pedidoExistente);
+
+        // <-- WEBSOCKETS: Notificar el cambio de estado del pedido.
+        messagingTemplate.convertAndSend("/topic/pedidos-cocina", convertToResponseDto(pedidoActualizado));
+        messagingTemplate.convertAndSend("/topic/pedidos-cajero", convertToResponseDto(pedidoActualizado));
+
         return convertToResponseDto(pedidoActualizado);
     }
 
@@ -531,20 +552,22 @@ public class PedidoServiceImpl implements PedidoService {
         if (pedido.getEstado() != Estado.RECHAZADO && pedido.getEstado() != Estado.CANCELADO) {
             pedido.setEstado(Estado.CANCELADO);
         }
-        pedidoRepository.save(pedido);
+        Pedido pedidoActualizado = pedidoRepository.save(pedido);
+
+        // <-- WEBSOCKETS: Notificar la cancelación (borrado lógico) del pedido.
+        messagingTemplate.convertAndSend("/topic/pedidos-cocina", convertToResponseDto(pedidoActualizado));
+        messagingTemplate.convertAndSend("/topic/pedidos-cajero", convertToResponseDto(pedidoActualizado));
     }
 
     @Override
     @Transactional
     public PedidoResponseDTO procesarNotificacionMercadoPago(String paymentId, String status, String externalReference) throws Exception {
         Pedido pedido;
-        // Intentar buscar por externalReference como ID de pedido
         try {
             Integer pedidoId = Integer.parseInt(externalReference);
             pedido = pedidoRepository.findById(pedidoId)
                     .orElseGet(() -> pedidoRepository.findByMercadoPagoPreferenceId(externalReference).orElse(null));
         } catch (NumberFormatException e) {
-            // Si externalReference no es un número, asumimos que es un preferenceId
             pedido = pedidoRepository.findByMercadoPagoPreferenceId(externalReference).orElse(null);
         }
 
@@ -558,7 +581,6 @@ public class PedidoServiceImpl implements PedidoService {
         if ("approved".equalsIgnoreCase(status)) {
             pedido.setEstado(Estado.PAGADO);
             System.out.println("INFO: Pedido ID " + pedido.getId() + " pagado exitosamente via Mercado Pago. Payment ID: " + paymentId);
-            // Lógica de factura...
         } else if ("rejected".equalsIgnoreCase(status) || "cancelled".equalsIgnoreCase(status) || "in_mediation".equalsIgnoreCase(status) || "charged_back".equalsIgnoreCase(status) ) {
             pedido.setEstado(Estado.RECHAZADO);
             System.out.println("INFO: Pago para Pedido ID " + pedido.getId() + " fue " + status + " por Mercado Pago. Payment ID: " + paymentId);
@@ -567,6 +589,11 @@ public class PedidoServiceImpl implements PedidoService {
         }
 
         Pedido pedidoActualizado = pedidoRepository.save(pedido);
+
+        // <-- WEBSOCKETS: Notificar el cambio de estado por el pago de Mercado Pago.
+        messagingTemplate.convertAndSend("/topic/pedidos-cocina", convertToResponseDto(pedidoActualizado));
+        messagingTemplate.convertAndSend("/topic/pedidos-cajero", convertToResponseDto(pedidoActualizado));
+
         return convertToResponseDto(pedidoActualizado);
     }
 

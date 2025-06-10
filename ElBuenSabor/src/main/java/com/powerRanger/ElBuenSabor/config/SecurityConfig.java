@@ -1,64 +1,3 @@
-/*
-package com.powerRanger.ElBuenSabor.config;
-
-
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer; // Para csrf().disable()
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.List;
-
-@Configuration
-@EnableWebSecurity // Habilita la configuración de seguridad web de Spring
-public class SecurityConfig {
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http
-                // Configuración de CORS para permitir peticiones del frontend
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-
-                // Deshabilitar CSRF (Cross-Site Request Forgery)
-                // Es común deshabilitarlo para APIs REST puras o al probar con Postman.
-                .csrf(AbstractHttpConfigurer::disable)
-
-                // Configurar las reglas de autorización de las peticiones HTTP
-                .authorizeHttpRequests(authorizeRequests ->
-                        authorizeRequests
-                                .anyRequest().permitAll() // Permite TODAS las peticiones a cualquier URL sin autenticación
-                );
-
-        return http.build();
-    }
-
-    /**
-     * Configuración de CORS. Permite peticiones desde el frontend.
-     * Aunque estemos permitiendo todo, es bueno mantener la configuración de CORS
-     * por si la necesitas más adelante o si tu navegador hace comprobaciones.
-     */
-    /*@Bean
-    CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // Orígenes permitidos (ajusta según tu frontend en desarrollo/producción)
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:3000", "http://localhost:4200", "http://localhost:8080"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "X-Auth-Token"));
-        configuration.setAllowCredentials(true);
-        configuration.setExposedHeaders(List.of("Authorization", "Content-Type"));
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // Aplica esta configuración a todas las rutas
-        return source;
-    }
-}
-*/
-
 package com.powerRanger.ElBuenSabor.config;
 
 import com.powerRanger.ElBuenSabor.entities.Usuario;
@@ -101,13 +40,6 @@ public class SecurityConfig {
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
     private String issuerUri;
 
-    // La propiedad 'auth0.audience' no es usada directamente por Spring Security por defecto para validación
-    // pero la incluimos aquí si quisiéramos hacer una validación de audiencia manual en el JwtDecoder.
-    // Spring Boot 3.x a menudo puede inferir la audiencia si se configura correctamente en Auth0
-    // y si el token la incluye. Si no, necesitaríamos un validador de audiencia personalizado.
-    // @Value("${auth0.audience}")
-    // private String audience;
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -115,24 +47,24 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                // ACA DEBEMOS IMPLENTAR QUIEN TIENE ACCESO A LAS APIS (ADMIN CLIENTE EMPLEADO ETC)
-                                // ENDPOINTS PÚBLICOS (ejemplos, ajusta según tus necesidades)
+                                // ENDPOINTS PÚBLICOS
                                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
-                                // Permitir a cualquier usuario AUTENTICADO intentar acceder a su propio detalle vía auth0Id.
-                                // La lógica de @PreAuthorize en el controlador se encargará de la autorización fina.
-                                .requestMatchers(HttpMethod.GET, "/api/usuarios/auth0/{auth0Id}").authenticated()
 
+                                // LÍNEA AÑADIDA PARA WEBSOCKETS
+                                .requestMatchers("/ws/**").permitAll()
+
+                                // Permitir a cualquier usuario AUTENTICADO intentar acceder a su propio detalle vía auth0Id.
+                                .requestMatchers(HttpMethod.GET, "/api/usuarios/auth0/{auth0Id}").authenticated()
 
                                 // Permitir GET para ciertas entidades de catálogo sin autenticación
                                 .requestMatchers(HttpMethod.GET, "/api/categorias/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/unidadesmedida/**").permitAll()
-                                .requestMatchers(HttpMethod.GET, "/api/articulos/**").permitAll() // GET general de artículos
-                                .requestMatchers(HttpMethod.GET, "/api/articulosinsumo/**").permitAll() // GET general de insumos
-                                .requestMatchers(HttpMethod.GET, "/api/articulosmanufacturados/**").permitAll() // GET general de manufacturados
+                                .requestMatchers(HttpMethod.GET, "/api/articulos/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/articulosinsumo/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/articulosmanufacturados/**").permitAll()
 
                                 // REGLAS DE AUTORIZACIÓN ESPECÍFICAS
-                                // Para crear, modificar o borrar se necesita un rol específico
                                 .requestMatchers(HttpMethod.POST, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.PUT, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.DELETE, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
@@ -141,50 +73,48 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.PUT, "/api/articulos/**", "/api/articulosinsumo/**", "/api/articulosmanufacturados/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.DELETE, "/api/articulos/**", "/api/articulosinsumo/**", "/api/articulosmanufacturados/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
 
-                                // Gestión de usuarios solo por ADMIN (el endpoint de creación directa)
-                                // Reglas más específicas para otras operaciones de /api/usuarios (generalmente admin)
-                                .requestMatchers(HttpMethod.GET, "/api/usuarios").hasAuthority("ROLE_ADMIN") // Listar todos los usuarios
-                                .requestMatchers(HttpMethod.POST, "/api/usuarios").hasAuthority("ROLE_ADMIN") // Crear usuario (vía admin)
-                                .requestMatchers(HttpMethod.PUT, "/api/usuarios/{id}").hasAuthority("ROLE_ADMIN") // Actualizar usuario (vía admin por ID numérico)
-                                .requestMatchers(HttpMethod.DELETE, "/api/usuarios/{id}").hasAuthority("ROLE_ADMIN") // Borrar usuario (vía admin por ID numérico)
+                                // Gestión de usuarios solo por ADMIN
+                                .requestMatchers(HttpMethod.GET, "/api/usuarios").hasAuthority("ROLE_ADMIN")
+                                .requestMatchers(HttpMethod.POST, "/api/usuarios").hasAuthority("ROLE_ADMIN")
+                                .requestMatchers(HttpMethod.PUT, "/api/usuarios/{id}").hasAuthority("ROLE_ADMIN")
+                                .requestMatchers(HttpMethod.DELETE, "/api/usuarios/{id}").hasAuthority("ROLE_ADMIN")
 
-                                // Pedidos: Clientes pueden crear y ver sus pedidos, empleados/admin pueden ver todos/gestionar
+                                // Pedidos
                                 .requestMatchers(HttpMethod.POST, "/api/pedidos").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.POST, "/api/pedidos/cliente/{clienteId}/desde-carrito").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.GET, "/api/pedidos/mis-pedidos").hasAuthority("ROLE_CLIENTE")
-                                .requestMatchers(HttpMethod.GET, "/api/pedidos/cliente/{clienteId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN") // Un cliente solo sus pedidos
-                                .requestMatchers(HttpMethod.GET, "/api/pedidos/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO") // Admin/Empleado ven todos
-                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/estado/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO") // Cambiar estado
-                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/{id}/estado").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO") // Cambiar estado (por ID
+                                .requestMatchers(HttpMethod.GET, "/api/pedidos/cliente/{clienteId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/api/pedidos/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/estado/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/{id}/estado").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
 
-                                //Carrito: Cliente Visualiza carrito
-                                .requestMatchers(HttpMethod.GET, "/api/clientes/{clienteId}/carrito").hasAuthority("ROLE_CLIENTE") // Cliente ve/crea SU carrito
-                                .requestMatchers(HttpMethod.POST, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE") // Cliente añade a SU carrito
-                                .requestMatchers(HttpMethod.PUT, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE") // Cliente actualiza en SU carrito
-                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE") // Cliente borra de SU carrito
-                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE") // Cliente vacía SU carrito
+                                // Carrito
+                                .requestMatchers(HttpMethod.GET, "/api/clientes/{clienteId}/carrito").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.POST, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.PUT, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE")
 
-                                // Clientes: Un cliente puede ver/modificar su propio perfil. Admin puede gestionar todos.
-                                .requestMatchers(HttpMethod.GET, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE") // Endpoint para que el cliente obtenga su perfil
-                                .requestMatchers(HttpMethod.PUT, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE") // Endpoint para que el cliente actualice su perfil
+                                // Clientes
+                                .requestMatchers(HttpMethod.GET, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.PUT, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.POST,"/api/domicilios/").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
                                 .requestMatchers(HttpMethod.PUT,"/api/domicilios/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
                                 .requestMatchers(HttpMethod.DELETE,"/api/domicilios/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
                                 .requestMatchers("/api/clientes/**").hasAuthority("ROLE_ADMIN")
 
-                                //Facturas: Cliente puede ver sus facturas. Admin y Cajero tambien
+                                // Facturas
                                 .requestMatchers(HttpMethod.GET,"/api/facturas/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.PUT,"/api/facturas/anular/{id}").hasAnyAuthority("ROLE_ADMIN","ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.POST,"/api/facturas/generar-desde-pedido").hasAnyAuthority("ROLE_ADMIN","ROLE_EMPLEADO")
 
-                                //Imagenes
+                                // Imagenes
                                 .requestMatchers(HttpMethod.POST, "/api/files/upload").hasAnyAuthority( "ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.GET, "/api/files/view/{filename}").permitAll()
 
-                                //Estadisticas
+                                // Estadisticas
                                 .requestMatchers(HttpMethod.GET, "/api/estadisticas/**").hasAuthority("ROLE_ADMIN")
                                 .requestMatchers(HttpMethod.POST, "/api/estadisticas/**").hasAuthority("ROLE_ADMIN")
-
 
                                 // Cualquier otra petición requiere autenticación
                                 .anyRequest().authenticated()
@@ -200,41 +130,28 @@ public class SecurityConfig {
 
     @Bean
     public JwtDecoder jwtDecoder() {
-        // Configura el decodificador de JWT para validar tokens contra tu Auth0 issuer URI.
-        // Esto verificará la firma y el issuer.
-        // La validación de la audiencia (audience) es importante. Spring Boot 3+
-        // intenta validar la audiencia del token contra lo que espera el resource server.
-        // Asegúrate que el token de Auth0 contenga la 'audience' correcta (`auth0.audience` de tus properties).
         return NimbusJwtDecoder.withIssuerLocation(issuerUri).build();
     }
 
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
-        // Este convertidor se ejecuta después de que el token JWT es decodificado y validado.
-        // Aquí es donde extraemos el auth0Id (subject del token) y llamamos a nuestro UsuarioService
-        // para buscar o crear el usuario local y obtener sus roles de NUESTRA base de datos.
         converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            String auth0Id = jwt.getSubject(); // 'sub' claim es el auth0Id
-            // Extraer información adicional del token si está disponible y la necesitas
-            // El claim 'email' es estándar, 'nickname' puede o no estar. Ajusta según los claims de tu token de Auth0.
+            String auth0Id = jwt.getSubject();
             String username = jwt.getClaimAsString("nickname");
             String email = jwt.getClaimAsString("email");
 
             if (username == null && email != null) {
-                username = email.split("@")[0]; // Ajuste para tomar solo la parte antes del @
+                username = email.split("@")[0];
             }
-            // Si username sigue siendo null o vacío, genera uno a partir del auth0Id
             if (username == null || username.trim().isEmpty()) {
                 username = "user_" + auth0Id.replaceAll("[^a-zA-Z0-9]", "").substring(0, Math.min(10, auth0Id.length()));
             }
 
-
             Collection<GrantedAuthority> authorities = new HashSet<>();
             try {
-                // Lógica de Just-In-Time Provisioning: Busca o crea el usuario en nuestra BD
                 System.out.println("JWT_CONVERTER: Llamando a findOrCreateUsuario con auth0Id: " + auth0Id + ", username: " + username + ", email: " + email);
-                Usuario usuario = usuarioService.findOrCreateUsuario(auth0Id, username, email); // Esta es la llamada CRUCIAL
+                Usuario usuario = usuarioService.findOrCreateUsuario(auth0Id, username, email);
 
                 if (usuario != null && usuario.getRol() != null && Boolean.TRUE.equals(usuario.getEstadoActivo())) {
                     authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name()));
@@ -242,13 +159,11 @@ public class SecurityConfig {
                 } else if (usuario != null && !Boolean.TRUE.equals(usuario.getEstadoActivo())) {
                     System.out.println("JWT_CONVERTER: Intento de login de usuario inactivo/dado de baja: " + (usuario.getUsername() != null ? usuario.getUsername() : auth0Id));
                 } else {
-                    // Este caso (usuario == null) no debería ocurrir si findOrCreateUsuario siempre devuelve un usuario o lanza excepción.
-                    // Si findOrCreateUsuario PUEDE devolver null sin lanzar excepción, este log es importante.
                     System.out.println("JWT_CONVERTER: No se pudo encontrar/crear usuario, o no tiene rol/estado activo para auth0Id: " + auth0Id + ". Usuario devuelto por servicio: " + usuario);
                 }
             } catch (Exception e) {
                 System.err.println("JWT_CONVERTER_ERROR: Error en findOrCreateUsuario para auth0Id '" + auth0Id + "': " + e.getMessage());
-                e.printStackTrace(); // Muy importante para ver la traza completa del error del servicio
+                e.printStackTrace();
             }
             return authorities;
         });
@@ -258,16 +173,13 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        // Orígenes permitidos para tu frontend (ej. localhost:3000, localhost:5173 para desarrollo)
-        // En producción, reemplaza esto con el dominio real de tu frontend.
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8080")); //ACA VA LA URL DEL FRONTEND (OSEA LIVESERVER)
+        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8080"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type", "X-Auth-Token"));
-        configuration.setAllowCredentials(true); // Importante si tu frontend necesita enviar cookies o cabeceras de autorización
-        configuration.setExposedHeaders(List.of("Authorization")); // Cabeceras que el cliente puede leer
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // Aplica esta configuración a todas las rutas "/api/**"
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }
