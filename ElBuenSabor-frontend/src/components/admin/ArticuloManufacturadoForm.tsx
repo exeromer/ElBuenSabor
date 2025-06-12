@@ -1,3 +1,4 @@
+// ArticuloManufacturadoForm.tsx
 /**
  * @file ArticuloManufacturadoForm.tsx
  * @description Componente de formulario modal para la creación y edición de Artículos Manufacturados.
@@ -16,12 +17,13 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner, Row, Col, InputGroup, Card, ListGroup } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
-import { createArticuloManufacturado, updateArticuloManufacturado } from '../../services/articuloManufacturadoService';
-import { getCategorias } from '../../services/categoriaService';
-import { getUnidadesMedida } from '../../services/unidadMedidaService';
-import { getArticulosInsumo } from '../../services/articuloInsumoService';
-import { deleteImageEntity } from '../../services/imagenService';
-import { uploadFile, deleteFileFromServer, getImageUrl } from '../../services/fileUploadService'; // Importa getImageUrl
+import { ArticuloManufacturadoService } from '../../services/articuloManufacturadoService';
+import { CategoriaService } from '../../services/categoriaService';
+import { UnidadMedidaService } from '../../services/unidadMedidaService';
+import { ArticuloInsumoService } from '../../services/articuloInsumoService';
+import { ImagenService } from '../../services/imagenService';
+import { FileUploadService } from '../../services/fileUploadService';
+
 // Se ajusta la importación de tipos a la nueva ruta types.ts
 import type {
   ArticuloManufacturado,
@@ -29,15 +31,20 @@ import type {
   UnidadMedida,
   ArticuloInsumo,
   ArticuloManufacturadoRequestDTO,
-  // Se eliminaron los tipos no utilizados o que ya no son necesarios de importar directamente aquí
-  // ArticuloManufacturadoDetalle, // No se usa directamente aquí, se mapea a DTO
-  // ImagenRequestDTO // No se usa para tipificar el estado, es un DTO para el backend
 } from '../../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPlusCircle,
   faMinusCircle,
-} from '@fortawesome/free-solid-svg-icons'; // Se eliminó faUpload (no usado)
+} from '@fortawesome/free-solid-svg-icons';
+
+// Instanciamos los servicios
+const articuloManufacturadoService = new ArticuloManufacturadoService();
+const categoriaService = new CategoriaService();
+const unidadMedidaService = new UnidadMedidaService();
+const articuloInsumoService = new ArticuloInsumoService();
+const imagenService = new ImagenService();
+const fileUploadService = new FileUploadService();
 
 /**
  * @interface ArticuloManufacturadoFormProps
@@ -144,9 +151,9 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
       setLoadingOptions(true);
       try {
         const [fetchedCategories, fetchedUnidades, fetchedInsumos] = await Promise.all([
-          getCategorias(),
-          getUnidadesMedida(),
-          getArticulosInsumo(),
+          categoriaService.getCategorias(),
+          unidadMedidaService.getUnidadesMedida(),
+          articuloInsumoService.getArticulosInsumo(),
         ]);
         setCategories(fetchedCategories);
         setUnidadesMedida(fetchedUnidades);
@@ -159,7 +166,7 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
       }
     };
     loadOptions();
-  }, []); // Dependencias vacías: se ejecuta solo una vez al montar
+  }, []);
 
   /**
    * @hook useEffect
@@ -170,31 +177,31 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
   useEffect(() => {
     if (show) {
       if (articuloToEdit) {
-        // Mapea la entidad ArticuloManufacturado recibida a un ArticuloManufacturadoRequestDTO
-        // para que coincida con la estructura del formData.
         setFormData({
           denominacion: articuloToEdit.denominacion,
           precioVenta: articuloToEdit.precioVenta,
-          unidadMedidaId: articuloToEdit.unidadMedida.id,
-          categoriaId: articuloToEdit.categoria.id,
+          unidadMedidaId: articuloToEdit.unidadMedida.id!,
+          categoriaId: articuloToEdit.categoria.id!,
           estadoActivo: articuloToEdit.estadoActivo,
           descripcion: articuloToEdit.descripcion,
           tiempoEstimadoMinutos: articuloToEdit.tiempoEstimadoMinutos,
           preparacion: articuloToEdit.preparacion,
-          // Mapea los detalles de manufacturado a su DTO correspondiente
           manufacturadoDetalles: articuloToEdit.manufacturadoDetalles.map(d => ({
-            articuloInsumoId: d.articuloInsumo.id,
+            articuloInsumoId: d.articuloInsumo.id!,
             cantidad: d.cantidad,
-            estadoActivo: d.estadoActivo !== undefined ? d.estadoActivo : true, // Default a true
+            estadoActivo: d.estadoActivo !== undefined ? d.estadoActivo : true,
           })),
         });
       } else {
-        // Resetea el formulario a sus valores iniciales para un nuevo artículo
         setFormData({
           denominacion: '',
           precioVenta: 0,
-          unidadMedidaId: 2,
-          categoriaId: categories.length > 0 ? categories[0].id : 0, // Default a la primera categoría o 0
+          // [INICIO DE CORRECCIÓN]: Aseguramos que el .id no sea undefined
+          unidadMedidaId: unidadesMedida.length > 0
+            ? (unidadesMedida.find(um => um.denominacion.toLowerCase() === 'unidad')?.id || unidadesMedida[0].id!)
+            : 0,
+          categoriaId: categories.length > 0 ? categories[0].id! : 0,
+          // [FIN DE CORRECCIÓN]
           estadoActivo: true,
           descripcion: '',
           tiempoEstimadoMinutos: 0,
@@ -202,11 +209,11 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
           manufacturadoDetalles: [],
         });
       }
-      setIsProductWrapper(false); // Limpia el estado de producto wrapper
-      setSelectedFile(null); // Limpia cualquier archivo de imagen seleccionado previamente
-      setError(null); // Limpia cualquier error anterior
+      setIsProductWrapper(false);
+      setSelectedFile(null);
+      setError(null);
     }
-  }, [articuloToEdit, show, categories]); // Dependencias: se ejecuta cuando el artículo a editar o la visibilidad del modal cambian
+  }, [articuloToEdit, show, categories, unidadesMedida]);
 
   /**
    * @function handleChange
@@ -221,8 +228,6 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
 
     setFormData((prev) => ({
       ...prev,
-      // Si es un checkbox, usa `checked`, de lo contrario, usa `value`.
-      // Si el campo es un ID (como `unidadMedidaId` o `categoriaId`), se convierte a número.
       [name]: isCheckbox ? checked : (name === 'unidadMedidaId' || name === 'categoriaId' ? Number(value) : value),
     }));
   };
@@ -255,7 +260,6 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
       ...prev,
       manufacturadoDetalles: [
         ...prev.manufacturadoDetalles,
-        // Inicializa el nuevo detalle con el ID del primer insumo disponible o 0 si no hay
         { articuloInsumoId: 0, cantidad: 1, estadoActivo: true },
       ],
     }));
@@ -284,8 +288,6 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
   const handleDetalleChange = (index: number, name: string, value: any) => {
     setFormData((prev) => {
       const newDetails = [...prev.manufacturadoDetalles];
-      // Si el nombre es 'cantidad', convierte el valor a float; de lo contrario, úsalo directamente.
-      // (asumimos que 'articuloInsumoId' ya se convierte a number en el onChange del select)
       newDetails[index] = { ...newDetails[index], [name]: name === 'cantidad' ? parseFloat(value) : value };
       return { ...prev, manufacturadoDetalles: newDetails };
     });
@@ -299,14 +301,13 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
    * @param {React.FormEvent} e - Evento de envío del formulario.
    */
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // Previene el comportamiento por defecto del formulario (recarga de página)
-    setSubmitting(true); // Activa el estado de envío
-    setError(null); // Limpia cualquier error anterior
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
 
     try {
-      const token = await getAccessTokenSilently(); // Obtiene el token de autenticación
+      const token = await getAccessTokenSilently();
 
-      // --- Validaciones básicas del formulario ---
       if (!formData.denominacion || formData.precioVenta <= 0 || !formData.categoriaId || !formData.unidadMedidaId || !formData.descripcion || formData.tiempoEstimadoMinutos <= 0 || !formData.preparacion) {
         setError('Por favor, completa todos los campos obligatorios (Denominación, Precio Venta, Categoría, Unidad de Medida, Descripción, Tiempo Estimado, Preparación).');
         setSubmitting(false);
@@ -317,51 +318,37 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
         setSubmitting(false);
         return;
       }
-      // Valida cada detalle de manufacturado
       if (formData.manufacturadoDetalles.some(d => d.cantidad <= 0 || d.articuloInsumoId === 0)) {
         setError('Todos los ingredientes deben tener un insumo seleccionado y una cantidad positiva.');
         setSubmitting(false);
         return;
       }
 
-      let newArticulo: ArticuloManufacturado; // Variable para almacenar el artículo recién creado/actualizado
+      let newArticulo: ArticuloManufacturado;
 
-      // Lógica de creación o actualización del artículo manufacturado
       if (articuloToEdit) {
-        // En modo edición, se envía el formData con el ID del artículo a actualizar
-        newArticulo = await updateArticuloManufacturado(articuloToEdit.id, formData, token);
+        newArticulo = await articuloManufacturadoService.updateArticuloManufacturado(articuloToEdit.id!, formData, token);
         alert('Artículo Manufacturado actualizado con éxito.');
       } else {
-        // En modo creación, se envía el formData para un nuevo artículo
-        newArticulo = await createArticuloManufacturado(formData, token);
+        newArticulo = await articuloManufacturadoService.createArticuloManufacturado(formData, token);
         alert('Artículo Manufacturado creado con éxito.');
       }
 
-      // --- Lógica de gestión de imágenes ---
       if (selectedFile) {
-        // Si hay una nueva imagen seleccionada, se procede a subirla.
-        // Primero, se eliminan las imágenes antiguas asociadas al artículo (si existen y estamos en modo edición).
         if (articuloToEdit && articuloToEdit.imagenes && articuloToEdit.imagenes.length > 0) {
           for (const oldImage of articuloToEdit.imagenes) {
             try {
-              await deleteImageEntity(oldImage.id, token); // Elimina la entidad de imagen de la DB
-              // Extrae el nombre del archivo de la URL y elimina el archivo físico
+              await imagenService.deleteImageEntity(oldImage.id!, token);
               if (oldImage.denominacion.includes('/api/files/view/')) {
                 const oldFilename = oldImage.denominacion.substring(oldImage.denominacion.lastIndexOf('/') + 1);
-                await deleteFileFromServer(oldFilename, token);
+                await fileUploadService.deleteFileFromServer(oldFilename, token);
               }
             } catch (imgDelErr) {
-              // Si falla la eliminación de una imagen antigua, se loguea una advertencia
-              // pero no se interrumpe el proceso principal para no afectar la creación/actualización del artículo.
               console.warn(`Error al eliminar imagen antigua ${oldImage.id}:`, imgDelErr);
             }
           }
         }
-
-        // Sube la nueva imagen y la asocia al artículo manufacturado recién creado/actualizado.
-        // El `uploadFile` está diseñado para crear la entidad `Imagen` en la DB y asociarla
-        // al artículo si se le pasa el `articuloId`.
-        await uploadFile(selectedFile, token, newArticulo.id);
+        await fileUploadService.uploadFile(selectedFile, token, newArticulo.id!);
       }
       if (isProductWrapper) {
         if (formData.manufacturadoDetalles.length !== 1) {
@@ -378,15 +365,14 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
         }
       }
 
-      onSave(); // Llama al callback `onSave` para notificar al componente padre que se guardó
-      handleClose(); // Cierra el modal
+      onSave();
+      handleClose();
     } catch (err) {
       console.error('Error al guardar artículo manufacturado:', err);
-      // Extrae el mensaje de error de la respuesta de Axios o un mensaje genérico
       const errorMessage = (err as any).response?.data?.message || (err as any).message || 'Error desconocido al guardar.';
       setError(`Error al guardar: ${errorMessage}`);
     } finally {
-      setSubmitting(false); // Desactiva el estado de envío
+      setSubmitting(false);
     }
   };
 
@@ -397,14 +383,11 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body>
-          {/* Muestra un spinner mientras se cargan las opciones del formulario */}
           {loadingOptions ? (
             <div className="text-center"><Spinner animation="border" /> Cargando opciones...</div>
           ) : error ? (
-            // Muestra una alerta de error si algo falla durante la carga o el envío
             <Alert variant="danger">{error}</Alert>
           ) : (
-            // Formulario principal cuando no hay carga ni errores
             <>
               <Form.Group className="mb-3">
                 <Form.Label>Denominación</Form.Label>
@@ -426,8 +409,8 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                       name="precioVenta"
                       value={formData.precioVenta}
                       onChange={handleChange}
-                      step="0.01" // Permite valores decimales
-                      min="0.01" // Precio de venta debe ser positivo
+                      step="0.01"
+                      min="0.01"
                       required
                     />
                   </Form.Group>
@@ -440,7 +423,7 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                       name="tiempoEstimadoMinutos"
                       value={formData.tiempoEstimadoMinutos}
                       onChange={handleChange}
-                      min="1" // Tiempo estimado debe ser al menos 1 minuto
+                      min="1"
                       required
                     />
                   </Form.Group>
@@ -451,10 +434,10 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                 <Form.Label>Unidad de Medida</Form.Label>
                 <Form.Select
                   name="unidadMedidaId"
-                  value={formData.unidadMedidaId || ''} // Debería estar pre-seteado a la ID de "Unidad"
+                  value={formData.unidadMedidaId || ''}
                   onChange={handleChange}
                   required
-                  disabled // Deshabilita si no hay opciones
+                  disabled={unidadesMedida.length === 0}
                 >
                   <option value="">Selecciona una Unidad</option>
                   {unidadesMedida.map((um) => (
@@ -467,10 +450,10 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                 <Form.Label>Categoría</Form.Label>
                 <Form.Select
                   name="categoriaId"
-                  value={formData.categoriaId || ''} // Usamos el ID directamente en el DTO
+                  value={formData.categoriaId || ''}
                   onChange={handleChange}
                   required
-                  disabled={categories.length === 0} // Deshabilita si no hay opciones
+                  disabled={categories.length === 0}
                 >
                   <option value="">Selecciona una Categoría</option>
                   {categories.map((cat) => (
@@ -487,7 +470,7 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                   value={formData.descripcion}
                   onChange={handleChange}
                   rows={3}
-                  maxLength={1000} // Límite de caracteres, si aplica en el backend
+                  maxLength={1000}
                   required
                 />
               </Form.Group>
@@ -514,21 +497,19 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                 />
               </Form.Group>
 
-              {/* Sección de Gestión de Imágenes */}
               <Form.Group className="mb-3">
                 <Form.Label>Imagen Principal del Artículo</Form.Label>
                 <Form.Control type="file" onChange={handleFileChange} accept="image/*" />
                 {selectedFile && <div className="mt-2">Archivo seleccionado: {selectedFile.name}</div>}
 
-                {/* Muestra la imagen actual solo si estamos editando, no hay nueva imagen seleccionada y existen imágenes */}
                 {articuloToEdit?.imagenes && articuloToEdit.imagenes.length > 0 && !selectedFile && (
                   <div className="mt-3 p-2 border rounded d-flex align-items-center">
                     <h6>Imagen Actual:</h6>
                     <img
-                      src={getImageUrl(articuloToEdit.imagenes[0].denominacion)} // Usa getImageUrl
+                      src={fileUploadService.getImageUrl(articuloToEdit.imagenes[0].denominacion)}
                       alt="Artículo"
                       style={{ width: '120px', height: '120px', objectFit: 'cover', border: '1px solid #ddd' }}
-                      className="ms-2 me-2" // Añadido ms-2 para un pequeño margen
+                      className="ms-2 me-2"
                     />
                     <span>{articuloToEdit.imagenes[0].denominacion.substring(articuloToEdit.imagenes[0].denominacion.lastIndexOf('/') + 1)}</span>
                   </div>
@@ -546,16 +527,9 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                   checked={isProductWrapper}
                   onChange={(e) => {
                     setIsProductWrapper(e.target.checked);
-                    // Opcional: Si se marca, podrías limpiar los detalles existentes o limitar a uno.
-                    // Por ahora, solo cambia el estado.
                     if (e.target.checked) {
-                      // Si se marca, limpiar detalles y añadir uno nuevo vacío,
-                      // o simplemente dejar que el usuario añada el único detalle.
-                      // También podrías deshabilitar "Añadir Ingrediente" si ya hay uno.
                       setFormData(prev => ({
                         ...prev,
-                        // Si se marca, quizá limpiar detalles si ya existen y son para elaborar.
-                        // Opcional: podrías forzar a que solo haya un detalle.
                         manufacturadoDetalles: prev.manufacturadoDetalles.length > 0 && !prev.manufacturadoDetalles[0].articuloInsumoId ? prev.manufacturadoDetalles : []
                       }));
                     }
@@ -568,12 +542,11 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                 )}
               </Form.Group>
 
-              {/* Sección de Detalles de Manufacturado (Ingredientes) */}
               <Card className="mt-4">
                 <Card.Header className="d-flex justify-content-between align-items-center">
                   <h6>Ingredientes y Cantidades</h6>
                   <Button variant="outline-success" size="sm" onClick={handleAddDetalle} disabled={insumos.length === 0}>
-                    <FontAwesomeIcon icon={faPlusCircle} /> Añadir Ingrediente {/* Asegúrate que faPlusCircle esté importado */}
+                    <FontAwesomeIcon icon={faPlusCircle} /> Añadir Ingrediente
                   </Button>
                 </Card.Header>
                 <ListGroup variant="flush">
@@ -583,19 +556,17 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                     </ListGroup.Item>
                   ) : (
                     formData.manufacturadoDetalles.map((detalle, index) => {
-                      // IDs de insumos ya seleccionados en OTROS detalles de esta receta
                       const insumosYaEnOtrosDetalles = formData.manufacturadoDetalles
-                        .filter((_, i) => i !== index) // Excluir el detalle 
+                        .filter((_, i) => i !== index)
                         .map(d => d.articuloInsumoId)
-                        .filter(id => id !== 0 && id !== undefined); // Importante: no considerar IDs no válidos
+                        .filter(id => id !== 0 && id !== undefined);
 
-                      // Opciones de insumos disponibles para ESTE detalle
                       const opcionesDeInsumosDisponibles = insumos
                         .filter(insumo =>
-                          isProductWrapper ? !insumo.esParaElaborar : insumo.esParaElaborar // Lógica condicional
+                          isProductWrapper ? !insumo.esParaElaborar : insumo.esParaElaborar
                         )
                         .filter(insumoFiltrado =>
-                          !insumosYaEnOtrosDetalles.includes(insumoFiltrado.id) ||
+                          !insumosYaEnOtrosDetalles.includes(insumoFiltrado.id!) ||
                           insumoFiltrado.id === detalle.articuloInsumoId
                         );
 
@@ -608,15 +579,12 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                                 <Form.Select
                                   value={detalle.articuloInsumoId || ''}
                                   onChange={(e) => handleDetalleChange(index, 'articuloInsumoId', Number(e.target.value))}
-                                  // Deshabilitar si no hay opciones o la lista original de insumos está vacía.
                                   disabled={opcionesDeInsumosDisponibles.length === 0}
                                   required
                                 >
                                   <option value="">Selecciona un insumo</option>
-                                  {opcionesDeInsumosDisponibles.map((insumoOpcion) => ( // Usa opcionesDeInsumosDisponibles
-                                    <option key={insumoOpcion.id} value={insumoOpcion.id}>
-                                      {insumoOpcion.denominacion}
-                                    </option>
+                                  {opcionesDeInsumosDisponibles.map((insumoOpcion) => (
+                                    <option key={insumoOpcion.id} value={insumoOpcion.id}>{insumoOpcion.denominacion}</option>
                                   ))}
                                 </Form.Select>
                               </Form.Group>
@@ -627,7 +595,7 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                                 <InputGroup>
                                   <Form.Control
                                     type="number"
-                                    value={detalle.cantidad} // Asegúrate que esto no sea undefined o cause problemas
+                                    value={detalle.cantidad}
                                     onChange={(e) => handleDetalleChange(index, 'cantidad', parseFloat(e.target.value))}
                                     step="0.01"
                                     min="0.01"

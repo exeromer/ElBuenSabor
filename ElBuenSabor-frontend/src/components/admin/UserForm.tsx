@@ -1,3 +1,4 @@
+// UserForm.tsx
 /**
  * @file UserForm.tsx
  * @description Componente de formulario modal para la creación y edición de Usuarios.
@@ -14,8 +15,11 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
-import { createUsuario, updateUsuario } from '../../services/clienteUsuarioService'; // Estos servicios gestionan usuarios
+import { ClienteUsuarioService } from '../../services/clienteUsuarioService'; // Importamos la clase de servicio
 import type { Usuario, UsuarioRequestDTO, Rol } from '../../types/types'; // Importamos Rol desde types/types.ts
+
+// Instanciamos el servicio
+const clienteUsuarioService = new ClienteUsuarioService();
 
 /**
  * @interface UserFormProps
@@ -77,6 +81,7 @@ const UserForm: React.FC<UserFormProps> = ({ show, handleClose, onSave, userToEd
       if (userToEdit) {
         // Precarga los datos del usuario a editar
         setFormData({
+          id: userToEdit.id, // Incluir ID si existe (asumiendo que Usuario.id es 'number' y no 'number | undefined')
           auth0Id: userToEdit.auth0Id,
           username: userToEdit.username,
           rol: userToEdit.rol,
@@ -85,6 +90,9 @@ const UserForm: React.FC<UserFormProps> = ({ show, handleClose, onSave, userToEd
       } else {
         // Resetea el formulario para un nuevo usuario
         setFormData({
+          // No se incluye 'id' aquí porque es para una creación y el backend lo asigna.
+          // Si UsuarioRequestDTO requiere 'id' incluso para creaciones (ej. con id: 0),
+          // entonces debería ser `id: 0,` aquí. Asumimos que es opcional para creación.
           auth0Id: '',
           username: '',
           rol: 'CLIENTE', // Restablece el rol predeterminado
@@ -115,14 +123,15 @@ const UserForm: React.FC<UserFormProps> = ({ show, handleClose, onSave, userToEd
         setSubmitting(false);
         return;
       }
-      // Consideración: se podría añadir validación para el formato del Auth0 ID si es necesario.
 
       // Decide si crear o actualizar basándose en la existencia de `userToEdit`
       if (userToEdit) {
-        await updateUsuario(userToEdit.id, formData, token);
+        // CORRECCIÓN FINAL: Usamos el operador de aserción no nula '!' en userToEdit.id
+        // para asegurar a TypeScript que aquí será un número.
+        await clienteUsuarioService.updateUsuario(userToEdit.id!, formData, token);
         alert('Usuario actualizado con éxito.');
       } else {
-        await createUsuario(formData, token);
+        await clienteUsuarioService.createUsuario(formData, token);
         alert('Usuario creado con éxito.');
       }
 

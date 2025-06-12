@@ -1,3 +1,5 @@
+// src/pages/CheckoutPage.tsx
+
 /**
  * @file CheckoutPage.tsx
  * @description Página de finalización de compra (`checkout`).
@@ -13,196 +15,108 @@
  * estados de carga/envío, y mensajes de error/éxito.
  * @hook `useEffect`: Carga los datos iniciales del cliente y sucursales, y maneja la inicialización
  * de selecciones de formulario.
- *
- * @service `setAuthToken`: Configura el token JWT para peticiones autenticadas.
- * @service `getClienteByAuth0Id`: Obtiene la información completa del cliente logueado.
- * @service `createPedido`: Envía la solicitud de creación de pedido al backend.
- * @service `getSucursales`: Obtiene la lista de sucursales disponibles.
- * @service `getImageUrl`: Función de utilidad para mostrar las imágenes de los productos en el resumen del carrito.
  */
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, ListGroup, Button, Form, Spinner, Alert, Image } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useCart } from '../context/CartContext';
 import { setAuthToken } from '../services/apiClient'; // Función para configurar el token en Axios
-import { getClienteByAuth0Id } from '../services/clienteUsuarioService';
-import { createPedido } from '../services/pedidoService';
-import { getSucursales } from '../services/sucursalService';
-import { getImageUrl } from '../services/fileUploadService'; // Para mostrar imágenes de productos
+
+// Importamos las CLASES de servicio
+import { ClienteUsuarioService } from '../services/clienteUsuarioService';
+import { PedidoService } from '../services/pedidoService';
+import { SucursalService } from '../services/sucursalService';
+import { FileUploadService } from '../services/fileUploadService';
+
 import type { Cliente, Sucursal, TipoEnvio, FormaPago, PedidoRequestDTO, DetallePedidoRequestDTO } from '../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTruck, faStore, faMoneyBillWave, faCreditCard } from '@fortawesome/free-solid-svg-icons';
 import { useNavigate } from 'react-router-dom';
 
 const CheckoutPage: React.FC = () => {
-  /**
-   * @hook useAuth0
-   * @description Hook para acceder al estado de autenticación y funciones de Auth0.
-   */
   const { isAuthenticated, user, getAccessTokenSilently, isLoading: authLoading } = useAuth0();
-
-  /**
-   * @hook useCart
-   * @description Hook para acceder al estado del carrito de compras y sus funciones.
-   */
   const { cart, getCartTotal, clearCart } = useCart();
-
-  /**
-   * @hook useNavigate
-   * @description Hook para la navegación programática.
-   */
   const navigate = useNavigate();
 
-  /**
-   * @state cliente
-   * @description Almacena la información del cliente logueado, obtenida del backend.
-   */
   const [cliente, setCliente] = useState<Cliente | null>(null);
-
-  /**
-   * @state sucursales
-   * @description Almacena la lista de sucursales disponibles, obtenida del backend.
-   */
   const [sucursales, setSucursales] = useState<Sucursal[]>([]);
-
-  /**
-   * @state selectedSucursalId
-   * @description ID de la sucursal seleccionada por el usuario para el pedido.
-   */
   const [selectedSucursalId, setSelectedSucursalId] = useState<number | ''>('');
-
-  /**
-   * @state selectedDomicilioId
-   * @description ID del domicilio de entrega seleccionado por el usuario (solo si `tipoEnvio` es 'DELIVERY').
-   */
   const [selectedDomicilioId, setSelectedDomicilioId] = useState<number | ''>('');
-
-  /**
-   * @state tipoEnvio
-   * @description Tipo de envío seleccionado por el usuario ('DELIVERY' o 'TAKEAWAY').
-   */
   const [tipoEnvio, setTipoEnvio] = useState<TipoEnvio>('DELIVERY');
-
-  /**
-   * @state formaPago
-   * @description Forma de pago seleccionada por el usuario ('EFECTIVO' o 'MERCADO_PAGO').
-   */
   const [formaPago, setFormaPago] = useState<FormaPago>('EFECTIVO');
-
-  /**
-   * @state loadingData
-   * @description Estado booleano para indicar si los datos iniciales del checkout están cargando.
-   */
   const [loadingData, setLoadingData] = useState(true);
-
-  /**
-   * @state submittingOrder
-   * @description Estado booleano para indicar si el pedido está en proceso de envío al backend.
-   */
   const [submittingOrder, setSubmittingOrder] = useState(false);
-
-  /**
-   * @state error
-   * @description Almacena un mensaje de error si ocurre un problema durante la carga de datos o la realización del pedido.
-   */
   const [error, setError] = useState<string | null>(null);
-
-  /**
-   * @state successMessage
-   * @description Almacena un mensaje de éxito después de realizar el pedido.
-   */
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  /**
-   * @constant defaultImage
-   * @description Ruta a una imagen de marcador de posición si un artículo no tiene imágenes.
-   */
-  const defaultImage = '/placeholder-food.png'; // Asegúrate de que esta ruta sea accesible desde `public/`
+  const defaultImage = '/placeholder-food.png';
 
-  /**
-   * @hook useEffect
-   * @description Hook para cargar los datos necesarios para la página de checkout.
-   * Se ejecuta al montar el componente, y cuando el estado de autenticación de Auth0 (`isAuthenticated`, `user`, `authLoading`) cambia.
-   * Se encarga de:
-   * 1. Verificar la autenticación del usuario.
-   * 2. Obtener el token de acceso de Auth0 y configurarlo para las peticiones.
-   * 3. Obtener la información del cliente desde el backend usando su `auth0Id`.
-   * 4. Obtener la lista de sucursales disponibles.
-   * 5. Preseleccionar la primera sucursal y domicilio si existen.
-   */
+  // Instanciamos los servicios una vez en el componente
+  const clienteUsuarioService = new ClienteUsuarioService();
+  const pedidoService = new PedidoService();
+  const sucursalService = new SucursalService();
+  const fileUploadService = new FileUploadService();
+
   useEffect(() => {
     const loadCheckoutData = async () => {
-      // Esperar a que Auth0 termine de cargar para evitar llamadas innecesarias o errores.
       if (authLoading) {
-        setLoadingData(true); // Asegura que se muestre el spinner
+        setLoadingData(true);
         return;
       }
 
-      setLoadingData(true); // Inicia el spinner de carga
-      setError(null); // Limpia cualquier error anterior
+      setLoadingData(true);
+      setError(null);
 
       try {
-        // Redirigir si el usuario no está autenticado o no tiene ID de Auth0
         if (!isAuthenticated || !user?.sub) {
           setError('Debes iniciar sesión para finalizar tu compra. Redirigiendo...');
-          // Esperar un momento antes de redirigir para que el usuario vea el mensaje
           setTimeout(() => navigate('/'), 2000);
           setLoadingData(false);
           return;
         }
 
-        // Obtener el token de acceso de Auth0
         const token = await getAccessTokenSilently({
           authorizationParams: {
             audience: import.meta.env.VITE_AUTH0_AUDIENCE,
             scope: import.meta.env.VITE_AUTH0_SCOPE,
           },
         });
-        setAuthToken(token); // Configura el token para todas las peticiones futuras de apiClient
+        setAuthToken(token);
 
-        // Cargar información del cliente y sucursales en paralelo para optimizar
         const [fetchedCliente, fetchedSucursales] = await Promise.all([
-          getClienteByAuth0Id(user.sub, token),
-          getSucursales(),
+          clienteUsuarioService.getClienteByAuth0Id(user.sub, token),
+          sucursalService.getSucursales(),
         ]);
         setCliente(fetchedCliente);
         setSucursales(fetchedSucursales);
 
-        // Preseleccionar la primera sucursal y el primer domicilio si están disponibles
         if (fetchedSucursales.length > 0) {
-          setSelectedSucursalId(fetchedSucursales[0].id);
+          // CORRECCIÓN 1: Usar el operador '!' para afirmar que .id no es undefined
+          setSelectedSucursalId(fetchedSucursales[0].id!);
         }
         if (fetchedCliente.domicilios.length > 0) {
-          setSelectedDomicilioId(fetchedCliente.domicilios[0].id);
+          // CORRECCIÓN 2: Usar el operador '!' para afirmar que .id no es undefined
+          setSelectedDomicilioId(fetchedCliente.domicilios[0].id!);
         }
 
       } catch (err) {
         console.error('Error al cargar datos del checkout:', err);
         const errorMessage = (err as any).response?.data?.message || (err as any).message || 'Error desconocido al cargar.';
         setError(`Error al cargar tu información o las sucursales: ${errorMessage}.`);
-        // Redirigir a la página principal si hay un error crítico de carga
         setTimeout(() => navigate('/'), 3000);
       } finally {
-        setLoadingData(false); // Detiene el spinner de carga
+        setLoadingData(false);
       }
     };
 
     loadCheckoutData();
-  }, [isAuthenticated, user, authLoading, getAccessTokenSilently, navigate]); // Dependencias del efecto
+  }, [isAuthenticated, user, authLoading, getAccessTokenSilently, navigate]);
 
-  /**
-   * @function handlePlaceOrder
-   * @description Manejador para el botón "Realizar Pedido".
-   * Realiza validaciones del carrito, información del cliente, sucursales y domicilios,
-   * y luego construye y envía la solicitud de creación de pedido al backend.
-   * Maneja el éxito y el fallo del pedido, limpiando el carrito y redirigiendo al usuario.
-   */
   const handlePlaceOrder = async () => {
-    setSubmittingOrder(true); // Activa el spinner de envío
-    setError(null); // Limpia mensajes de error/éxito anteriores
+    setSubmittingOrder(true);
+    setError(null);
     setSuccessMessage(null);
 
-    // --- Validaciones previas al envío del pedido ---
     if (cart.length === 0) {
       setError('Tu carrito está vacío. Por favor, añade productos antes de finalizar la compra.');
       setSubmittingOrder(false);
@@ -218,19 +132,16 @@ const CheckoutPage: React.FC = () => {
       setSubmittingOrder(false);
       return;
     }
-    if (tipoEnvio === 'DELIVERY' && !selectedDomicilioId) {
+    if (tipoEnvio === 'DELIVERY' && (!selectedDomicilioId || selectedDomicilioId === 0)) {
       setError('Debes seleccionar un domicilio de entrega para el envío a domicilio.');
       setSubmittingOrder(false);
       return;
     }
-    // Validación de horario de sucursal (simplificada)
+
     const selectedSucursal = sucursales.find(s => s.id === selectedSucursalId);
     if (selectedSucursal) {
       const now = new Date();
-      // Formato HH:mm para comparar con los horarios de apertura/cierre
       const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-      // NOTA: Esta validación es básica y no considera fechas o cierres que pasen por la medianoche.
-      // Un sistema más robusto usaría librerías de fecha-hora o validaría en el backend.
       if (currentTime < selectedSucursal.horarioApertura || currentTime > selectedSucursal.horarioCierre) {
         setError(`La sucursal seleccionada (${selectedSucursal.nombre}) está cerrada. Horario: ${selectedSucursal.horarioApertura} - ${selectedSucursal.horarioCierre}.`);
         setSubmittingOrder(false);
@@ -242,26 +153,21 @@ const CheckoutPage: React.FC = () => {
       return;
     }
 
-    // --- Preparación de los datos del pedido para el DTO ---
     const orderDetails: DetallePedidoRequestDTO[] = cart.map(item => ({
-      articuloId: item.articulo.id,
+      // CORRECCIÓN 3: Usar el operador '!' para afirmar que .id no es undefined
+      articuloId: item.articulo.id!,
       cantidad: item.quantity,
     }));
 
-    // Cálculo de la hora estimada de finalización (simulada)
-    // Idealmente, el backend debería calcular este tiempo basándose en la complejidad del pedido,
-    // el tiempo de preparación de la sucursal, etc. Aquí se simula un tiempo base.
     const now = new Date();
-    const estimatedTime = new Date(now.getTime() + (30 * 60 * 1000)); // 30 minutos a partir de ahora
-    // Formato HH:mm:ss para el backend
+    const estimatedTime = new Date(now.getTime() + (30 * 60 * 1000));
     const estimatedTimeString = `${estimatedTime.getHours().toString().padStart(2, '0')}:${estimatedTime.getMinutes().toString().padStart(2, '0')}:${estimatedTime.getSeconds().toString().padStart(2, '0')}`;
 
     const pedidoData: PedidoRequestDTO = {
-      clienteId: cliente.id,
-      sucursalId: selectedSucursalId as number, // Aserción de tipo ya que sabemos que tiene un valor
-      // Para TAKEAWAY, se podría enviar el ID del primer domicilio del cliente o un ID ficticio si el backend lo permite.
-      // Aquí se usa el ID del primer domicilio si existe, o 0 si no hay (asumiendo que el backend maneja 0 para TAKEAWAY sin domicilio específico).
-      domicilioId: tipoEnvio === 'DELIVERY' ? (selectedDomicilioId as number) : (cliente.domicilios.length > 0 ? cliente.domicilios[0].id : 0),
+      clienteId: cliente.id!, // Usar '!' para asegurar que cliente.id no es undefined
+      sucursalId: selectedSucursalId as number,
+      // CORRECCIÓN 4: Usar '!' para afirmar que .id no es undefined
+      domicilioId: tipoEnvio === 'DELIVERY' ? (selectedDomicilioId as number) : (cliente.domicilios.length > 0 ? cliente.domicilios[0].id! : 0),
       tipoEnvio: tipoEnvio,
       formaPago: formaPago,
       horaEstimadaFinalizacion: estimatedTimeString,
@@ -270,25 +176,35 @@ const CheckoutPage: React.FC = () => {
 
     try {
       const token = await getAccessTokenSilently();
-      const newOrder = await createPedido(pedidoData, token); // Envía el pedido al backend
-      setSuccessMessage(`¡Tu pedido #${newOrder.id} ha sido realizado con éxito!`);
-      clearCart(); // Limpia el carrito de compras
-      // Redirigir al usuario a la página de sus pedidos después de un breve retraso
-      setTimeout(() => {
-        navigate('/mis-pedidos');
-      }, 2000);
+
+      if (formaPago === 'MERCADO_PAGO') {
+        const preferenceId = await pedidoService.createPreferenceMercadoPago(pedidoData, token);
+        if (preferenceId) {
+          window.open(`https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${preferenceId}`, '_blank');
+          setSuccessMessage(`¡Redirigiendo a Mercado Pago para finalizar tu pedido!`);
+          clearCart();
+          setTimeout(() => navigate('/mis-pedidos'), 3000);
+        } else {
+          setError("Error al generar la preferencia de Mercado Pago. Por favor, inténtalo de nuevo.");
+        }
+      } else {
+        const newOrder = await pedidoService.createPedido(pedidoData, token);
+        setSuccessMessage(`¡Tu pedido #${newOrder.id} ha sido realizado con éxito! Será pagado en efectivo al retirar/recibir.`);
+        clearCart();
+        setTimeout(() => {
+          navigate('/mis-pedidos');
+        }, 2000);
+      }
+
     } catch (err: any) {
       console.error('Error al realizar el pedido:', err);
-      // Intenta extraer un mensaje de error más específico de la respuesta del backend
       const backendErrorMessage = err.response?.data?.message || err.message || 'Por favor, inténtalo de nuevo.';
       setError(`Error al realizar el pedido: ${backendErrorMessage}`);
     } finally {
-      setSubmittingOrder(false); // Desactiva el spinner de envío
+      setSubmittingOrder(false);
     }
   };
 
-  // --- Renderizado condicional basado en estados de carga o error ---
-  // Muestra un spinner si Auth0 o los datos iniciales están cargando
   if (loadingData || authLoading) {
     return (
       <Container className="text-center my-5">
@@ -298,7 +214,6 @@ const CheckoutPage: React.FC = () => {
     );
   }
 
-  // Muestra un mensaje de error si ocurre un problema (y no hay un mensaje de éxito)
   if (error && !successMessage) {
     return (
       <Container className="my-5 text-center">
@@ -312,24 +227,20 @@ const CheckoutPage: React.FC = () => {
     );
   }
 
-  // Si el carrito está vacío y no hay mensaje de éxito, redirigir al menú.
-  // Esto previene que se muestre la página de checkout con un carrito vacío si el usuario llega accidentalmente.
   if (cart.length === 0 && !successMessage && !submittingOrder) {
     navigate('/products');
-    return null; // No renderizar nada mientras se redirige
+    return null;
   }
 
   return (
     <Container className="my-4">
       <h1 className="text-center mb-4">Finalizar Compra</h1>
 
-      {/* Muestra un mensaje de éxito si el pedido se realizó correctamente */}
       {successMessage && <Alert variant="success" className="mb-4 text-center">{successMessage}</Alert>}
 
       <Row>
-        {/* Columna para el Resumen del Carrito */}
         <Col md={6}>
-          <Card className="mb-4 shadow-sm"> {/* Añadido shadow-sm */}
+          <Card className="mb-4 shadow-sm">
             <Card.Header as="h5">Productos en tu Carrito</Card.Header>
             <ListGroup variant="flush">
               {cart.length === 0 ? (
@@ -341,7 +252,7 @@ const CheckoutPage: React.FC = () => {
                       <Image
                         src={
                           item.articulo.imagenes && item.articulo.imagenes.length > 0
-                            ? getImageUrl(item.articulo.imagenes[0].denominacion)
+                            ? fileUploadService.getImageUrl(item.articulo.imagenes[0].denominacion)
                             : defaultImage
                         }
                         thumbnail
@@ -356,19 +267,17 @@ const CheckoutPage: React.FC = () => {
                 ))
               )}
             </ListGroup>
-            <Card.Footer className="d-flex justify-content-between align-items-center bg-light"> {/* Fondo para el footer */}
+            <Card.Footer className="d-flex justify-content-between align-items-center bg-light">
               <h5 className="mb-0">Total del Pedido:</h5>
               <h5 className="mb-0"><span className="text-success">${getCartTotal().toFixed(2)}</span></h5>
             </Card.Footer>
           </Card>
         </Col>
 
-        {/* Columna para los Detalles del Pedido (Entrega y Pago) */}
         <Col md={6}>
-          <Card className="shadow-sm"> {/* Añadido shadow-sm */}
+          <Card className="shadow-sm">
             <Card.Header as="h5">Detalles de Entrega y Pago</Card.Header>
             <Card.Body>
-              {/* Selección de Sucursal */}
               <Form.Group className="mb-3">
                 <Form.Label>Sucursal:</Form.Label>
                 <Form.Select
@@ -387,7 +296,6 @@ const CheckoutPage: React.FC = () => {
                 {sucursales.length === 0 && <Form.Text className="text-danger">No hay sucursales disponibles. Por favor, contacta al soporte.</Form.Text>}
               </Form.Group>
 
-              {/* Tipo de Envío */}
               <Form.Group className="mb-3">
                 <Form.Label>Tipo de Envío:</Form.Label>
                 <div>
@@ -414,7 +322,6 @@ const CheckoutPage: React.FC = () => {
                 </div>
               </Form.Group>
 
-              {/* Selección de Domicilio (solo si es Delivery) */}
               {tipoEnvio === 'DELIVERY' && (
                 <Form.Group className="mb-3">
                   <Form.Label>Domicilio de Entrega:</Form.Label>
@@ -422,12 +329,13 @@ const CheckoutPage: React.FC = () => {
                     value={selectedDomicilioId}
                     onChange={(e) => setSelectedDomicilioId(Number(e.target.value))}
                     disabled={!cliente || cliente.domicilios.length === 0}
-                    required // Requiere un domicilio si es delivery
+                    required
                   >
                     <option value="">Selecciona un domicilio</option>
                     {cliente?.domicilios.map((domicilio) => (
+                      // CORRECCIÓN 5: Usar el operador '!' para afirmar que .denominacion no es undefined
                       <option key={domicilio.id} value={domicilio.id}>
-                        {domicilio.calle} {domicilio.numero}, {domicilio.localidad.nombre}
+                        {domicilio.calle} {domicilio.numero}, {domicilio.localidad.denominacion!}
                       </option>
                     ))}
                   </Form.Select>
@@ -443,7 +351,6 @@ const CheckoutPage: React.FC = () => {
                 </Form.Group>
               )}
 
-              {/* Forma de Pago */}
               <Form.Group className="mb-3">
                 <Form.Label>Forma de Pago:</Form.Label>
                 <div>
@@ -470,10 +377,8 @@ const CheckoutPage: React.FC = () => {
                 </div>
               </Form.Group>
 
-              {/* Mensaje de error (si existe) */}
               {error && <Alert variant="danger" className="mt-3">{error}</Alert>}
 
-              {/* Botón para Realizar Pedido */}
               <Button
                 variant="primary"
                 onClick={handlePlaceOrder}

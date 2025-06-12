@@ -1,14 +1,17 @@
+// ArticuloInsumoDetailModal.tsx
 // src/components/admin/ArticuloInsumoDetailModal.tsx
 import React from 'react';
 import { Modal, Button, Row, Col, Image, Badge, Card } from 'react-bootstrap';
 import type { ArticuloInsumo } from '../../types/types';
-import { getImageUrl } from '../../services/fileUploadService';
+import { FileUploadService } from '../../services/fileUploadService'; // Importamos la clase FileUploadService
 
 interface ArticuloInsumoDetailModalProps {
   show: boolean;
   handleClose: () => void;
   articulo: ArticuloInsumo | null;
 }
+
+const fileUploadService = new FileUploadService(); // Instanciamos el servicio
 
 const ArticuloInsumoDetailModal: React.FC<ArticuloInsumoDetailModalProps> = ({ show, handleClose, articulo }) => {
   const defaultImage = '/placeholder-food.png'; // Imagen por defecto
@@ -28,7 +31,7 @@ const ArticuloInsumoDetailModal: React.FC<ArticuloInsumoDetailModalProps> = ({ s
             <Image
               src={
                 articulo.imagenes && articulo.imagenes.length > 0
-                  ? getImageUrl(articulo.imagenes[0].denominacion)
+                  ? fileUploadService.getImageUrl(articulo.imagenes[0].denominacion) // Usamos la instancia del servicio
                   : defaultImage
               }
               alt={`Imagen de ${articulo.denominacion}`}
@@ -89,7 +92,7 @@ const ArticuloInsumoDetailModal: React.FC<ArticuloInsumoDetailModalProps> = ({ s
             <Row xs={2} sm={3} md={4} className="g-3">
               {articulo.imagenes.slice(1).map(img => (
                 <Col key={img.id}>
-                  <Image src={getImageUrl(img.denominacion)} alt="Imagen adicional del insumo" thumbnail fluid />
+                  <Image src={fileUploadService.getImageUrl(img.denominacion)} alt="Imagen adicional del insumo" thumbnail fluid /> {/* Usamos la instancia del servicio */}
                 </Col>
               ))}
             </Row>
