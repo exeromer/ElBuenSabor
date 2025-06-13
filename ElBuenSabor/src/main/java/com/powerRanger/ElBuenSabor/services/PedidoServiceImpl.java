@@ -3,7 +3,9 @@ package com.powerRanger.ElBuenSabor.services;
 import com.powerRanger.ElBuenSabor.dtos.*;
 import com.powerRanger.ElBuenSabor.entities.*;
 import com.powerRanger.ElBuenSabor.entities.enums.Estado;
+import com.powerRanger.ElBuenSabor.entities.enums.FormaPago;
 import com.powerRanger.ElBuenSabor.entities.enums.Rol;
+import com.powerRanger.ElBuenSabor.entities.enums.TipoEnvio;
 import com.powerRanger.ElBuenSabor.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -37,6 +39,7 @@ public class PedidoServiceImpl implements PedidoService {
     @Autowired private ArticuloManufacturadoRepository articuloManufacturadoRepository;
     @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
     @Autowired private LocalidadRepository localidadRepository; // Añadido para la nueva lógica de domicilio
+    @Autowired private MercadoPagoService mercadoPagoService;
 
     // --- MAPPERS (Como los tenías) ---
     private ArticuloSimpleResponseDTO convertArticuloToSimpleDto(Articulo articulo) {
@@ -407,6 +410,7 @@ public class PedidoServiceImpl implements PedidoService {
         nuevoPedido.setEstadoActivo(true);
         // nuevoPedido.setNotas(pedidoRequest.getNotasAdicionales()); // Si tienes campo notas en Pedido
 
+
         double totalGeneralPedido = 0.0;
         double costoTotalPedido = 0.0;
         System.out.println("DEBUG: Iniciando cálculo de Total y TotalCosto. costoTotalPedido inicial: " + costoTotalPedido);
@@ -483,6 +487,16 @@ public class PedidoServiceImpl implements PedidoService {
             nuevoPedido.addDetalle(detallePedido);
         }
 
+        // --- INICIO DE LA NUEVA LÓGICA DE DESCUENTO ---
+        double descuento = 0.0;
+        if (pedidoRequest.getTipoEnvio() == TipoEnvio.TAKEAWAY) {
+            descuento = totalGeneralPedido * 0.10; // 10% de descuento
+            System.out.println("LOG: Descuento TAKEAWAY aplicado: -$" + descuento);
+            totalGeneralPedido -= descuento; // Aplicamos el descuento al total
+        }
+        nuevoPedido.setDescuentoAplicado(descuento); // Guardamos el monto del descuento
+        // --- FIN DE LA NUEVA LÓGICA DE DESCUENTO ---
+
         nuevoPedido.setTotal(totalGeneralPedido);
         nuevoPedido.setTotalCosto(costoTotalPedido);
         System.out.println("DEBUG: Pedido Final - Total: " + nuevoPedido.getTotal() + ", TotalCosto: " + nuevoPedido.getTotalCosto());
@@ -504,6 +518,21 @@ public class PedidoServiceImpl implements PedidoService {
 
         Pedido pedidoGuardado = pedidoRepository.save(nuevoPedido);
         System.out.println("DEBUG: Pedido Guardado con ID: " + pedidoGuardado.getId());
+
+        if (pedidoGuardado.getFormaPago() == FormaPago.MERCADO_PAGO) {
+            System.out.println("LOG: Forma de pago es MERCADO_PAGO. Intentando crear preferencia...");
+            try {
+                String preferenceId = mercadoPagoService.crearPreferenciaPago(pedidoGuardado);
+                pedidoGuardado.setMpPreferenceId(preferenceId);
+                pedidoGuardado = pedidoRepository.save(pedidoGuardado); // Guardamos de nuevo para persistir el ID de MP
+                System.out.println("LOG: Pedido actualizado en DB con Preference ID: " + preferenceId);
+
+            } catch (Exception e) {
+                System.err.println("ERROR: Falló la creación de la preferencia de Mercado Pago. " + e.getMessage());
+                // Considerar si se debe anular el pedido aquí o simplemente lanzar la excepción
+                throw new Exception("No se pudo generar la preferencia de pago. Por favor, intente de nuevo.", e);
+            }
+        }
 
         carritoService.vaciarCarrito(cliente);
         System.out.println("DEBUG: Carrito vaciado para cliente ID: " + cliente.getId());

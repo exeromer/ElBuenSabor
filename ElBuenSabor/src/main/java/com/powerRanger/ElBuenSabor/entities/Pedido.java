@@ -82,6 +82,18 @@ public class Pedido {
     @NotNull(message = "El estado activo es obligatorio")
     private Boolean estadoActivo = true;
 
+    @Column(name = "mp_preference_id")
+    private String mpPreferenceId;
+
+    @Column(name = "mp_payment_id")
+    private String mpPaymentId;
+
+    @Column(name = "mp_payment_status")
+    private String mpPaymentStatus;
+
+    @Column(name = "descuento_aplicado")
+    private Double descuentoAplicado;
+
     public Pedido() {
         this.detalles = new ArrayList<>();
         this.fechaPedido = LocalDate.now();
@@ -120,6 +132,22 @@ public class Pedido {
     public void setFechaBaja(LocalDate fechaBaja) { this.fechaBaja = fechaBaja; }
     public Boolean getEstadoActivo() { return estadoActivo; }
     public void setEstadoActivo(Boolean estadoActivo) { this.estadoActivo = estadoActivo; }
+
+    public String getMpPreferenceId() {return mpPreferenceId;}
+
+    public void setMpPreferenceId(String mpPreferenceId) {this.mpPreferenceId = mpPreferenceId;}
+
+    public String getMpPaymentId() {return mpPaymentId;}
+
+    public void setMpPaymentId(String mpPaymentId) {this.mpPaymentId = mpPaymentId;}
+
+    public String getMpPaymentStatus() {return mpPaymentStatus;}
+
+    public void setMpPaymentStatus(String mpPaymentStatus) {this.mpPaymentStatus = mpPaymentStatus;}
+
+    public Double getDescuentoAplicado() {return descuentoAplicado;}
+
+    public void setDescuentoAplicado(Double descuentoAplicado) {this.descuentoAplicado = descuentoAplicado;}
 
     // Métodos Helper
     public void addDetalle(DetallePedido detalle) {

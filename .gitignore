@@ -175,3 +175,4 @@ tmp/
 # >>>>>> ADICIONES ESPECÍFICAS PARA VSCODE (FRONTEND) >>>>>>
 # Carpeta .vscode de VSCode
 .vscode/
+*.rar

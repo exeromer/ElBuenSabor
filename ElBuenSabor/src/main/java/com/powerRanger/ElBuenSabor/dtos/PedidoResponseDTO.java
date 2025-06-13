@@ -28,6 +28,9 @@ public class PedidoResponseDTO {
     private DomicilioResponseDTO domicilio;  // DTO
     private ClienteResponseDTO cliente;     // DTO (el completo que ya tienes)
 
+    private String mpPreferenceId;
+
+
     private List<DetallePedidoResponseDTO> detalles = new ArrayList<>();
 
     // Getters y Setters
@@ -59,4 +62,7 @@ public class PedidoResponseDTO {
     public void setCliente(ClienteResponseDTO cliente) { this.cliente = cliente; }
     public List<DetallePedidoResponseDTO> getDetalles() { return detalles; }
     public void setDetalles(List<DetallePedidoResponseDTO> detalles) { this.detalles = detalles; }
+    public String getMpPreferenceId() {return mpPreferenceId;}
+    public void setMpPreferenceId(String mpPreferenceId) {this.mpPreferenceId = mpPreferenceId;}
+
 }

@@ -437,17 +437,17 @@ export interface ClienteRequestDTO extends BaseEntity { // Add base entity
  * Corresponds to `com.powerRanger.ElBuenSabor.dtos.CrearPedidoRequestDTO`.
  * (Note: It's different from `PedidoRequestDTO` which uses existing domicile IDs).
  */
-export interface CrearPedidoRequestDTO extends BaseEntity { // Add base entity
-  calleDomicilio: string;
-  numeroDomicilio: number; // `Integer` en Java
-  cpDomicilio: string;
-  localidadIdDomicilio: number; // `Integer` en Java
-  tipoEnvio: TipoEnvio;
-  formaPago: FormaPago;
-  sucursalId: number; // `Integer` en Java
-  horaEstimadaFinalizacion: string; // `String` in Java (HH:mm or HH:mm:ss)
-  notasAdicionales?: string | null; // `String` in Java, can be null
-  guardarDireccionEnPerfil?: boolean; // `Boolean` in Java
+export interface CrearPedidoRequestDTO {
+    calleDomicilio: string;
+    numeroDomicilio: number;
+    cpDomicilio: string;
+    localidadIdDomicilio: number;
+    tipoEnvio: TipoEnvio;
+    formaPago: FormaPago;
+    sucursalId: number;
+    horaEstimadaFinalizacion?: string; // Es opcional en algunas de tus lógicas
+    notasAdicionales?: string | null;
+    guardarDireccionEnPerfil?: boolean;
 }
 
 /**
@@ -992,6 +992,7 @@ export interface PedidoResponseDTO extends BaseEntity {
  * Uses the `Articulo` type (ArticuloManufacturado | ArticuloInsumo) and quantity.
  */
 export interface CartItem {
+  id: number;
   articulo: Articulo; // Can be ArticuloManufacturado or ArticuloInsumo
   quantity: number;
 }
