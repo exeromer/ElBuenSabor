@@ -179,6 +179,14 @@ const CheckoutPage: React.FC = () => {
     return null;
   }
 
+  const handleTipoEnvioChange = (nuevoTipoEnvio: TipoEnvio) => {
+    setTipoEnvio(nuevoTipoEnvio);
+    // Si el usuario selecciona DELIVERY, se fuerza el pago con Mercado Pago
+    if (nuevoTipoEnvio === 'DELIVERY') {
+      setFormaPago('MERCADO_PAGO');
+    }
+  };
+
   return (
     <Container className="my-4">
       <h1 className="text-center mb-4">Finalizar Compra</h1>

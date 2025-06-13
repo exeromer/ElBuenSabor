@@ -95,13 +95,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.GET, "/api/clientes/usuario/{auth0Id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                                //Carrito: Cliente Visualiza carrito
-                                .requestMatchers(HttpMethod.GET, "/api/clientes/{clienteId}/carrito").hasAuthority("ROLE_CLIENTE") // Cliente ve/crea SU carrito
-                                .requestMatchers(HttpMethod.POST, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE") // Cliente añade a SU carrito
-                                .requestMatchers(HttpMethod.PUT, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE") // Cliente actualiza en SU carrito
-                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE") // Cliente borra de SU carrito
-                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE") // Cliente vacía SU carrito
-
+                                
                                 // Clientes
                                 .requestMatchers(HttpMethod.GET, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.PUT, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE")
