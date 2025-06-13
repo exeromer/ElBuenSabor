@@ -174,7 +174,6 @@ const CheckoutPage: React.FC = () => {
       detalles: orderDetails,
     };
 
-
     try {
       const token = await getAccessTokenSilently();
 
@@ -203,14 +202,6 @@ const CheckoutPage: React.FC = () => {
       setError(`Error al realizar el pedido: ${backendErrorMessage}`);
     } finally {
       setSubmittingOrder(false);
-    }
-  };
-
-  const handleTipoEnvioChange = (nuevoTipoEnvio: TipoEnvio) => {
-    setTipoEnvio(nuevoTipoEnvio);
-    // Si el usuario selecciona DELIVERY, se fuerza el pago con Mercado Pago
-    if (nuevoTipoEnvio === 'DELIVERY') {
-      setFormaPago('MERCADO_PAGO');
     }
   };
 
@@ -304,6 +295,7 @@ const CheckoutPage: React.FC = () => {
                 </Form.Select>
                 {sucursales.length === 0 && <Form.Text className="text-danger">No hay sucursales disponibles. Por favor, contacta al soporte.</Form.Text>}
               </Form.Group>
+
               <Form.Group className="mb-3">
                 <Form.Label>Tipo de Envío:</Form.Label>
                 <div>
@@ -315,7 +307,7 @@ const CheckoutPage: React.FC = () => {
                     id="delivery"
                     value="DELIVERY"
                     checked={tipoEnvio === 'DELIVERY'}
-                    onChange={() => handleTipoEnvioChange('DELIVERY')} 
+                    onChange={() => setTipoEnvio('DELIVERY')}
                   />
                   <Form.Check
                     inline
@@ -325,7 +317,7 @@ const CheckoutPage: React.FC = () => {
                     id="takeaway"
                     value="TAKEAWAY"
                     checked={tipoEnvio === 'TAKEAWAY'}
-                    onChange={() => handleTipoEnvioChange('TAKEAWAY')} 
+                    onChange={() => setTipoEnvio('TAKEAWAY')}
                   />
                 </div>
               </Form.Group>
@@ -371,7 +363,6 @@ const CheckoutPage: React.FC = () => {
                     value="EFECTIVO"
                     checked={formaPago === 'EFECTIVO'}
                     onChange={() => setFormaPago('EFECTIVO')}
-                    disabled={tipoEnvio === 'DELIVERY'} // <--- AÑADE ESTA LÍNEA PARA DESHABILITAR
                   />
                   <Form.Check
                     inline

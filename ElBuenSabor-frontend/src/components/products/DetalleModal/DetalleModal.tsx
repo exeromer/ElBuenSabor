@@ -7,9 +7,9 @@
  */
 import React from 'react';
 import { Modal, Button, Image, Container, Row, Col } from 'react-bootstrap';
-import type { ArticuloManufacturado } from '../../../types/types'; // Ruta correcta
-import { getImageUrl } from '../../../services/fileUploadService'; // Ruta correcta
-import './DetalleModal.sass'; // Crearemos este archivo SASS
+import type { ArticuloManufacturado } from '../../../types/types';
+import { FileUploadService } from '../../../services/fileUploadService'; 
+import './DetalleModal.sass'; 
 
 interface DetalleModalProps {
   product: ArticuloManufacturado;
@@ -19,6 +19,9 @@ interface DetalleModalProps {
 
 const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide }) => {
   const defaultImage = '/placeholder-food.png'; // Ruta a tu imagen por defecto
+
+  // INSTANCIA DEL SERVICIO DE SUBIDA DE ARCHIVOS
+  const fileUploadService = new FileUploadService();
 
   return (
     <Modal show={show} onHide={onHide} size="lg" centered className="detalle-modal">
@@ -32,7 +35,8 @@ const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide }) =>
               <Image
                 src={
                   product.imagenes && product.imagenes.length > 0
-                    ? getImageUrl(product.imagenes[0].denominacion)
+                    // USO DEL MÉTODO DE LA INSTANCIA Y SEGURIDAD PARA 'denominacion'
+                    ? fileUploadService.getImageUrl(product.imagenes[0].denominacion ?? '') // <-- CORRECCIÓN AQUÍ
                     : defaultImage
                 }
                 alt={`Imagen de ${product.denominacion}`}

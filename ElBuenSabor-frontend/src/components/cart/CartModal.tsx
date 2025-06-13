@@ -12,7 +12,8 @@
 import React from 'react';
 import { Modal, Button, ListGroup, Image, Col, Form } from 'react-bootstrap';
 import { useCart } from '../../context/CartContext'; // Importa el hook personalizado para el carrito
-import { getImageUrl } from '../../services/fileUploadService'; // Función para obtener la URL completa de la imagen
+// REMOVE: import { getImageUrl } from '../../services/fileUploadService'; // Esta línea ya no es necesaria
+import { FileUploadService } from '../../services/fileUploadService'; // <-- IMPORTA LA CLASE FileUploadService
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrashAlt } from '@fortawesome/free-solid-svg-icons'; // Icono para eliminar
 import { Link } from 'react-router-dom'; // Componente Link para navegación
@@ -43,6 +44,9 @@ const CartModal: React.FC<CartModalProps> = ({ show, handleClose }) => {
    */
   const defaultImage = '/placeholder-food.png'; // Asegúrate de que esta ruta sea accesible desde `public/`
 
+  // INSTANCIA DEL SERVICIO DE SUBIDA DE ARCHIVOS
+  const fileUploadService = new FileUploadService();
+
   return (
     <Modal show={show} onHide={handleClose} size="lg" centered> {/* Añadido 'centered' para centrar el modal */}
       <Modal.Header closeButton>
@@ -61,9 +65,9 @@ const CartModal: React.FC<CartModalProps> = ({ show, handleClose }) => {
                   <Image
                     src={
                       // Si el artículo tiene imágenes, usa la primera; de lo contrario, usa la imagen por defecto.
-                      // Se utiliza getImageUrl para asegurarse de que la URL sea correcta.
+                      // Se utiliza la instancia de fileUploadService para obtener la URL correcta.
                       item.articulo.imagenes && item.articulo.imagenes.length > 0
-                        ? getImageUrl(item.articulo.imagenes[0].denominacion)
+                        ? fileUploadService.getImageUrl(item.articulo.imagenes[0].denominacion) // <-- USO DEL MÉTODO DE LA INSTANCIA
                         : defaultImage
                     }
                     thumbnail // Proporciona un borde y un padding alrededor de la imagen
@@ -78,18 +82,24 @@ const CartModal: React.FC<CartModalProps> = ({ show, handleClose }) => {
                 <Col xs={3}>
                   <Form.Control
                     type="number"
-                    min="1" // Cantidad mínima de 1
+                    min="1"
                     value={item.quantity}
-                    // Actualiza la cantidad en el carrito, parseando el valor a un entero
-                    onChange={(e) => updateQuantity(item.articulo.id, parseInt(e.target.value))}
-                    className="w-75" // Ancho reducido para el control de cantidad
+                    onChange={(e) => {
+                      if (item.articulo.id) {
+                        updateQuantity(item.articulo.id, parseInt(e.target.value));
+                      }
+                    }}
+                    className="w-75"
                   />
                 </Col>
                 <Col xs={2} className="text-end">
-                  {/* Muestra el subtotal del ítem */}
                   <span className="fw-bold me-3">${(item.articulo.precioVenta * item.quantity).toFixed(2)}</span>
-                  {/* Botón para eliminar el ítem del carrito */}
-                  <Button variant="danger" size="sm" onClick={() => removeFromCart(item.articulo.id)}>
+
+                  <Button variant="danger" size="sm" onClick={() => {
+                    if (item.articulo.id) {
+                      removeFromCart(item.articulo.id);
+                    }
+                  }}>
                     <FontAwesomeIcon icon={faTrashAlt} />
                   </Button>
                 </Col>

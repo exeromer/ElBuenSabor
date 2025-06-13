@@ -11,15 +11,15 @@
  * @hook `useEffect`: Carga los pedidos del cliente al montar el componente o al cambiar el estado de autenticación.
  * @hook `Link` de `react-router-dom`: Permite la navegación a otras páginas (ej. menú, facturas).
  *
- * @service `getPedidosByClienteAuth0Id`: Servicio para obtener los pedidos de un cliente específico.
- * @service `getImageUrl`: Función de utilidad para construir las URLs completas de las imágenes de los artículos.
+ * @service `PedidoService`: Servicio para obtener los pedidos de un cliente específico.
+ * @service `FileUploadService`: Servicio de utilidad para construir las URLs completas de las imágenes de los artículos.
  */
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, ListGroup, Spinner, Alert, Button, Image } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
-import { getPedidosByClienteAuth0Id } from '../services/pedidoService';
-import { getImageUrl } from '../services/fileUploadService';
-import type { Pedido, EstadoPedido } from '../types/types'; // Importa los tipos necesarios
+import { PedidoService } from '../services/pedidoService';
+import { FileUploadService } from '../services/fileUploadService'; 
+import type { Pedido, Estado } from '../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faHistory, // Icono para el título de la página
@@ -67,6 +67,10 @@ const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
    */
   const [error, setError] = useState<string | null>(null);
 
+  // INSTANCIAS DE LOS SERVICIOS
+  const pedidoService = new PedidoService(); // <-- Instancia
+  const fileUploadService = new FileUploadService(); // <-- Instancia
+
   /**
    * @hook useEffect
    * @description Hook principal para la carga de pedidos del cliente.
@@ -105,7 +109,8 @@ const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
           },
         });
         // Llama al servicio para obtener los pedidos del cliente usando su Auth0 ID.
-        const fetchedPedidos = await getPedidosByClienteAuth0Id(user.sub, token);
+        // USO DEL MÉTODO DE LA INSTANCIA DEL SERVICIO DE PEDIDOS
+        const fetchedPedidos = await pedidoService.getPedidosByClienteAuth0Id(user.sub, token); // <-- Corrección aquí
         setPedidos(fetchedPedidos);
       } catch (err) {
         console.error('Error al obtener mis pedidos:', err);
@@ -123,21 +128,25 @@ const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
   /**
    * @function getEstadoIcon
    * @description Función de utilidad que devuelve un icono de FontAwesome y un color
-   * basados en el `EstadoPedido` del pedido.
-   * @param {EstadoPedido} estado - El estado del pedido.
+   * basados en el `Estado` del pedido.
+   * @param {Estado} estado - El estado del pedido.
    * @returns {JSX.Element | null} Un elemento `FontAwesomeIcon` con su color correspondiente, o `null` si no hay un icono definido.
    */
-  const getEstadoIcon = (estado: EstadoPedido) => {
+  const getEstadoIcon = (estado: Estado) => { // Cambiado EstadoPedido a Estado.
     switch (estado) {
       case 'PENDIENTE':
         return <FontAwesomeIcon icon={faClock} className="text-warning" title="Pendiente" />;
       case 'PREPARACION':
         return <FontAwesomeIcon icon={faCog} className="text-info" title="En Preparación" />;
+      case 'EN_CAMINO': // Añadir este estado si tu backend lo usa
+        return <FontAwesomeIcon icon={faTruck} className="text-primary" title="En Camino" />;
       case 'ENTREGADO':
         return <FontAwesomeIcon icon={faCheckCircle} className="text-success" title="Entregado" />;
       case 'CANCELADO':
       case 'RECHAZADO':
         return <FontAwesomeIcon icon={faTimesCircle} className="text-danger" title="Cancelado/Rechazado" />;
+      case 'PAGADO': // Añadir este estado si tu backend lo usa (ej. para Mercado Pago)
+        return <FontAwesomeIcon icon={faCreditCard} className="text-success" title="Pagado" />;
       default:
         return null;
     }
@@ -193,7 +202,7 @@ const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
         // Cuadrícula responsiva de tarjetas de pedido
         <Row xs={1} md={1} lg={2} className="g-4"> {/* `g-4` para espacio entre tarjetas */}
           {pedidos.map((pedido) => (
-            <Col key={pedido.id}>
+            <Col key={pedido.id}> {/* Asegura que pedido.id existe */}
               <Card className="h-100 shadow-sm">
                 <Card.Header className="d-flex justify-content-between align-items-center">
                   <div>
@@ -203,7 +212,7 @@ const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
                   </div>
                   <div>
                     {/* Badge con el estado del pedido, con colores condicionales */}
-                    <span className={`badge bg-${pedido.estado === 'ENTREGADO' ? 'success' : pedido.estado === 'CANCELADO' || pedido.estado === 'RECHAZADO' ? 'danger' : 'warning'} me-2`}>
+                    <span className={`badge bg-${pedido.estado === 'ENTREGADO' || pedido.estado === 'PAGADO' ? 'success' : pedido.estado === 'CANCELADO' || pedido.estado === 'RECHAZADO' ? 'danger' : 'warning'} me-2`}>
                       {pedido.estado}
                     </span>
                     {/* Icono del estado del pedido */}
@@ -218,7 +227,7 @@ const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
                     {/* Muestra el domicilio si es Delivery y existe */}
                     {pedido.tipoEnvio === 'DELIVERY' && pedido.domicilio && (
                       <small className="text-muted d-block ms-3">
-                        ({pedido.domicilio.calle} {pedido.domicilio.numero}, {pedido.domicilio.localidad.nombre})
+                        ({pedido.domicilio.calle} {pedido.domicilio.numero}, {pedido.domicilio.localidad?.denominacion ?? 'N/A'}) {/* <-- Corrección aquí */}
                       </small>
                     )}
                     <strong>Pago:</strong> {pedido.formaPago === 'EFECTIVO' ? <FontAwesomeIcon icon={faMoneyBillWave} className="me-1" /> : <FontAwesomeIcon icon={faCreditCard} className="me-1" />} {pedido.formaPago} <br />
@@ -229,12 +238,12 @@ const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
                   <ListGroup variant="flush">
                     {/* Mapea los detalles de los artículos del pedido */}
                     {pedido.detalles.map((detalle) => (
-                      <ListGroup.Item key={detalle.id} className="d-flex justify-content-between align-items-center py-1 px-0">
+                      <ListGroup.Item key={detalle.id} className="d-flex justify-content-between align-items-center py-1 px-0"> {/* Asegura que detalle.id existe */}
                         <div className="d-flex align-items-center">
                           {/* Imagen del artículo si está disponible */}
                           {detalle.articulo.imagenes && detalle.articulo.imagenes.length > 0 && (
                             <Image
-                              src={getImageUrl(detalle.articulo.imagenes[0].denominacion)}
+                              src={fileUploadService.getImageUrl(detalle.articulo.imagenes[0].denominacion ?? '')} // <-- Corrección aquí
                               alt={detalle.articulo.denominacion}
                               style={{ width: '30px', height: '30px', objectFit: 'cover' }}
                               className="me-2 rounded"

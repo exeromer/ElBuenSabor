@@ -1,12 +1,13 @@
+// ArticuloManufacturadoDetailModal.tsx
 /**
  * @description Componente modal para mostrar los detalles completos de un Artículo Manufacturado.
  * Incluye información básica, descripción, preparación, imágenes y la lista de insumos.
  */
 
 import React from 'react';
-import { Modal, Button, Row, Col, Image, ListGroup, Card, Badge } from 'react-bootstrap';
-import type { ArticuloManufacturado, ArticuloManufacturadoDetalle, ArticuloInsumo } from '../../types/types'; // Asegúrate que ArticuloInsumo también esté en types.ts si es necesario para el detalle
-import { getImageUrl } from '../../services/fileUploadService'; // Para mostrar imágenes
+import { Modal, Button, Row, Col, Image, ListGroup, Badge } from 'react-bootstrap';
+import type { ArticuloManufacturado, ArticuloManufacturadoDetalle } from '../../types/types'; 
+import { FileUploadService } from '../../services/fileUploadService';
 
 /**
  * @interface ArticuloManufacturadoDetailModalProps
@@ -20,6 +21,8 @@ interface ArticuloManufacturadoDetailModalProps {
   handleClose: () => void;
   articulo: ArticuloManufacturado | null;
 }
+
+const fileUploadService = new FileUploadService(); // Instanciamos el servicio
 
 const ArticuloManufacturadoDetailModal: React.FC<ArticuloManufacturadoDetailModalProps> = ({ show, handleClose, articulo }) => {
   const defaultImage = '/placeholder-food.png'; // Asegúrate que esta ruta sea accesible desde `public/`
@@ -39,7 +42,7 @@ const ArticuloManufacturadoDetailModal: React.FC<ArticuloManufacturadoDetailModa
             <Image
               src={
                 articulo.imagenes && articulo.imagenes.length > 0
-                  ? getImageUrl(articulo.imagenes[0].denominacion)
+                  ? fileUploadService.getImageUrl(articulo.imagenes[0].denominacion) // Usamos la instancia del servicio
                   : defaultImage
               }
               alt={`Imagen de ${articulo.denominacion}`}
@@ -73,9 +76,6 @@ const ArticuloManufacturadoDetailModal: React.FC<ArticuloManufacturadoDetailModa
                       {/* Asumimos que 'detalle.articuloInsumo' tiene al menos 'id' y necesitamos obtener su denominación.
                           En un escenario ideal, 'ArticuloManufacturado' vendría con los nombres de los insumos
                           o tendrías que buscarlos si solo tienes IDs.
-                          Por ahora, si 'articuloInsumo' es solo un ID, esto necesitará ajuste
-                          o que el objeto ArticuloManufacturado que pasas a este modal ya venga con
-                          los detalles completos del insumo.
                           
                           Revisando tu `types.ts`, `ArticuloManufacturadoDetalle` tiene:
                           articuloInsumo: { id: number };
@@ -115,7 +115,7 @@ const ArticuloManufacturadoDetailModal: React.FC<ArticuloManufacturadoDetailModa
             <Row xs={2} md={4} className="g-3">
               {articulo.imagenes.slice(1).map(img => (
                 <Col key={img.id}>
-                  <Image src={getImageUrl(img.denominacion)} alt="Imagen adicional" thumbnail fluid />
+                  <Image src={fileUploadService.getImageUrl(img.denominacion)} alt="Imagen adicional" thumbnail fluid /> {/* Usamos la instancia del servicio */}
                 </Col>
               ))}
             </Row>

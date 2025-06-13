@@ -8,17 +8,18 @@
  * y la categoría seleccionada para el filtro.
  * @hook `useEffect`: Realiza la carga inicial de productos y categorías desde el backend.
  *
- * @service `getArticulosManufacturados`: Para obtener la lista de productos.
- * @service `getCategorias`: Para obtener la lista de categorías para el filtro.
+ * @service `ArticuloManufacturadoService`: Para obtener la lista de productos.
+ * @service `CategoriaService`: Para obtener la lista de categorías para el filtro.
  * @component `ProductCard`: Componente individual para mostrar cada producto.
  */
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Spinner, Alert, Form, Button } from 'react-bootstrap';
-import { getArticulosManufacturados } from '../services/articuloManufacturadoService';
-import { getCategorias } from '../services/categoriaService';
+import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService';
+import { CategoriaService } from '../services/categoriaService'; 
 import type { ArticuloManufacturado, Categoria } from '../types/types';
-import ProductCard from '../components/products/Card/ProductCard'; 
+import ProductCard from '../components/products/Card/ProductCard';
 import Titulo from '../components/utils/Titulo/Titulo';
+
 /**
  * @interface ProductsPageProps
  * @description No se requieren propiedades (`props`) para este componente de página,
@@ -58,6 +59,10 @@ const ProductsPage: React.FC<ProductsPageProps> = () => {
    */
   const [selectedCategory, setSelectedCategory] = useState<number | ''>('');
 
+  // INSTANCIAS DE LOS SERVICIOS
+  const articuloManufacturadoService = new ArticuloManufacturadoService(); // <-- Instancia
+  const categoriaService = new CategoriaService(); // <-- Instancia
+
   /**
    * @hook useEffect
    * @description Hook principal para la carga de productos y categorías.
@@ -70,8 +75,9 @@ const ProductsPage: React.FC<ProductsPageProps> = () => {
       try {
         // Realiza ambas llamadas API en paralelo para optimizar el tiempo de carga
         const [fetchedProducts, fetchedCategories] = await Promise.all([
-          getArticulosManufacturados(),
-          getCategorias(),
+          // USO DE LOS MÉTODOS DE LAS INSTANCIAS
+          articuloManufacturadoService.getArticulosManufacturados(), // <-- Corrección aquí
+          categoriaService.getCategorias(), // <-- Corrección aquí
         ]);
         setProducts(fetchedProducts);
         setCategories(fetchedCategories);
@@ -115,7 +121,7 @@ const ProductsPage: React.FC<ProductsPageProps> = () => {
           <Alert.Heading>¡Error al Cargar Productos!</Alert.Heading>
           <p>{error}</p>
           <hr />
-          <Button variant="primary" onClick={() => window.location.reload()}>Recargar Página</Button> {/* Botón para recargar */}
+          <Button variant="primary" onClick={() => window.location.reload()}>Recargar Página</Button>
         </Alert>
       </Container>
     );
@@ -125,7 +131,7 @@ const ProductsPage: React.FC<ProductsPageProps> = () => {
     <Container className="my-4">
       <Titulo texto="Nuestros productos" nivel="titulo" />
       {/* Sección de filtro por categoría */}
-      <Row className="mb-4 justify-content-center"> {/* Centrar la columna de filtro */}
+      <Row className="mb-4 justify-content-center">
         <Col md={4}>
           <Form.Group controlId="categorySelect">
             <Form.Label>Filtrar por Categoría:</Form.Label>
@@ -149,7 +155,7 @@ const ProductsPage: React.FC<ProductsPageProps> = () => {
       </Row>
 
       {/* Cuadrícula de tarjetas de productos */}
-      <Row xs={1} sm={2} md={3} lg={4} xl={4} className="g-4"> {/* Ajuste de columnas para más responsividad */}
+      <Row xs={1} sm={2} md={3} lg={4} xl={4} className="g-4">
         {/* Renderizado condicional: si hay productos filtrados o no */}
         {filteredProducts.length > 0 ? (
           filteredProducts.map((product) => (
@@ -159,7 +165,7 @@ const ProductsPage: React.FC<ProductsPageProps> = () => {
           ))
         ) : (
           // Mensaje si no se encontraron productos en la categoría seleccionada
-          <Col xs={12}> {/* Ocupa todo el ancho */}
+          <Col xs={12}>
             <Alert variant="info" className="text-center">
               No se encontraron productos en esta categoría o no hay productos registrados.
             </Alert>

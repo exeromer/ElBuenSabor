@@ -3,28 +3,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 // Asegúrate que la ruta a tu función debounce sea correcta.
 // Si la definiste en `src/components/utils/Functions/debounce.ts` como parece en tu ManageProductsPage.txt
 import { debounce } from '../components/utils/Functions/debounce';
+
 // Definición de la dirección del ordenamiento
 type SortDirection = 'ascending' | 'descending';
 
 // Interfaz para la configuración del ordenamiento
-// Usamos 'keyof T' para asegurar que la clave de ordenamiento sea una propiedad válida del tipo T
-// o 'string' si necesitamos más flexibilidad (ej. para propiedades anidadas, aunque eso complica el sort).
+// CAMBIO CLAVE AQUÍ: key es SOLO keyof T, ya no string.
 export interface SortConfig<T> {
-  key: keyof T | string; 
+  key: keyof T; // Ahora la clave de ordenamiento debe ser una propiedad directa de T
   direction: SortDirection;
 }
 
-interface FetchDataFunction<T> {
-  (searchTerm: string): Promise<T[]>;
-}
-
-/**
- * @interface FetchDataFunction
- * @description Firma de la función que el hook usará para obtener los datos (ya filtrados por el backend).
- * @template T - El tipo de los ítems en la lista.
- * @param {string} searchTerm - El término de búsqueda actual.
- * @returns {Promise<T[]>} Una promesa que resuelve con un array de ítems.
- */
+// Este tipo ya estaba bien, pero lo dejo por contexto
 interface FetchDataFunction<T> {
   (searchTerm: string): Promise<T[]>;
 }
@@ -34,12 +24,31 @@ interface FetchDataFunction<T> {
  * @description Props para el hook useSearchableData.
  * @template T
  * @property {FetchDataFunction<T>} fetchData - Función para obtener los datos.
- * @property {number} [initialPageSize=10] - Tamaño de página inicial.
  * @property {number} [debounceTime=500] - Tiempo de debounce para la búsqueda.
  */
 export interface UseSearchableDataProps<T> {
   fetchData: FetchDataFunction<T>;
   debounceTime?: number;
+}
+
+/**
+ * @interface UseSearchableDataReturn
+ * @description Tipo de retorno del hook useSearchableData.
+ * @template T
+ */
+export interface UseSearchableDataReturn<T> { // <-- Se recomienda exportar esta interfaz para que otros componentes puedan tipar el retorno del hook
+  items: T[];
+  searchTerm: string;
+  setSearchTerm: React.Dispatch<React.SetStateAction<string>>;
+  totalItems: number;
+  isLoading: boolean;
+  error: string | null;
+  reload: () => void;
+  sortConfig: SortConfig<T> | null;
+  // sortedItems se puede quitar del retorno si no lo usas directamente fuera, ya que `items` ya está ordenado.
+  // Pero lo mantendré por si lo necesitas.
+  sortedItems: T[];
+  requestSort: (key: keyof T) => void; // CAMBIO CLAVE AQUÍ: requestSort espera SOLO keyof T
 }
 
 /**
@@ -50,7 +59,7 @@ export interface UseSearchableDataProps<T> {
 export function useSearchableData<T>({
   fetchData,
   debounceTime = 500
-}: UseSearchableDataProps<T>) {
+}: UseSearchableDataProps<T>): UseSearchableDataReturn<T> { // Añadimos el tipo de retorno explícito
   const [allItems, setAllItems] = useState<T[]>([]); // Todos los ítems después de la búsqueda del backend
   const [searchTerm, setSearchTerm] = useState('');
   const [totalItems, setTotalItems] = useState(0);
@@ -68,7 +77,7 @@ export function useSearchableData<T>({
       setError(null);
       try {
         const result = await fetchData(currentSearchTerm);
-        setAllItems(result); // Directamente en allItems
+        setAllItems(result);
         setTotalItems(result.length);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Error al cargar datos');
@@ -85,7 +94,7 @@ export function useSearchableData<T>({
   useEffect(() => {
     debouncedFetch(searchTerm);
   }, [searchTerm, debouncedFetch]);
-  
+
   /**
    * @function reload
    * @description Permite recargar los datos manualmente con el término de búsqueda actual.
@@ -98,15 +107,13 @@ export function useSearchableData<T>({
   /**
    * @function requestSort
    * @description Actualiza la configuración de ordenamiento. Si se ordena por la misma clave, invierte la dirección.
-   * @param {keyof T | string} key - La clave del ítem por la cual ordenar.
+   * @param {keyof T} key - La clave del ítem por la cual ordenar. // CAMBIO CLAVE AQUÍ: key es SOLO keyof T
    */
-  const requestSort = (key: keyof T | string) => {
+  const requestSort = (key: keyof T) => {
     let direction: SortDirection = 'ascending';
     if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') {
       direction = 'descending';
     }
-    // Si quisieras un tercer estado (sin orden) podrías añadir otra condición aquí
-    // y setSortConfig(null)
     setSortConfig({ key, direction });
   };
 
@@ -116,9 +123,9 @@ export function useSearchableData<T>({
     let sortableItems = [...allItems]; // Trabajar con una copia
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        // Acceder a los valores de forma segura
-        const valA = a[sortConfig.key as keyof T];
-        const valB = b[sortConfig.key as keyof T];
+        // Acceder a los valores de forma segura. Ya no necesitamos `as keyof T` porque sortConfig.key ya es keyof T
+        const valA = a[sortConfig.key];
+        const valB = b[sortConfig.key];
 
         // Comparación básica (puedes extenderla para otros tipos de datos si es necesario)
         if (valA === null || valA === undefined) return sortConfig.direction === 'ascending' ? -1 : 1;
@@ -139,6 +146,7 @@ export function useSearchableData<T>({
     return sortableItems;
 
   }, [allItems, sortConfig]);
+
   return {
     items: sortedItems,
     searchTerm,
@@ -148,9 +156,7 @@ export function useSearchableData<T>({
     error,
     reload,
     sortConfig,
-    sortedItems,
+    sortedItems, // Puedes quitar esto si `items` es suficiente
     requestSort,
   };
 }
-
-

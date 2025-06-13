@@ -176,7 +176,7 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("Cargando Sucursales...");
         Domicilio domSuc1E1 = new Domicilio(); domSuc1E1.setCalle("Av. Colón"); domSuc1E1.setNumero(100); domSuc1E1.setCp("C5000XAF"); domSuc1E1.setLocalidad(ciudadMendoza);
         Sucursal suc1E1 = new Sucursal();
-        suc1E1.setNombre("Buen Sabor - Colón"); suc1E1.setHorarioApertura(LocalTime.of(10,0)); suc1E1.setHorarioCierre(LocalTime.of(23,0));
+        suc1E1.setNombre("Buen Sabor - Colón"); suc1E1.setHorarioApertura(LocalTime.of(0,0)); suc1E1.setHorarioCierre(LocalTime.of(23,59));
         suc1E1.setEmpresa(empresa1); suc1E1.setDomicilio(domSuc1E1); suc1E1.addCategoria(catPizzas); suc1E1.addCategoria(catBebidas); suc1E1.setEstadoActivo(true);
         sucursalRepository.save(suc1E1);
 

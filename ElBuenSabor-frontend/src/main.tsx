@@ -25,6 +25,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           audience: AUTH0_AUDIENCE,
           scope: import.meta.env.VITE_AUTH0_SCOPE || 'openid profile email',
         }}
+        useRefreshTokens={true}
+        cacheLocation="localstorage"
       >
         <CartProvider>
           <App />

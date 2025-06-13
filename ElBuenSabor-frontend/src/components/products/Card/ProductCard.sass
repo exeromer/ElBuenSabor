@@ -34,7 +34,7 @@
 
     .product-card-description
       font-size: $f-s-1
-      color: lighten($color-grey, 20%)
+      color: $color-grey
       line-height: 1.4
       margin-bottom: $m3
       display: -webkit-box
@@ -76,12 +76,12 @@
           width: 100% // Ocupa todo el ancho del grupo
 
           &:hover
-            background-color: darken($color-clay, 10%)
-            border-color: darken($color-clay, 10%)
+            background-color: $color-clay
+            border-color: $color-clay
 
           &:active
-            background-color: darken($color-clay, 15%)
-            border-color: darken($color-clay, 15%)
+            background-color: $color-clay
+            border-color: $color-clay
 
         .product-card-controls-wrapper // Nuevo contenedor para los botones de cantidad
           display: flex
@@ -141,17 +141,15 @@
           align-items: center
           justify-content: center
         .product-card.product-unavailable
-          opacity: 0.7;
-          .product-card-add-button, .product-card-control-button 
-          cursor: not-allowed;
+          opacity: 0.7
 
           &:hover
-            background-color: darken($color-stone, 10%)
-            border-color: darken($color-stone, 10%)
+            background-color: $color-stone
+            border-color: $color-stone
 
           &:active
-            background-color: darken($color-stone, 15%)
-            border-color: darken($color-stone, 15%)
+            background-color: $color-stone
+            border-color: $color-stone
 
 
 // Media queries para responsividad (ajustes opcionales)

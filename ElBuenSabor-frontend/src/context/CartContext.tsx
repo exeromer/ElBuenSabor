@@ -13,7 +13,8 @@
  * @hook `useEffect`: Sincroniza el carrito con `localStorage` cada vez que cambia.
  */
 import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
-import type { ArticuloManufacturado, ArticuloInsumo, CartItem } from '../types/types'; // Importa los tipos necesarios
+// Importa los tipos necesarios, incluyendo Domicilio y ArticuloManufacturado
+import type { ArticuloManufacturado, ArticuloInsumo, CartItem, Domicilio } from '../types/types';
 
 /**
  * @interface CartContextType
@@ -25,7 +26,14 @@ import type { ArticuloManufacturado, ArticuloInsumo, CartItem } from '../types/t
  * @property {() => void} clearCart - Función para vaciar completamente el carrito.
  * @property {() => number} getCartTotal - Función que devuelve el total monetario del carrito.
  * @property {() => number} getCartItemCount - Función que devuelve el número total de ítems (cantidad sumada) en el carrito.
- * @property {(itemId: number) => number} getItemQuantity - **NUEVO** Función que devuelve la cantidad de un artículo específico en el carrito.
+ * @property {(itemId: number) => number} getItemQuantity - Función que devuelve la cantidad de un artículo específico en el carrito.
+ *
+ * @property {'local' | 'delivery' | null} deliveryOption - Opción de envío seleccionada ('local', 'delivery', o null).
+ * @property {(option: 'local' | 'delivery' | null) => void} setDeliveryOption - Función para establecer la opción de envío.
+ * @property {Domicilio | null} selectedAddress - La dirección de entrega seleccionada para delivery, o null.
+ * @property {(address: Domicilio | null) => void} setSelectedAddress - Función para establecer la dirección de entrega.
+ * @property {'mercadoPago' | 'efectivo' | null} paymentMethod - Método de pago seleccionado ('mercadoPago', 'efectivo', o null).
+ * @property {(method: 'mercadoPago' | 'efectivo' | null) => void} setPaymentMethod - Función para establecer el método de pago.
  */
 interface CartContextType {
   cart: CartItem[];
@@ -35,7 +43,15 @@ interface CartContextType {
   clearCart: () => void;
   getCartTotal: () => number;
   getCartItemCount: () => number;
-  getItemQuantity: (itemId: number) => number; // Agregada la nueva propiedad
+  getItemQuantity: (itemId: number) => number;
+
+  // NUEVAS PROPIEDADES PARA EL CHECKOUT
+  deliveryOption: 'local' | 'delivery' | null;
+  setDeliveryOption: (option: 'local' | 'delivery' | null) => void;
+  selectedAddress: Domicilio | null;
+  setSelectedAddress: (address: Domicilio | null) => void;
+  paymentMethod: 'mercadoPago' | 'efectivo' | null;
+  setPaymentMethod: (method: 'mercadoPago' | 'efectivo' | null) => void;
 }
 
 /**
@@ -68,6 +84,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return []; // Devuelve un carrito vacío en caso de error de parseo
     }
   });
+
+  // NUEVOS ESTADOS PARA EL CHECKOUT
+  const [deliveryOption, setDeliveryOption] = useState<'local' | 'delivery' | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<Domicilio | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'mercadoPago' | 'efectivo' | null>(null);
 
   /**
    * @hook useEffect
@@ -136,7 +157,7 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   /**
    * @function getItemQuantity
-   * @description **NUEVO:** Obtiene la cantidad actual de un artículo específico en el carrito.
+   * @description Obtiene la cantidad actual de un artículo específico en el carrito.
    * @param {number} itemId - El ID del artículo cuya cantidad se desea obtener.
    * @returns {number} La cantidad del artículo en el carrito, o 0 si no se encuentra.
    */
@@ -147,10 +168,14 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   /**
    * @function clearCart
-   * @description Vacía completamente el carrito de compras.
+   * @description Vacía completamente el carrito de compras y resetea las opciones de checkout.
    */
   const clearCart = () => {
     setCart([]);
+    // Resetea también estas nuevas opciones de checkout
+    setDeliveryOption(null);
+    setSelectedAddress(null);
+    setPaymentMethod(null);
   };
 
   /**
@@ -183,7 +208,15 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         clearCart,
         getCartTotal,
         getCartItemCount,
-        getItemQuantity, // Incluida la nueva función en el valor del contexto
+        getItemQuantity,
+
+        // PROPORCIONA LOS NUEVOS VALORES DEL CONTEXTO
+        deliveryOption,
+        setDeliveryOption,
+        selectedAddress,
+        setSelectedAddress,
+        paymentMethod,
+        setPaymentMethod,
       }}
     >
       {children}

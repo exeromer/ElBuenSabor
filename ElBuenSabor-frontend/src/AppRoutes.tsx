@@ -11,6 +11,7 @@ import ManageUsersPage from './pages/ManageUsersPage';
 import PrivateRoute from './components/auth/PrivateRoute';
 import { Button } from 'react-bootstrap';
 
+
 /**
  * @function AppRoutes
  * @description Componente que define todas las rutas de la aplicación,
@@ -39,7 +40,6 @@ function AppRoutes() {
       <Route path="/manage-products" element={<PrivateRoute component={ManageProductsPage} requiredRoles={['CLIENTE', 'ADMIN', 'EMPLEADO']} />} />
       {/* Gestión de Usuarios y Clientes: requiere rol de ADMIN */}
       <Route path="/manage-users" element={<PrivateRoute component={ManageUsersPage} requiredRoles={['CLIENTE', 'ADMIN', 'EMPLEADO']} />} />
-
       {/* Ruta comodín para páginas no encontradas (404) */}
       <Route path="*" element={
         <div className="d-flex justify-content-center align-items-center text-center my-5" style={{ minHeight: '60vh' }}>

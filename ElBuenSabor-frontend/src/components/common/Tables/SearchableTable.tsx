@@ -1,26 +1,29 @@
 import React from 'react';
 import type { ReactNode } from 'react';
 import { Table, Form, Spinner, Alert, Button } from 'react-bootstrap';
-import type { SortConfig } from '../../../hooks/useSearchableData'; // Ajusta la ruta
+import type { SortConfig } from '../../../hooks/useSearchableData';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faPlus } from '@fortawesome/free-solid-svg-icons';
 
+import type { EntityWithId } from '../../../types/types';
+
+
 export interface ColumnDefinition<T> {
-  key: string;
+  key: keyof T;
   header: string;
   renderCell: (item: T) => ReactNode;
   sortable?: boolean;
 }
 
-interface SearchableTableProps<T extends { id: any }> {
-  items: T[]; // Recibe directamente los items a mostrar
+interface SearchableTableProps<T extends EntityWithId> {
+  items: T[];
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   isLoading: boolean;
   error: string | null;
   reload: () => void;
   sortConfig: SortConfig<T> | null;
-  requestSort: (key: keyof T | string) => void;
+  requestSort: (key: keyof T) => void;
   columns: ColumnDefinition<T>[];
   searchPlaceholder?: string;
   renderRowActions?: (item: T, reloadData: () => void) => ReactNode;
@@ -28,7 +31,7 @@ interface SearchableTableProps<T extends { id: any }> {
   onCreate?: () => void;
 }
 
-export function SearchableTable<T extends { id: any }>({
+export function SearchableTable<T extends EntityWithId>({
   items,
   searchTerm,
   setSearchTerm,
@@ -46,9 +49,9 @@ export function SearchableTable<T extends { id: any }>({
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
-    const getSortIcon = (columnKey: keyof T | string) => {
+  const getSortIcon = (columnKey: keyof T) => {
     if (!sortConfig || sortConfig.key !== columnKey) {
-      return faSort; // Icono por defecto para columnas ordenables
+      return faSort;
     }
     return sortConfig.direction === 'ascending' ? faSortUp : faSortDown;
   };
@@ -86,14 +89,15 @@ export function SearchableTable<T extends { id: any }>({
             <thead>
               <tr>
                 {columns.map(col => (
-                  <th 
-                    key={col.key} 
-                    onClick={() => col.sortable ? requestSort(col.key as keyof T) : undefined}
+                  <th
+                    key={col.key as string}
+                    // CORRECCIÓN CLAVE AQUÍ: Eliminamos la llave extra al final
+                    onClick={() => col.sortable ? requestSort(col.key) : undefined} 
                     style={col.sortable ? { cursor: 'pointer' } : {}}
                   >
                     {col.header}
                     {col.sortable && (
-                      <FontAwesomeIcon icon={getSortIcon(col.key as keyof T)} className="ms-2" />
+                      <FontAwesomeIcon icon={getSortIcon(col.key)} className="ms-2" />
                     )}
                   </th>
                 ))}
@@ -104,14 +108,13 @@ export function SearchableTable<T extends { id: any }>({
               {items.map(item => (
                 <tr key={item.id}>
                   {columns.map(col => (
-                    <td key={`${item.id}-${col.key}`}>{col.renderCell(item)}</td>
+                    <td key={`${item.id}-${col.key as string}`}>{col.renderCell(item)}</td>
                   ))}
                   {renderRowActions && <td>{renderRowActions(item, reload)}</td>}
                 </tr>
               ))}
             </tbody>
           </Table>
-          {/* Sección de Paginación eliminada */}
         </>
       )}
     </div>
