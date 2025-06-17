@@ -1,5 +1,3 @@
-// src/pages/ManageProductsPage.tsx
-
 /**
  * @file ManageProductsPage.tsx
  * @description Página de administración para la gestión de Artículos (Artículos Manufacturados y Artículos Insumo).
@@ -46,15 +44,16 @@ import ArticuloManufacturadoForm from '../components/admin/ArticuloManufacturado
 import ArticuloManufacturadoDetailModal from '../components/admin/ArticuloManufacturadoDetailModal';
 import ArticuloInsumoDetailModal from '../components/admin/ArticuloInsumoDetailModal';
 
+
+// INSTANCIAS DE SERVICIOS
+  const articuloInsumoService = new ArticuloInsumoService();
+  const articuloManufacturadoService = new ArticuloManufacturadoService();
+
 // ------ COMPONENTE PRINCIPAL ------
 
 const ManageProductsPage: React.FC = () => {
   const { getAccessTokenSilently } = useAuth0();
   const [activeTab, setActiveTab] = useState<'manufacturados' | 'insumos'>('manufacturados');
-
-  // INSTANCIAS DE SERVICIOS
-  const articuloInsumoService = new ArticuloInsumoService();
-  const articuloManufacturadoService = new ArticuloManufacturadoService();
 
   // --- ESTADOS Y MANEJADORES PARA MODALES (Común a ambas pestañas) ---
   // Estos estados se quedan en ManageProductsPage porque los modales se renderizan aquí.
@@ -79,9 +78,9 @@ const ManageProductsPage: React.FC = () => {
    * @param {string} term - Término de búsqueda.
    * @returns {Promise<ArticuloInsumo[]>}
    */
-  const fetchInsumosFunction = useCallback((term: string) => {
-    return articuloInsumoService.getArticulosInsumo(term, null);
-  }, [articuloInsumoService]);
+   const fetchInsumosFunction = useCallback((term: string) => {
+        return articuloInsumoService.getArticulosInsumo(term, null);
+    }, []);
 
   const insumoDataHook = useSearchableData<ArticuloInsumo>({ fetchData: fetchInsumosFunction });
 
@@ -177,9 +176,9 @@ const ManageProductsPage: React.FC = () => {
   * @function fetchManufacturadosFunction
   * @description Función envuelta en useCallback que llama al servicio para obtener manufacturados.
   */
-  const fetchManufacturadosFunction = useCallback((term: string) => {
-    return articuloManufacturadoService.getArticulosManufacturados(term, null);
-  }, [articuloManufacturadoService]);
+    const fetchManufacturadosFunction = useCallback((term: string) => {
+        return articuloManufacturadoService.getArticulosManufacturados(term, null);
+    }, []);
 
   const manufacturadoDataHook = useSearchableData<ArticuloManufacturado>({ fetchData: fetchManufacturadosFunction });
 

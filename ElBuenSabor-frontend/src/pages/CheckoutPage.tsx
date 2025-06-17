@@ -22,6 +22,12 @@ declare global {
   }
 }
 
+
+const clienteUsuarioService = new ClienteUsuarioService();
+const pedidoService = new PedidoService();
+const sucursalService = new SucursalService();
+const fileUploadService = new FileUploadService();
+
 const CheckoutPage: React.FC = () => {
   const { isAuthenticated, user, getAccessTokenSilently, isLoading: authLoading } = useAuth0();
   const { cart, getCartTotal, clearCart } = useCart();
@@ -43,20 +49,15 @@ const CheckoutPage: React.FC = () => {
 
   const defaultImage = '/placeholder-food.png';
 
-  const clienteUsuarioService = new ClienteUsuarioService();
-  const pedidoService = new PedidoService();
-  const sucursalService = new SucursalService();
-  const fileUploadService = new FileUploadService();
-
   useEffect(() => {
     const loadCheckoutData = async () => {
       if (authLoading) {
         setLoadingData(true);
         return;
       }
-      
+
       if (!loadingData) {
-          setLoadingData(true);
+        setLoadingData(true);
       }
       setError(null);
 
@@ -65,7 +66,7 @@ const CheckoutPage: React.FC = () => {
           navigate('/');
         }, 0);
         setLoadingData(false);
-        return; 
+        return;
       }
 
       try {
@@ -81,11 +82,11 @@ const CheckoutPage: React.FC = () => {
         setSucursales(fetchedSucursales);
 
         if (fetchedCliente.domicilios.length > 0 && selectedDomicilioId === '') {
-            setSelectedDomicilioId(fetchedCliente.domicilios[0].id!);
+          setSelectedDomicilioId(fetchedCliente.domicilios[0].id!);
         }
-        
+
         if (fetchedSucursales.length > 0 && selectedSucursalId === '') {
-            setSelectedSucursalId(fetchedSucursales[0].id!);
+          setSelectedSucursalId(fetchedSucursales[0].id!);
         }
 
       } catch (err) {
@@ -98,7 +99,7 @@ const CheckoutPage: React.FC = () => {
     };
 
     loadCheckoutData();
-  }, [isAuthenticated, user, authLoading, getAccessTokenSilently, navigate, loadingData, selectedDomicilioId, selectedSucursalId]);
+    }, [isAuthenticated, user, authLoading, getAccessTokenSilently, navigate]);
 
 
   useEffect(() => {
@@ -132,14 +133,14 @@ const CheckoutPage: React.FC = () => {
 
       const container = document.getElementById("wallet_container");
       if (container) {
-          container.innerHTML = "";
-          mp.bricks().create("wallet", "wallet_container", {
-              initialization: { preferenceId },
-              customization: { texts: { valueProp: 'smart_option' } },
-          });
+        container.innerHTML = "";
+        mp.bricks().create("wallet", "wallet_container", {
+          initialization: { preferenceId },
+          customization: { texts: { valueProp: 'smart_option' } },
+        });
       } else {
-          console.error("Contenedor 'wallet_container' no encontrado en el DOM.");
-          setError("Error interno: Contenedor de pago no disponible.");
+        console.error("Contenedor 'wallet_container' no encontrado en el DOM.");
+        setError("Error interno: Contenedor de pago no disponible.");
       }
     }
   }, [preferenceId]);
@@ -147,16 +148,16 @@ const CheckoutPage: React.FC = () => {
   const handleTipoEnvioChange = (nuevoTipoEnvio: TipoEnvio) => {
     setTipoEnvio(nuevoTipoEnvio);
     if (nuevoTipoEnvio === 'TAKEAWAY') {
-        setFormaPago('EFECTIVO');
+      setFormaPago('EFECTIVO');
     } else {
-        setFormaPago('MERCADO_PAGO');
+      setFormaPago('MERCADO_PAGO');
     }
   };
 
 
-// En tu archivo CheckoutPage.tsx, reemplaza la función handlePlaceOrder completa por esta:
+  // En tu archivo CheckoutPage.tsx, reemplaza la función handlePlaceOrder completa por esta:
 
-const handlePlaceOrder = async () => {
+  const handlePlaceOrder = async () => {
     setSubmittingOrder(true);
     setError(null);
     setSuccessMessage(null);
@@ -216,43 +217,43 @@ const handlePlaceOrder = async () => {
 
     // Creación del DTO del pedido
     const pedidoData: CrearPedidoRequestDTO = {
-        tipoEnvio,
-        formaPago,
-        sucursalId: selectedSucursalId as number,
-        calleDomicilio: finalCalleDomicilio,
-        numeroDomicilio: finalNumeroDomicilio,
-        cpDomicilio: finalCpDomicilio,
-        localidadIdDomicilio: finalLocalidadIdDomicilio,
-        horaEstimadaFinalizacion,
-        guardarDireccionEnPerfil: false,
+      tipoEnvio,
+      formaPago,
+      sucursalId: selectedSucursalId as number,
+      calleDomicilio: finalCalleDomicilio,
+      numeroDomicilio: finalNumeroDomicilio,
+      cpDomicilio: finalCpDomicilio,
+      localidadIdDomicilio: finalLocalidadIdDomicilio,
+      horaEstimadaFinalizacion,
+      guardarDireccionEnPerfil: false,
     };
 
     // --- LÓGICA CORREGIDA ---
     try {
-        const token = await getAccessTokenSilently();
-        const response: PedidoResponseDTO = await pedidoService.crearPedidoDesdeCarrito(cliente.id!, pedidoData, token);
+      const token = await getAccessTokenSilently();
+      const response: PedidoResponseDTO = await pedidoService.crearPedidoDesdeCarrito(cliente.id!, pedidoData, token);
 
-        if (formaPago === 'MERCADO_PAGO') {
-            if (response && response.mpPreferenceId) {
-                setSuccessMessage(`Pedido #${response.id} generado. Por favor, completa el pago.`);
-                setPreferenceId(response.mpPreferenceId);
-            } else {
-                setError('El pedido se creó, pero no se pudo obtener la preferencia de pago.');
-            }
-        } else { // Para 'EFECTIVO'
-            setSuccessMessage(`¡Tu pedido #${response.id} ha sido realizado con éxito!`);
-            clearCart();
-            setTimeout(() => navigate('/mis-pedidos'), 3000);
+      if (formaPago === 'MERCADO_PAGO') {
+        if (response && response.mpPreferenceId) {
+          setSuccessMessage(`Pedido #${response.id} generado. Por favor, completa el pago.`);
+          setPreferenceId(response.mpPreferenceId);
+        } else {
+          setError('El pedido se creó, pero no se pudo obtener la preferencia de pago.');
         }
+      } else { // Para 'EFECTIVO'
+        setSuccessMessage(`¡Tu pedido #${response.id} ha sido realizado con éxito!`);
+        clearCart();
+        setTimeout(() => navigate('/mis-pedidos'), 3000);
+      }
 
     } catch (err: any) {
-        console.error('Error al realizar el pedido:', err);
-        const backendErrorMessage = err.response?.data?.error || err.message || 'Error desconocido.';
-        setError(`Error al realizar el pedido: ${backendErrorMessage}`);
+      console.error('Error al realizar el pedido:', err);
+      const backendErrorMessage = err.response?.data?.error || err.message || 'Error desconocido.';
+      setError(`Error al realizar el pedido: ${backendErrorMessage}`);
     } finally {
-        setSubmittingOrder(false);
+      setSubmittingOrder(false);
     }
-};
+  };
 
   if (loadingData || authLoading) {
     return (
@@ -278,7 +279,7 @@ const handlePlaceOrder = async () => {
 
   if (cart.length === 0 && !successMessage && !submittingOrder) {
     setTimeout(() => {
-        navigate('/products');
+      navigate('/products');
     }, 0);
     return null;
   }
@@ -318,18 +319,18 @@ const handlePlaceOrder = async () => {
             </ListGroup>
             <Card.Footer className="bg-light">
               <div className="d-flex justify-content-between">
-                  <h5 className="mb-0">Subtotal:</h5>
-                  <h5 className="mb-0"><span className="text-dark">${getCartTotal().toFixed(2)}</span></h5>
+                <h5 className="mb-0">Subtotal:</h5>
+                <h5 className="mb-0"><span className="text-dark">${getCartTotal().toFixed(2)}</span></h5>
               </div>
               {calculatedDiscount > 0 && (
-                  <div className="d-flex justify-content-between text-danger">
-                      <h5 className="mb-0">Descuento aplicado:</h5>
-                      <h5 className="mb-0">-${calculatedDiscount.toFixed(2)}</h5>
-                  </div>
+                <div className="d-flex justify-content-between text-danger">
+                  <h5 className="mb-0">Descuento aplicado:</h5>
+                  <h5 className="mb-0">-${calculatedDiscount.toFixed(2)}</h5>
+                </div>
               )}
               <div className="d-flex justify-content-between align-items-center mt-2">
-                  <h5 className="mb-0">Total Final:</h5>
-                  <h5 className="mb-0"><span className="text-success">${finalTotal.toFixed(2)}</span></h5>
+                <h5 className="mb-0">Total Final:</h5>
+                <h5 className="mb-0"><span className="text-success">${finalTotal.toFixed(2)}</span></h5>
               </div>
             </Card.Footer>
           </Card>
