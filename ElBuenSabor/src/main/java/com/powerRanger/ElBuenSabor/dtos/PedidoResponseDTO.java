@@ -14,9 +14,7 @@ public class PedidoResponseDTO {
     private Integer id;
     @JsonFormat(pattern = "HH:mm:ss")
     private LocalTime horaEstimadaFinalizacion;
-    private Double total; // Este sería el total DESPUÉS de descuentos
-    private Double subTotalPedido; // Subtotal ANTES de descuentos
-    private Double descuentoAplicado; // Monto del descuento
+    private Double total;
     private Double totalCosto;
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaPedido;
@@ -30,13 +28,13 @@ public class PedidoResponseDTO {
     private DomicilioResponseDTO domicilio;  // DTO
     private ClienteResponseDTO cliente;     // DTO (el completo que ya tienes)
 
+    private String mpPreferenceId;
+
+    // Ya estaba incluido, se mantiene.
+    private Double descuentoAplicado;
+
+
     private List<DetallePedidoResponseDTO> detalles = new ArrayList<>();
-
-    // Campos para Mercado Pago
-    private String mercadoPagoPaymentId;
-    private String mercadoPagoPreferenceId; // Podría ser útil devolverlo al cliente
-    private String mercadoPagoPaymentStatus;
-
 
     // Getters y Setters
     public Integer getId() { return id; }
@@ -45,10 +43,6 @@ public class PedidoResponseDTO {
     public void setHoraEstimadaFinalizacion(LocalTime horaEstimadaFinalizacion) { this.horaEstimadaFinalizacion = horaEstimadaFinalizacion; }
     public Double getTotal() { return total; }
     public void setTotal(Double total) { this.total = total; }
-    public Double getSubTotalPedido() { return subTotalPedido; }
-    public void setSubTotalPedido(Double subTotalPedido) { this.subTotalPedido = subTotalPedido;}
-    public Double getDescuentoAplicado() { return descuentoAplicado; }
-    public void setDescuentoAplicado(Double descuentoAplicado) { this.descuentoAplicado = descuentoAplicado; }
     public Double getTotalCosto() { return totalCosto; }
     public void setTotalCosto(Double totalCosto) { this.totalCosto = totalCosto; }
     public LocalDate getFechaPedido() { return fechaPedido; }
@@ -68,15 +62,12 @@ public class PedidoResponseDTO {
     public DomicilioResponseDTO getDomicilio() { return domicilio; }
     public void setDomicilio(DomicilioResponseDTO domicilio) { this.domicilio = domicilio; }
     public ClienteResponseDTO getCliente() { return cliente; }
-    public void setCliente(ClienteResponseDTO cliente) { this.cliente = cliente; }
+    public void setCliente(ClienteResponseDTO cliente) { this.cliente = cliente; } // <-- Corregido aquí
     public List<DetallePedidoResponseDTO> getDetalles() { return detalles; }
     public void setDetalles(List<DetallePedidoResponseDTO> detalles) { this.detalles = detalles; }
+    public String getMpPreferenceId() {return mpPreferenceId;}
+    public void setMpPreferenceId(String mpPreferenceId) {this.mpPreferenceId = mpPreferenceId;}
 
-    // Getters y Setters para Mercado Pago
-    public String getMercadoPagoPaymentId() { return mercadoPagoPaymentId; }
-    public void setMercadoPagoPaymentId(String mercadoPagoPaymentId) { this.mercadoPagoPaymentId = mercadoPagoPaymentId; }
-    public String getMercadoPagoPreferenceId() { return mercadoPagoPreferenceId; }
-    public void setMercadoPagoPreferenceId(String mercadoPagoPreferenceId) { this.mercadoPagoPreferenceId = mercadoPagoPreferenceId; }
-    public String getMercadoPagoPaymentStatus() { return mercadoPagoPaymentStatus; }
-    public void setMercadoPagoPaymentStatus(String mercadoPagoPaymentStatus) { this.mercadoPagoPaymentStatus = mercadoPagoPaymentStatus; }
+    public Double getDescuentoAplicado() { return descuentoAplicado; }
+    public void setDescuentoAplicado(Double descuentoAplicado) { this.descuentoAplicado = descuentoAplicado; }
 }

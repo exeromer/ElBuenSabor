@@ -68,8 +68,10 @@ public class Mappers {
             ArticuloInsumo insumo = (ArticuloInsumo) articulo;
             ArticuloInsumoResponseDTO dto = new ArticuloInsumoResponseDTO();
             dto.setPrecioCompra(insumo.getPrecioCompra());
-            dto.setStockActual(insumo.getStockActual());
-            dto.setstockMinimo(insumo.getstockMinimo());
+            // stockActual y stockMinimo ya no están en la entidad ArticuloInsumo
+            // El servicio que llame a este mapper será responsable de obtener y asignar el stock por sucursal si es necesario.
+            // dto.setStockActual(insumo.getStockActual()); // ELIMINADO
+            // dto.setstockMinimo(insumo.getstockMinimo()); // ELIMINADO
             dto.setEsParaElaborar(insumo.getEsParaElaborar());
             baseDto = dto;
         } else if (articulo instanceof ArticuloManufacturado) {
@@ -87,12 +89,6 @@ public class Mappers {
             }
             baseDto = dto;
         } else {
-            // Este caso es si tienes un Articulo que no es ni Insumo ni Manufacturado.
-            // Si no es posible, puedes lanzar una excepción o manejarlo diferente.
-            // Por ahora, creamos un ArticuloBaseResponseDTO genérico.
-            // Pero como ArticuloBaseResponseDTO es abstracta, esto no compilará.
-            // Debes decidir: o ArticuloBaseResponseDTO no es abstracta, o todo Articulo es Insumo/Manufacturado.
-            // Asumamos que todo artículo será Insumo o Manufacturado. Si no, debes crear un ArticuloResponseDTO concreto.
             throw new IllegalStateException("Tipo de Artículo desconocido: " + articulo.getClass().getName());
         }
 
@@ -101,7 +97,6 @@ public class Mappers {
         baseDto.setDenominacion(articulo.getDenominacion());
         baseDto.setPrecioVenta(articulo.getPrecioVenta());
         baseDto.setEstadoActivo(articulo.getEstadoActivo());
-        // baseDto.setFechaBaja(articulo.getFechaBaja()); // Si lo tienes
 
         if (articulo.getUnidadMedida() != null) {
             baseDto.setUnidadMedida(convertUnidadMedidaToDto(articulo.getUnidadMedida()));
@@ -115,5 +110,27 @@ public class Mappers {
                     .collect(Collectors.toList()));
         }
         return baseDto;
+    }
+
+    /**
+     * Convierte una entidad StockInsumoSucursal a su DTO de respuesta.
+     * @param stock entidad StockInsumoSucursal.
+     * @return DTO de respuesta StockInsumoSucursalResponseDTO.
+     */
+    public StockInsumoSucursalResponseDTO convertStockInsumoSucursalToDto(StockInsumoSucursal stock) {
+        if (stock == null) return null;
+        StockInsumoSucursalResponseDTO dto = new StockInsumoSucursalResponseDTO();
+        dto.setId(stock.getId());
+        dto.setStockActual(stock.getStockActual());
+        dto.setStockMinimo(stock.getStockMinimo());
+        if (stock.getArticuloInsumo() != null) {
+            dto.setArticuloInsumoId(stock.getArticuloInsumo().getId());
+            dto.setArticuloInsumoDenominacion(stock.getArticuloInsumo().getDenominacion());
+        }
+        if (stock.getSucursal() != null) {
+            dto.setSucursalId(stock.getSucursal().getId());
+            dto.setSucursalNombre(stock.getSucursal().getNombre());
+        }
+        return dto;
     }
 }

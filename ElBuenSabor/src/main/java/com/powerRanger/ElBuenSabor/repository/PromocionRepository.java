@@ -1,5 +1,4 @@
 package com.powerRanger.ElBuenSabor.repository;
 import com.powerRanger.ElBuenSabor.entities.Promocion;
-
-public interface PromocionRepository extends BaseRepository<Promocion, Integer> { // Cambiado a BaseRepository
-}
+import org.springframework.data.jpa.repository.JpaRepository;
+public interface PromocionRepository extends JpaRepository<Promocion, Integer> {}

@@ -19,13 +19,17 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class Factura extends BaseEntity { // HEREDA DE BaseEntity
+public class Factura {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
     @NotNull(message = "La fecha de facturación es obligatoria")
     @PastOrPresent(message = "La fecha de facturación no puede ser futura")
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaFacturacion;
 
+    // Los campos de MercadoPago son opcionales
     private Integer mpPaymentId;
     private Integer mpMerchantOrderId;
     private String mpPreferenceId;
@@ -35,8 +39,8 @@ public class Factura extends BaseEntity { // HEREDA DE BaseEntity
     @DecimalMin(value = "0.0", message = "El total de venta no puede ser negativo")
     private Double totalVenta;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "pedido_id", nullable = false, unique = true)
+    @OneToOne(fetch = FetchType.LAZY) // Es importante que Pedido exista
+    @JoinColumn(name = "pedido_id", nullable = false, unique = true) // Una factura por pedido
     @NotNull(message = "El pedido asociado es obligatorio")
     private Pedido pedido;
 
@@ -51,18 +55,20 @@ public class Factura extends BaseEntity { // HEREDA DE BaseEntity
 
     @Column(name = "fecha_anulacion")
     @JsonFormat(pattern = "yyyy-MM-dd")
-    private LocalDate fechaAnulacion;
+    private LocalDate fechaAnulacion; // Se establece solo si se anula
 
     @OneToMany(mappedBy = "factura", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<FacturaDetalle> detallesFactura = new ArrayList<>();
 
     public Factura() {
-        this.fechaFacturacion = LocalDate.now();
-        this.estadoFactura = EstadoFactura.ACTIVA;
+        this.fechaFacturacion = LocalDate.now(); // Valor por defecto
+        this.estadoFactura = EstadoFactura.ACTIVA; // Estado por defecto
         this.detallesFactura = new ArrayList<>();
     }
 
-    // Getters y Setters
+    // Getters y Setters (los que ya tenías)
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
     public LocalDate getFechaFacturacion() { return fechaFacturacion; }
     public void setFechaFacturacion(LocalDate fechaFacturacion) { this.fechaFacturacion = fechaFacturacion; }
     public Integer getMpPaymentId() { return mpPaymentId; }
@@ -92,7 +98,7 @@ public class Factura extends BaseEntity { // HEREDA DE BaseEntity
             this.detallesFactura = new ArrayList<>();
         }
         this.detallesFactura.add(detalle);
-        detalle.setFactura(this);
+        detalle.setFactura(this); // Establece la relación bidireccional
     }
 
     public void removeDetalleFactura(FacturaDetalle detalle) {
@@ -107,15 +113,15 @@ public class Factura extends BaseEntity { // HEREDA DE BaseEntity
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Factura factura = (Factura) o;
-        return Objects.equals(this.getId(), factura.getId());
+        return Objects.equals(id, factura.id);
     }
 
     @Override
-    public int hashCode() { return Objects.hash(this.getId()); }
+    public int hashCode() { return Objects.hash(id); }
 
     @Override
     public String toString() {
-        return "Factura{" + "id=" + this.getId() + ", fechaFacturacion=" + fechaFacturacion + ", totalVenta=" + totalVenta +
+        return "Factura{" + "id=" + id + ", fechaFacturacion=" + fechaFacturacion + ", totalVenta=" + totalVenta +
                 ", pedidoId=" + (pedido != null ? pedido.getId() : "null") + ", estadoFactura=" + estadoFactura + '}';
     }
 }

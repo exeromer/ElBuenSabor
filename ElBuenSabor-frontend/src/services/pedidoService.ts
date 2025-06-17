@@ -1,3 +1,5 @@
+// Nueva carpeta/ElBuenSabor-frontend/src/services/pedidoService.ts
+
 /**
  * @file pedidoService.ts
  * @description Provee funciones para interactuar con los endpoints de Pedidos de la API.
@@ -6,7 +8,7 @@
 
 import apiClient, { setAuthToken } from './apiClient';
 // Importamos Pedido, PedidoRequestDTO y PreferenceMP para los tipos
-import type { Pedido, PedidoRequestDTO, PreferenceMP } from '../types/types'; 
+import type { Pedido, PedidoRequestDTO, PreferenceMP, CrearPedidoRequestDTO } from '../types/types'; 
 
 // Definimos la clase PedidoService
 export class PedidoService {
@@ -27,6 +29,26 @@ export class PedidoService {
             return response.data;
         } catch (error) {
             console.error(`Error al obtener pedidos para Auth0 ID ${auth0Id}:`, error);
+            throw error;
+        }
+    }
+
+        /**
+     * @function crearPedidoDesdeCarrito
+     * @description Crea un nuevo pedido desde el carrito de un cliente. Llama al endpoint especializado del backend.
+     * @param {number} clienteId - El ID del cliente que realiza el pedido.
+     * @param {CrearPedidoRequestDTO} pedidoData - Los datos del pedido, incluyendo domicilio y forma de pago.
+     * @param {string} token - El token JWT para la autenticación.
+     * @returns {Promise<any>} Resuelve con la respuesta del backend (que puede ser el Pedido o un objeto con datos de Mercado Pago).
+     */
+    async crearPedidoDesdeCarrito(clienteId: number, pedidoData: CrearPedidoRequestDTO, token: string): Promise<any> {
+        setAuthToken(token);
+        try {
+            // Este es el endpoint correcto y robusto de tu backend que maneja toda la lógica.
+            const response = await apiClient.post(`/pedidos/cliente/${clienteId}/desde-carrito`, pedidoData);
+            return response.data;
+        } catch (error) {
+            console.error('Error al crear pedido desde el carrito:', error);
             throw error;
         }
     }

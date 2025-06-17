@@ -1,13 +1,13 @@
 package com.powerRanger.ElBuenSabor.repository;
-
+import com.powerRanger.ElBuenSabor.entities.ArticuloInsumo;
 import com.powerRanger.ElBuenSabor.entities.Cliente;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
-
-public interface ClienteRepository extends BaseRepository<Cliente, Integer> { // Cambiado a BaseRepository
+public interface ClienteRepository extends JpaRepository<Cliente, Integer> {
     Optional<Cliente> findByUsuarioId(Integer usuarioId);
     Optional<Cliente> findByEmail(String email);
 

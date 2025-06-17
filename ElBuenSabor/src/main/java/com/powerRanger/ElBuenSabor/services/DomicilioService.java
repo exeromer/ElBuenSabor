@@ -1,14 +1,16 @@
 package com.powerRanger.ElBuenSabor.services;
 
 import com.powerRanger.ElBuenSabor.dtos.DomicilioRequestDTO;
-import com.powerRanger.ElBuenSabor.dtos.DomicilioResponseDTO;
+import com.powerRanger.ElBuenSabor.dtos.DomicilioResponseDTO; // Importar el nuevo DTO
 import com.powerRanger.ElBuenSabor.entities.Domicilio;
 import jakarta.validation.Valid;
 import java.util.List;
 
-public interface DomicilioService extends BaseService<Domicilio, Integer> {
-    List<DomicilioResponseDTO> findAllDomicilios();
-    DomicilioResponseDTO findDomicilioById(Integer id) throws Exception;
-    DomicilioResponseDTO createDomicilio(@Valid DomicilioRequestDTO dto) throws Exception;
-    DomicilioResponseDTO updateDomicilio(Integer id, @Valid DomicilioRequestDTO dto) throws Exception;
+public interface DomicilioService {
+    List<DomicilioResponseDTO> getAll(); // Devuelve lista de DTOs
+    DomicilioResponseDTO getById(Integer id) throws Exception; // Devuelve un DTO
+
+    Domicilio create(@Valid DomicilioRequestDTO dto) throws Exception;
+    Domicilio update(Integer id, @Valid DomicilioRequestDTO dto) throws Exception;
+    void delete(Integer id) throws Exception;
 }

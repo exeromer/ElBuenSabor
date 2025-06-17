@@ -1,3 +1,5 @@
+// Nueva carpeta/ElBuenSabor-frontend/src/services/clienteUsuarioService.ts
+
 /**
  * @file clienteUsuarioService.ts
  * @description Provee funciones para interactuar con los endpoints de Clientes y Usuarios de la API.
@@ -8,29 +10,22 @@ import apiClient, { setAuthToken } from './apiClient';
 import type { Cliente, ClienteRequestDTO, Usuario, UsuarioRequestDTO } from '../types/types';
 
 // Definimos la clase ClienteUsuarioService
-export class ClienteUsuarioService { // <-- Aquí está la clase que faltaba
+export class ClienteUsuarioService {
 
     /**
-     * @function getClienteByAuth0Id
-     * @description Obtiene los datos de un cliente basado en su Auth0 ID.
-     * Este proceso implica primero obtener el `Usuario` asociado al Auth0 ID,
-     * y luego obtener el `Cliente` vinculado a ese `Usuario`.
-     * @param {string} auth0Id - El ID de Auth0 del usuario.
+     * @function getMyProfile
+     * @description Obtiene el perfil del cliente actualmente autenticado.
+     * El backend identifica al usuario a través del token JWT.
      * @param {string} token - El token JWT para la autenticación.
      * @returns {Promise<Cliente>} Una promesa que resuelve con los datos del cliente.
-     * @throws {Error} Si el usuario o cliente no se encuentran, o si ocurre un error en la petición.
      */
-    async getClienteByAuth0Id(auth0Id: string, token: string): Promise<Cliente> {
+    async getMyProfile(token: string): Promise<Cliente> {
         setAuthToken(token);
         try {
-            // Ajusta esta ruta si tu endpoint de usuario por Auth0 ID es diferente
-            const userResponse = await apiClient.get<Usuario>(`/usuarios/auth0/${auth0Id}`);
-            const userId = userResponse.data.id;
-            // Ajusta esta ruta si tu endpoint de cliente por ID de usuario es diferente
-            const clientResponse = await apiClient.get<Cliente>(`/clientes/usuario/${userId}`);
-            return clientResponse.data;
+            const response = await apiClient.get<Cliente>('/clientes/perfil');
+            return response.data;
         } catch (error) {
-            console.error(`Error al obtener cliente para Auth0 ID ${auth0Id}:`, error);
+            console.error("Error al obtener el perfil del cliente:", error);
             throw error;
         }
     }

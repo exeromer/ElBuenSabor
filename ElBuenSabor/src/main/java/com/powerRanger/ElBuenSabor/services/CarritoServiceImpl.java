@@ -3,18 +3,18 @@ package com.powerRanger.ElBuenSabor.services;
 import com.powerRanger.ElBuenSabor.dtos.AddItemToCartRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.CarritoItemResponseDTO;
 import com.powerRanger.ElBuenSabor.dtos.CarritoResponseDTO;
+import com.powerRanger.ElBuenSabor.dtos.UpdateCartItemQuantityRequestDTO; // Nuevo DTO importado
 import com.powerRanger.ElBuenSabor.entities.*;
 import com.powerRanger.ElBuenSabor.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.file.AccessDeniedException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -23,14 +23,21 @@ public class CarritoServiceImpl implements CarritoService {
 
     @Autowired
     private CarritoRepository carritoRepository;
+
     @Autowired
     private CarritoItemRepository carritoItemRepository;
+
     @Autowired
     private ArticuloRepository articuloRepository;
+
     @Autowired
     private UsuarioRepository usuarioRepository;
+
     @Autowired
     private ClienteRepository clienteRepository;
+
+    // No se inyecta StockInsumoSucursalService aquí ya que la validación de stock
+    // detallada (por sucursal) se realiza en PedidoServiceImpl al crear el pedido.
 
     private void validarPropietarioCliente(Cliente clienteDelPath) throws AccessDeniedException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -59,7 +66,7 @@ public class CarritoServiceImpl implements CarritoService {
     @Override
     @Transactional
     public CarritoResponseDTO getOrCreateCarrito(Cliente cliente) throws Exception {
-        validarPropietarioCliente(cliente); 
+        validarPropietarioCliente(cliente);
 
         Optional<Carrito> carritoOpt = carritoRepository.findByCliente(cliente);
         Carrito carrito;
@@ -72,7 +79,7 @@ public class CarritoServiceImpl implements CarritoService {
         }
         return mapCarritoToDto(carrito);
     }
-    
+
     @Override
     @Transactional
     public CarritoResponseDTO addItemAlCarrito(Cliente cliente, AddItemToCartRequestDTO itemRequest) throws Exception {
@@ -85,49 +92,77 @@ public class CarritoServiceImpl implements CarritoService {
         Articulo articulo = articuloRepository.findById(itemRequest.getArticuloId())
                 .orElseThrow(() -> new Exception("Artículo no encontrado con ID: " + itemRequest.getArticuloId()));
 
+        // La única validación de stock aquí es que el artículo esté activo.
+        // La validación detallada de stock por sucursal se realiza al crear el pedido.
         if (articulo.getEstadoActivo() == null || !articulo.getEstadoActivo()) {
             throw new Exception("El artículo '" + articulo.getDenominacion() + "' no está disponible (inactivo).");
         }
 
-        Carrito carrito = getOrCreateCarritoEntity(cliente);
-        Optional<CarritoItem> carritoItemOpt = carritoItemRepository.findByCarritoAndArticulo(carrito, articulo);
-        int cantidadSolicitada = itemRequest.getCantidad() + (carritoItemOpt.isPresent() ? carritoItemOpt.get().getCantidad() : 0);
+        int cantidadSolicitada = itemRequest.getCantidad();
+        CarritoItem itemExistente = null;
+        Optional<Carrito> carritoOpt = carritoRepository.findByCliente(cliente);
+        Carrito carrito;
 
-        if (articulo instanceof ArticuloInsumo) {
-            ArticuloInsumo insumo = (ArticuloInsumo) articulo;
-            if (insumo.getStockActual() == null || insumo.getStockActual() < cantidadSolicitada) {
-                throw new Exception("Stock insuficiente para el insumo: " + insumo.getDenominacion() +
-                        ". Solicitado total: " + cantidadSolicitada +
-                        ", Disponible: " + (insumo.getStockActual() != null ? insumo.getStockActual() : 0));
+        if (carritoOpt.isPresent()) {
+            carrito = carritoOpt.get();
+            Optional<CarritoItem> carritoItemOpt = carritoItemRepository.findByCarritoAndArticulo(carrito, articulo);
+            if (carritoItemOpt.isPresent()) {
+                itemExistente = carritoItemOpt.get();
+                cantidadSolicitada = itemExistente.getCantidad() + itemRequest.getCantidad();
             }
-        }
-        
-        if (carritoItemOpt.isPresent()) {
-            CarritoItem item = carritoItemOpt.get();
-            item.setCantidad(cantidadSolicitada); 
-            carritoItemRepository.save(item);
         } else {
-            CarritoItem item = new CarritoItem();
-            item.setArticulo(articulo);
-            item.setCantidad(itemRequest.getCantidad());
-            item.setPrecioUnitarioAlAgregar(articulo.getPrecioVenta());
-            carrito.addItem(item);
+            carrito = new Carrito();
+            carrito.setCliente(cliente);
+        }
+
+        if (itemExistente != null) {
+            itemExistente.setCantidad(cantidadSolicitada);
+            carritoItemRepository.save(itemExistente);
+        } else {
+            itemExistente = new CarritoItem();
+            itemExistente.setArticulo(articulo);
+            itemExistente.setCantidad(itemRequest.getCantidad());
+            itemExistente.setPrecioUnitarioAlAgregar(articulo.getPrecioVenta());
+            if (carrito.getId() == null) {
+                carrito = carritoRepository.save(carrito);
+            }
+            itemExistente.setCarrito(carrito);
+            carrito.addItem(itemExistente);
         }
 
         carrito.setFechaUltimaModificacion(LocalDateTime.now());
         Carrito carritoGuardado = carritoRepository.save(carrito);
+
         return mapCarritoToDto(carritoGuardado);
     }
 
-
     @Override
     @Transactional
-    public CarritoResponseDTO actualizarCantidadItem(Cliente cliente, Integer carritoItemId, int nuevaCantidad) throws Exception {
+    public CarritoResponseDTO actualizarCantidadItem(Cliente cliente, Long carritoItemId, int nuevaCantidad) throws Exception {
         validarPropietarioCliente(cliente);
+        if (cliente == null || cliente.getId() == null) {
+            throw new Exception("Cliente no válido.");
+        }
+        if (carritoItemId == null) {
+            throw new Exception("ID del ítem del carrito no puede ser nulo.");
+        }
         if (nuevaCantidad <= 0) {
+            // Si la nueva cantidad es 0 o menos, se considera una eliminación.
             return eliminarItemDelCarrito(cliente, carritoItemId);
         }
-        CarritoItem carritoItem = findAndValidateCarritoItem(cliente, carritoItemId);
+
+        CarritoItem carritoItem = carritoItemRepository.findById(carritoItemId)
+                .orElseThrow(() -> new Exception("Ítem de carrito no encontrado con ID: " + carritoItemId));
+
+        if (carritoItem.getCarrito() == null || carritoItem.getCarrito().getCliente() == null ||
+                !carritoItem.getCarrito().getCliente().getId().equals(cliente.getId())) {
+            throw new Exception("El ítem no pertenece al carrito del cliente especificado.");
+        }
+
+        // No se realiza validación de stock detallada aquí.
+        // Se asume que el frontend ya mostrará la disponibilidad basada en el stock de sucursal
+        // y la validación final se hará al crear el pedido.
+
         carritoItem.setCantidad(nuevaCantidad);
         carritoItemRepository.save(carritoItem);
 
@@ -140,48 +175,51 @@ public class CarritoServiceImpl implements CarritoService {
 
     @Override
     @Transactional
-    public CarritoResponseDTO eliminarItemDelCarrito(Cliente cliente, Integer carritoItemId) throws Exception {
+    public CarritoResponseDTO eliminarItemDelCarrito(Cliente cliente, Long carritoItemId) throws Exception {
         validarPropietarioCliente(cliente);
-        CarritoItem carritoItem = findAndValidateCarritoItem(cliente, carritoItemId);
+
+        if (cliente == null || cliente.getId() == null) {
+            throw new Exception("Cliente no válido.");
+        }
+        if (carritoItemId == null) {
+            throw new Exception("ID del ítem del carrito no puede ser nulo.");
+        }
+
+        CarritoItem carritoItem = carritoItemRepository.findById(carritoItemId)
+                .orElseThrow(() -> new Exception("Ítem de carrito no encontrado con ID: " + carritoItemId));
+
+        if (carritoItem.getCarrito() == null || carritoItem.getCarrito().getCliente() == null ||
+                !carritoItem.getCarrito().getCliente().getId().equals(cliente.getId())) {
+            throw new Exception("El ítem no pertenece al carrito del cliente especificado.");
+        }
+
         Carrito carrito = carritoItem.getCarrito();
         carrito.removeItem(carritoItem);
+
         carrito.setFechaUltimaModificacion(LocalDateTime.now());
         carritoRepository.save(carrito);
+
         return mapCarritoToDto(carrito);
     }
-    
 
     @Override
     @Transactional
     public CarritoResponseDTO vaciarCarrito(Cliente cliente) throws Exception {
         validarPropietarioCliente(cliente);
-        Carrito carrito = carritoRepository.findByCliente(cliente)
-                .orElseThrow(() -> new Exception("No se encontró un carrito para el cliente " + cliente.getEmail()));
-        carrito.getItems().clear();
-        carrito.setFechaUltimaModificacion(LocalDateTime.now());
-        carritoRepository.save(carrito);
-        return mapCarritoToDto(carrito);
-    }
-
-    private Carrito getOrCreateCarritoEntity(Cliente cliente) {
-        return carritoRepository.findByCliente(cliente).orElseGet(() -> {
-            Carrito nuevoCarrito = new Carrito();
-            nuevoCarrito.setCliente(cliente);
-            return carritoRepository.save(nuevoCarrito);
-        });
-    }
-
-    private CarritoItem findAndValidateCarritoItem(Cliente cliente, Integer carritoItemId) throws Exception {
-        if (carritoItemId == null) {
-            throw new Exception("ID del ítem del carrito no puede ser nulo.");
+        if (cliente == null || cliente.getId() == null) {
+            throw new Exception("Cliente no válido.");
         }
-        CarritoItem carritoItem = carritoItemRepository.findById(carritoItemId)
-                .orElseThrow(() -> new Exception("Ítem de carrito no encontrado con ID: " + carritoItemId));
-        if (carritoItem.getCarrito() == null || carritoItem.getCarrito().getCliente() == null ||
-                !carritoItem.getCarrito().getCliente().getId().equals(cliente.getId())) {
-            throw new Exception("El ítem no pertenece al carrito del cliente especificado.");
+
+        Optional<Carrito> carritoOpt = carritoRepository.findByCliente(cliente);
+        if (carritoOpt.isPresent()) {
+            Carrito carrito = carritoOpt.get();
+            carrito.getItems().clear();
+            carrito.setFechaUltimaModificacion(LocalDateTime.now());
+            carritoRepository.save(carrito);
+            return mapCarritoToDto(carrito);
+        } else {
+            return getOrCreateCarrito(cliente);
         }
-        return carritoItem;
     }
 
     private CarritoResponseDTO mapCarritoToDto(Carrito carrito) {
@@ -192,6 +230,9 @@ public class CarritoServiceImpl implements CarritoService {
         }
         dto.setFechaCreacion(carrito.getFechaCreacion());
         dto.setFechaUltimaModificacion(carrito.getFechaUltimaModificacion());
+
+        double totalGeneralCarrito = 0.0;
+
         if (carrito.getItems() != null) {
             dto.setItems(carrito.getItems().stream().map(itemEntity -> {
                 CarritoItemResponseDTO itemDto = new CarritoItemResponseDTO();
@@ -202,15 +243,19 @@ public class CarritoServiceImpl implements CarritoService {
                 }
                 itemDto.setCantidad(itemEntity.getCantidad());
                 itemDto.setPrecioUnitarioAlAgregar(itemEntity.getPrecioUnitarioAlAgregar());
-                itemDto.setSubtotalItem(itemEntity.getSubtotalItem());
+
+                double subtotalItem = 0.0;
+                if (itemEntity.getCantidad() != null && itemEntity.getPrecioUnitarioAlAgregar() != null) {
+                    subtotalItem = itemEntity.getCantidad() * itemEntity.getPrecioUnitarioAlAgregar();
+                }
+                itemDto.setSubtotalItem(subtotalItem);
                 return itemDto;
             }).collect(Collectors.toList()));
-        } else {
-             dto.setItems(new ArrayList<>());
+
+            totalGeneralCarrito = dto.getItems().stream()
+                    .mapToDouble(CarritoItemResponseDTO::getSubtotalItem)
+                    .sum();
         }
-        double totalGeneralCarrito = dto.getItems().stream()
-                .mapToDouble(CarritoItemResponseDTO::getSubtotalItem)
-                .sum();
         dto.setTotalCarrito(totalGeneralCarrito);
         return dto;
     }

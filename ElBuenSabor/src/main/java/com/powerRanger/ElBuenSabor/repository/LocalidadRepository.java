@@ -1,8 +1,9 @@
 package com.powerRanger.ElBuenSabor.repository;
 
 import com.powerRanger.ElBuenSabor.entities.Localidad;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface LocalidadRepository extends BaseRepository<Localidad, Integer> { // Cambiado a BaseRepository
+public interface LocalidadRepository extends JpaRepository<Localidad, Integer> {
 }

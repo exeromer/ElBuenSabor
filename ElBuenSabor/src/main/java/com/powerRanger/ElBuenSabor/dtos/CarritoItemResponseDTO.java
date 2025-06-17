@@ -1,22 +1,22 @@
 package com.powerRanger.ElBuenSabor.dtos;
 
 public class CarritoItemResponseDTO {
-    private Integer id;
+    private Long id; // ID del CarritoItem
     private Integer articuloId;
     private String articuloDenominacion;
     private Integer cantidad;
     private Double precioUnitarioAlAgregar;
-    private Double subtotalItem;
+    private Double subtotalItem; // Calculado: cantidad * precioUnitarioAlAgregar
 
     public CarritoItemResponseDTO() {
     }
 
     // Getters y Setters
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) { // <-- CAMBIO AQUÍ: de Long a Integer
+    public void setId(Long id) {
         this.id = id;
     }
 

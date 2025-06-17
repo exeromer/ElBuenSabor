@@ -9,13 +9,14 @@ import com.powerRanger.ElBuenSabor.repository.PedidoRepository;
 import com.powerRanger.ElBuenSabor.repository.ArticuloInsumoRepository;
 import com.powerRanger.ElBuenSabor.repository.ArticuloRepository;
 import com.powerRanger.ElBuenSabor.repository.ArticuloManufacturadoRepository;
-// Asumiendo que Mappers.java existe o los mappers están aquí
-import com.powerRanger.ElBuenSabor.mappers.Mappers;
+import com.powerRanger.ElBuenSabor.mappers.Mappers; // Asumiendo que Mappers.java existe y está aquí
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
+import org.slf4j.Logger; // Importar Logger
+import org.slf4j.LoggerFactory; // Importar LoggerFactory
 
 import java.time.LocalDate;
 import java.util.List;
@@ -32,8 +33,10 @@ public class FacturaServiceImpl implements FacturaService {
     @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
     @Autowired private ArticuloRepository articuloRepository;
     @Autowired private ArticuloManufacturadoRepository articuloManufacturadoRepository;
+    @Autowired private StockInsumoSucursalService stockInsumoSucursalService; // Inyectar el nuevo servicio
+    private static final Logger logger = LoggerFactory.getLogger(FacturaServiceImpl.class); // Inicializar Logger
 
-
+    // --- MAPPERS (o usar la clase Mappers inyectada) ---
     private FacturaResponseDTO convertToResponseDto(Factura factura) {
         if (factura == null) return null;
         FacturaResponseDTO dto = new FacturaResponseDTO();
@@ -171,7 +174,7 @@ public class FacturaServiceImpl implements FacturaService {
 
         Pedido pedidoOriginal = facturaAAnular.getPedido();
         if (pedidoOriginal == null) {
-            // Esto no debería ocurrir si la lógica de creación de factura es correcta.
+            logger.error("La factura con ID {} no tiene un pedido asociado. No se puede procesar la anulación de stock.", id);
             throw new Exception("La factura con ID " + id + " no tiene un pedido asociado. No se puede procesar la anulación de stock.");
         }
 
@@ -179,68 +182,100 @@ public class FacturaServiceImpl implements FacturaService {
         Pedido pedidoConDetalles = pedidoRepository.findById(pedidoOriginal.getId())
                 .orElseThrow(() -> new Exception("Pedido asociado con ID " + pedidoOriginal.getId() + " no pudo ser recargado para la anulación."));
 
-        // El estado del pedido al momento de la facturación era ENTREGADO.
-        // La lógica de reposición se basará principalmente en si el insumo es para elaborar o no.
-        System.out.println("DEBUG ANULACION: Anulando factura ID: " + id + " para Pedido ID: " + pedidoConDetalles.getId() + ". Estado original del pedido (al facturar): " + pedidoConDetalles.getEstado() + " (Se asume ENTREGADO para facturación).");
-
-        if (pedidoConDetalles.getDetalles() == null || pedidoConDetalles.getDetalles().isEmpty()) {
-            System.out.println("WARN ANULACION: El pedido ID " + pedidoConDetalles.getId() + " no tiene detalles. No se repondrá stock.");
-        } else {
-            System.out.println("DEBUG ANULACION: Número de detalles en pedidoConDetalles: " + pedidoConDetalles.getDetalles().size()); // LOG AÑADIDO
-            for (DetallePedido detallePedido : pedidoConDetalles.getDetalles()) {
-                Articulo articuloDelDetalleOriginal = detallePedido.getArticulo();
-                if (articuloDelDetalleOriginal == null) {
-                    System.err.println("WARN ANULACION: Detalle de pedido ID " + detallePedido.getId() + " no tiene un artículo asociado. Se omitirá para reposición.");
-                    continue;
-                }
-                int cantidadEnPedido = detallePedido.getCantidad();
-                // Log para ver qué tipo de proxy es inicialmente
-                System.out.println("DEBUG ANULACION: Procesando detalle para Artículo ID: " + articuloDelDetalleOriginal.getId() +
-                        ", Denominación: " + articuloDelDetalleOriginal.getDenominacion() +
-                        ", Cantidad en pedido: " + cantidadEnPedido +
-                        ", Tipo Original del Detalle: " + articuloDelDetalleOriginal.getClass().getName());
-
-                // Intentar obtener la instancia concreta
-                ArticuloInsumo insumoConcreto = null;
-                ArticuloManufacturado manufacturadoConcreto = null;
-
-                // Primero intenta como ArticuloInsumo
-                Optional<ArticuloInsumo> optInsumo = articuloInsumoRepository.findById(articuloDelDetalleOriginal.getId());
-                if (optInsumo.isPresent()) {
-                    insumoConcreto = optInsumo.get();
-                    System.out.println("DEBUG ANULACION:   Artículo es INSUMO. Denominación: " + insumoConcreto.getDenominacion() + ", esParaElaborar: " + insumoConcreto.getEsParaElaborar());
-
-                    if (insumoConcreto.getEsParaElaborar() != null && !insumoConcreto.getEsParaElaborar()) {
-                        double stockPrevio = insumoConcreto.getStockActual() != null ? insumoConcreto.getStockActual() : 0.0;
-                        insumoConcreto.setStockActual(stockPrevio + cantidadEnPedido);
-                        articuloInsumoRepository.save(insumoConcreto); // Guardar la instancia concreta
-                        System.out.println("DEBUG ANULACION:     Stock de Insumo (No para elaborar) " + insumoConcreto.getDenominacion() + " actualizado de " + stockPrevio + " a " + insumoConcreto.getStockActual());
-                    } else {
-                        System.out.println("DEBUG ANULACION:     Insumo " + insumoConcreto.getDenominacion() + " es para elaborar o flag es nulo. No se repone stock para factura de pedido entregado.");
-                    }
-                } else {
-                    // Si no es Insumo, intenta como ArticuloManufacturado
-                    Optional<ArticuloManufacturado> optManuf = articuloManufacturadoRepository.findById(articuloDelDetalleOriginal.getId());
-                    if (optManuf.isPresent()) {
-                        manufacturadoConcreto = optManuf.get();
-                        System.out.println("DEBUG ANULACION:   Es MANUFACTURADO: " + manufacturadoConcreto.getDenominacion() + ". Los componentes no se reponen para una factura de un pedido entregado.");
-                        // No se reponen componentes aquí para un pedido ENTREGADO.
-                    } else {
-                        // Si no es ninguno de los dos, es un Articulo base o un error.
-                        System.err.println("WARN ANULACION:   Artículo ID " + articuloDelDetalleOriginal.getId() + " no se encontró como Insumo ni como Manufacturado específico. No se procesa para reposición de stock.");
-                    }
-                }
-            }
-            System.out.println("DEBUG ANULACION: Procesamiento de reposición de stock (condicionada) completada para factura ID: " + id);
-        }
+        // Reponer stock
+        restituirStockDeFacturaAnulada(pedidoConDetalles);
 
         // 3. Actualizar estado de la factura
         facturaAAnular.setEstadoFactura(EstadoFactura.ANULADA);
         facturaAAnular.setFechaAnulacion(LocalDate.now());
         Factura facturaGuardada = facturaRepository.save(facturaAAnular);
 
-        System.out.println("INFO: Factura ID: " + id + " anulada correctamente.");
+        logger.info("Factura ID: {} anulada correctamente.", id);
         return convertToResponseDto(facturaGuardada);
     }
 
+    /**
+     * Restituye el stock de los insumos asociados a los artículos de un pedido
+     * cuando una factura es anulada.
+     * La restitución se realiza por sucursal.
+     * @param pedido El pedido asociado a la factura anulada, con sus detalles cargados.
+     * @throws Exception Si no se encuentra la sucursal del pedido, o algún artículo/insumo.
+     */
+    private void restituirStockDeFacturaAnulada(Pedido pedido) throws Exception {
+        logger.info("DEBUG ANULACION: Iniciando restitución de stock para Pedido ID: {}. Estado original del pedido (al facturar): {} (Se asume ENTREGADO para facturación).", pedido.getId(), pedido.getEstado());
+
+        if (pedido.getDetalles() == null || pedido.getDetalles().isEmpty()) {
+            logger.warn("WARN ANULACION: El pedido ID {} no tiene detalles. No se repondrá stock.", pedido.getId());
+            return;
+        }
+
+        Integer sucursalId = pedido.getSucursal() != null ? pedido.getSucursal().getId() : null;
+        if (sucursalId == null) {
+            logger.error("ERROR ANULACION: No se pudo determinar la sucursal del pedido ID {}. No se restituirá stock.", pedido.getId());
+            throw new Exception("No se pudo determinar la sucursal del pedido para restituir stock.");
+        }
+
+        logger.debug("DEBUG ANULACION: Número de detalles en pedidoConDetalles: {}", pedido.getDetalles().size());
+        for (DetallePedido detallePedido : pedido.getDetalles()) {
+            Articulo articuloDelDetalleOriginal = detallePedido.getArticulo();
+            if (articuloDelDetalleOriginal == null) {
+                logger.warn("WARN ANULACION: Detalle de pedido ID {} no tiene un artículo asociado. Se omitirá para reposición.", detallePedido.getId());
+                continue;
+            }
+            int cantidadEnPedido = detallePedido.getCantidad();
+
+            // Es crucial recargar el artículo para que JPA lo instancie como la subclase correcta (proxy o entidad completa)
+            Articulo refreshedArticulo = articuloRepository.findById(articuloDelDetalleOriginal.getId())
+                    .orElseThrow(() -> new Exception("ERROR ANULACION: Artículo ID " + articuloDelDetalleOriginal.getId() + " del detalle no encontrado para restitución."));
+
+            logger.debug("DEBUG ANULACION: Procesando detalle para Artículo ID: {}, Denominación: '{}', Cantidad en pedido: {}, Tipo Real: {}",
+                    refreshedArticulo.getId(), refreshedArticulo.getDenominacion(), cantidadEnPedido, refreshedArticulo.getClass().getName());
+
+
+            if (refreshedArticulo instanceof ArticuloInsumo) {
+                ArticuloInsumo insumo = (ArticuloInsumo) refreshedArticulo;
+                logger.debug("DEBUG ANULACION:   Artículo es INSUMO. Denominación: '{}', esParaElaborar: {}.", insumo.getDenominacion(), insumo.getEsParaElaborar());
+
+                if (insumo.getEsParaElaborar() != null && !insumo.getEsParaElaborar()) {
+                    stockInsumoSucursalService.addStock(insumo.getId(), sucursalId, (double) cantidadEnPedido);
+                    logger.info("INFO ANULACION:     Stock de Insumo (No para elaborar) '{}' (ID: {}) en Sucursal ID {} restituido en {}. Nuevo stock gestionado por StockInsumoSucursalService.",
+                            insumo.getDenominacion(), insumo.getId(), sucursalId, cantidadEnPedido);
+                } else {
+                    logger.info("INFO ANULACION:     Insumo '{}' (ID: {}) es 'para elaborar'. Su stock no se repone directamente para una factura de pedido entregado.", insumo.getDenominacion(), insumo.getId());
+                }
+            } else if (refreshedArticulo instanceof ArticuloManufacturado) {
+                ArticuloManufacturado manufacturado = (ArticuloManufacturado) refreshedArticulo;
+                logger.debug("DEBUG ANULACION:   Es MANUFACTURADO: '{}' (ID: {}). Procesando insumos componentes.", manufacturado.getDenominacion(), manufacturado.getId());
+
+                List<ArticuloManufacturadoDetalle> detallesReceta = manufacturado.getManufacturadoDetalles();
+                // Recargar detalles de receta si no están cargados (LAZY)
+                if (detallesReceta == null || detallesReceta.isEmpty()) {
+                    ArticuloManufacturado loadedManufacturado = articuloManufacturadoRepository.findById(manufacturado.getId())
+                            .orElseThrow(() -> new Exception("ERROR ANULACION: No se pudo recargar el manufacturado '{}' (ID: {}) para obtener detalles de receta.".formatted(manufacturado.getDenominacion(), manufacturado.getId())));
+                    detallesReceta = loadedManufacturado.getManufacturadoDetalles();
+                    if (detallesReceta == null || detallesReceta.isEmpty()) {
+                        logger.warn("WARN ANULACION: El ArticuloManufacturado '{}' (ID: {}) no tiene detalles de receta. No se restituirán sus insumos.", manufacturado.getDenominacion(), manufacturado.getId());
+                        continue;
+                    }
+                }
+
+                for (ArticuloManufacturadoDetalle detalleRecetaItem : detallesReceta) {
+                    ArticuloInsumo insumoComponente = detalleRecetaItem.getArticuloInsumo();
+                    if (insumoComponente == null) {
+                        logger.error("ERROR ANULACION: Detalle de receta para manufacturado '{}' (ID: {}) tiene insumo componente nulo.", manufacturado.getDenominacion(), manufacturado.getId());
+                        throw new Exception("Error en receta de '" + manufacturado.getDenominacion() + "': insumo nulo.");
+                    }
+                    Double cantidadNecesariaPorReceta = detalleRecetaItem.getCantidad();
+                    Double cantidadAReponerTotal = cantidadNecesariaPorReceta * cantidadEnPedido;
+
+                    stockInsumoSucursalService.addStock(insumoComponente.getId(), sucursalId, cantidadAReponerTotal);
+                    logger.info("INFO ANULACION:     Stock de insumo componente '{}' (ID: {}) en Sucursal ID {} restituido en {}. Nuevo stock gestionado por StockInsumoSucursalService.",
+                            insumoComponente.getDenominacion(), insumoComponente.getId(), sucursalId, cantidadAReponerTotal);
+                }
+            } else {
+                logger.warn("WARN ANULACION: Artículo ID {} ('{}') no es insumo ni manufacturado. No se procesa restitución de stock.", refreshedArticulo.getId(), refreshedArticulo.getDenominacion());
+            }
+        }
+        logger.info("DEBUG ANULACION: Procesamiento de reposición de stock completada para factura asociada a Pedido ID: {}.", pedido.getId());
+    }
 }

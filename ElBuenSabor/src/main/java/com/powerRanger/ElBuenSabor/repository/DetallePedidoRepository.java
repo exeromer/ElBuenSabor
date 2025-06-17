@@ -4,13 +4,14 @@ import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoRankingDTO;
 import com.powerRanger.ElBuenSabor.entities.DetallePedido;
 import com.powerRanger.ElBuenSabor.entities.enums.Estado;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
 
-public interface DetallePedidoRepository extends BaseRepository<DetallePedido, Integer> { // Cambiado a BaseRepository
+public interface DetallePedidoRepository extends JpaRepository<DetallePedido, Integer> {
 
     @Query("SELECT NEW com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoRankingDTO(art.id, art.denominacion, SUM(dp.cantidad)) " +
             "FROM DetallePedido dp JOIN dp.articulo art " +

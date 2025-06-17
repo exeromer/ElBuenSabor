@@ -7,7 +7,11 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "carrito_item")
-public class CarritoItem extends BaseEntity { // HEREDA DE BaseEntity Y USA ID INTEGER
+public class CarritoItem {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id; // Usar Long para IDs
 
     @NotNull(message = "El carrito es obligatorio para el ítem")
     @ManyToOne(fetch = FetchType.LAZY)
@@ -26,12 +30,20 @@ public class CarritoItem extends BaseEntity { // HEREDA DE BaseEntity Y USA ID I
 
     @NotNull(message = "El precio unitario al agregar es obligatorio")
     @Column(name = "precio_unitario_al_agregar", nullable = false)
-    private Double precioUnitarioAlAgregar;
+    private Double precioUnitarioAlAgregar; // Precio del artículo al momento de agregarlo
 
     public CarritoItem() {
     }
 
     // Getters y Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public Carrito getCarrito() {
         return carrito;
     }
@@ -64,7 +76,8 @@ public class CarritoItem extends BaseEntity { // HEREDA DE BaseEntity Y USA ID I
         this.precioUnitarioAlAgregar = precioUnitarioAlAgregar;
     }
 
-    @Transient
+    // Subtotal calculado (no persistido, se calcula al vuelo o en DTOs/Servicio)
+    @Transient // Indica a JPA que no persista este campo
     public Double getSubtotalItem() {
         if (this.cantidad != null && this.precioUnitarioAlAgregar != null) {
             return this.cantidad * this.precioUnitarioAlAgregar;
@@ -77,11 +90,11 @@ public class CarritoItem extends BaseEntity { // HEREDA DE BaseEntity Y USA ID I
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         CarritoItem that = (CarritoItem) o;
-        return Objects.equals(this.getId(), that.getId());
+        return Objects.equals(id, that.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.getId());
+        return Objects.hash(id);
     }
 }

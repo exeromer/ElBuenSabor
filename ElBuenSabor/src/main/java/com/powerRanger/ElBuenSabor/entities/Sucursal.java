@@ -17,7 +17,10 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class Sucursal extends BaseEntity {
+public class Sucursal {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
     @Column(nullable = false, unique = true)
     @NotEmpty(message = "El nombre de la sucursal no puede estar vacío")
@@ -69,6 +72,8 @@ public class Sucursal extends BaseEntity {
     }
 
     // Getters y Setters
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
     public String getNombre() { return nombre; }
     public void setNombre(String nombre) { this.nombre = nombre; }
     public LocalTime getHorarioApertura() { return horarioApertura; }
@@ -93,19 +98,28 @@ public class Sucursal extends BaseEntity {
         if (this.categorias == null) this.categorias = new ArrayList<>();
         if (!this.categorias.contains(categoria)) {
             this.categorias.add(categoria);
+            // Si Categoria tuviera List<Sucursal> y fuera bidireccional gestionada también desde Categoria:
+            // if(categoria.getSucursales() == null) categoria.setSucursales(new ArrayList<>());
+            // if(!categoria.getSucursales().contains(this)) categoria.getSucursales().add(this);
         }
     }
     public void removeCategoria(Categoria categoria) {
         if (this.categorias != null) this.categorias.remove(categoria);
+        // if (categoria != null && categoria.getSucursales() != null) categoria.getSucursales().remove(this);
     }
+
     public void addPromocion(Promocion promocion) {
         if (this.promociones == null) this.promociones = new ArrayList<>();
         if (!this.promociones.contains(promocion)) {
             this.promociones.add(promocion);
+            // Si Promocion tuviera List<Sucursal> y fuera bidireccional gestionada también desde Promocion:
+            // if(promocion.getSucursales() == null) promocion.setSucursales(new ArrayList<>());
+            // if(!promocion.getSucursales().contains(this)) promocion.getSucursales().add(this);
         }
     }
     public void removePromocion(Promocion promocion) {
         if (this.promociones != null) this.promociones.remove(promocion);
+        // if (promocion != null && promocion.getSucursales() != null) promocion.getSucursales().remove(this);
     }
 
     @Override
@@ -113,17 +127,19 @@ public class Sucursal extends BaseEntity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Sucursal sucursal = (Sucursal) o;
-        return Objects.equals(this.getId(), sucursal.getId());
+        return Objects.equals(id, sucursal.id);
     }
 
     @Override
-    public int hashCode() { return Objects.hash(this.getId()); }
+    public int hashCode() { return Objects.hash(id); }
 
     @Override
     public String toString() {
-        return "Sucursal{" + "id=" + this.getId() + ", nombre='" + nombre + '\'' +
+        return "Sucursal{" + "id=" + id + ", nombre='" + nombre + '\'' +
                 ", empresa=" + (empresa != null ? empresa.getNombre() : "null") +
                 ", estadoActivo=" + estadoActivo +
+                ", numPromociones=" + (promociones != null ? promociones.size() : 0) +
+                ", numCategorias=" + (categorias != null ? categorias.size() : 0) +
                 '}';
     }
 }

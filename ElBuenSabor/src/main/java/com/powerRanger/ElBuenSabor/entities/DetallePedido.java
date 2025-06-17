@@ -13,7 +13,10 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class DetallePedido extends BaseEntity { // HEREDA DE BaseEntity
+public class DetallePedido {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
     @NotNull(message = "La cantidad es obligatoria")
     @Min(value = 1, message = "La cantidad debe ser al menos 1")
@@ -33,9 +36,14 @@ public class DetallePedido extends BaseEntity { // HEREDA DE BaseEntity
     @JoinColumn(name = "pedido_id", nullable = false)
     private Pedido pedido;
 
+    // Eliminamos estadoActivo y pagoRealizado de aquí, ya que no los estamos usando y son más propios del Pedido.
+    // Si los necesitas, puedes volver a añadirlos con @NotNull.
+
     public DetallePedido() {}
 
     // Getters y Setters
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
     public Integer getCantidad() { return cantidad; }
     public void setCantidad(Integer cantidad) { this.cantidad = cantidad; }
     public Double getSubTotal() { return subTotal; }
@@ -50,14 +58,16 @@ public class DetallePedido extends BaseEntity { // HEREDA DE BaseEntity
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         DetallePedido that = (DetallePedido) o;
-        return Objects.equals(this.getId(), that.getId());
+        return Objects.equals(id, that.id);
     }
 
     @Override
-    public int hashCode() { return Objects.hash(this.getId()); }
+    public int hashCode() { return Objects.hash(id); }
 
     @Override
     public String toString() {
-        return "DetallePedido{" + "id=" + this.getId() + ", cantidad=" + cantidad + ", subTotal=" + subTotal + '}';
+        return "DetallePedido{" + "id=" + id + ", cantidad=" + cantidad + ", subTotal=" + subTotal +
+                ", articuloId=" + (articulo != null ? articulo.getId() : "null") +
+                ", pedidoId=" + (pedido != null ? pedido.getId() : "null") + '}';
     }
 }

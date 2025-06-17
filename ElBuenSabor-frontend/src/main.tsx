@@ -1,10 +1,12 @@
+// Nueva carpeta/ElBuenSabor-frontend/src/main.tsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App.tsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './styles/main.sass';
 import { Auth0Provider } from '@auth0/auth0-react'; // Importa Auth0Provider
-import { CartProvider } from './context/CartContext.tsx'; // Importa CartProvider
+import { CartProvider } from './context/CartContext.tsx'; // Importa CartProvider´´
+import  { UserProvider } from './context/UserContext.tsx'; 
 
 const AUTH0_DOMAIN = import.meta.env.VITE_AUTH0_DOMAIN;
 const AUTH0_CLIENT_ID = import.meta.env.VITE_AUTH0_CLIENT_ID;
@@ -25,10 +27,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
           audience: AUTH0_AUDIENCE,
           scope: import.meta.env.VITE_AUTH0_SCOPE || 'openid profile email',
         }}
+        useRefreshTokens={true}
+        cacheLocation="localstorage"
       >
+        <UserProvider>
         <CartProvider>
           <App />
         </CartProvider>
+        </UserProvider>
       </Auth0Provider>
     ) : (
       <div>Error: Configuración de autenticación faltante. Por favor, revisa tus variables de entorno.</div>

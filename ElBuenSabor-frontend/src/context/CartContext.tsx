@@ -1,241 +1,190 @@
 /**
  * @file CartContext.tsx
  * @description Contexto de React para gestionar el estado global del carrito de compras.
- * Proporciona las funciones y el estado necesarios para añadir, eliminar, actualizar cantidades,
- * vaciar el carrito y obtener el total y el conteo de ítems.
- * El carrito se persiste automáticamente en el `localStorage` del navegador.
- *
- * @context `CartContext`: Objeto de contexto creado para compartir el estado del carrito.
- * @provider `CartProvider`: Componente proveedor que envuelve la aplicación y gestiona el estado del carrito.
- * @hook `useCart`: Hook personalizado para consumir el `CartContext` y acceder a sus valores.
- *
- * @hook `useState`: Gestiona el estado interno del carrito (`cart`).
- * @hook `useEffect`: Sincroniza el carrito con `localStorage` cada vez que cambia.
+ * Obtiene el carrito "ligero" del backend y lo enriquece con los detalles completos de cada artículo
+ * para que los componentes del UI tengan toda la información necesaria (imágenes, tiempos, etc.).
+ * Todas las operaciones (añadir, eliminar, etc.) se sincronizan con la API del backend.
  */
-import { createContext, useContext, useState, type ReactNode, useEffect } from 'react';
-// Importa los tipos necesarios, incluyendo Domicilio y ArticuloManufacturado
-import type { ArticuloManufacturado, ArticuloInsumo, CartItem, Domicilio } from '../types/types';
+import React, { createContext, useContext, useState, type ReactNode, useEffect, useCallback } from 'react';
+import { useAuth0 } from '@auth0/auth0-react';
+import { useUser } from './UserContext';
+import { CarritoService } from '../services/carritoService';
+import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService'; 
+import type { ArticuloManufacturado, CarritoResponseDTO, CartItem } from '../types/types';
 
-/**
- * @interface CartContextType
- * @description Define la estructura del objeto de contexto que se provee a los consumidores.
- * @property {CartItem[]} cart - El array de ítems en el carrito.
- * @property {(item: ArticuloManufacturado | ArticuloInsumo, quantity?: number) => void} addToCart - Función para añadir un artículo al carrito.
- * @property {(itemId: number) => void} removeFromCart - Función para eliminar un artículo del carrito por su ID.
- * @property {(itemId: number, newQuantity: number) => void} updateQuantity - Función para actualizar la cantidad de un artículo en el carrito.
- * @property {() => void} clearCart - Función para vaciar completamente el carrito.
- * @property {() => number} getCartTotal - Función que devuelve el total monetario del carrito.
- * @property {() => number} getCartItemCount - Función que devuelve el número total de ítems (cantidad sumada) en el carrito.
- * @property {(itemId: number) => number} getItemQuantity - Función que devuelve la cantidad de un artículo específico en el carrito.
- *
- * @property {'local' | 'delivery' | null} deliveryOption - Opción de envío seleccionada ('local', 'delivery', o null).
- * @property {(option: 'local' | 'delivery' | null) => void} setDeliveryOption - Función para establecer la opción de envío.
- * @property {Domicilio | null} selectedAddress - La dirección de entrega seleccionada para delivery, o null.
- * @property {(address: Domicilio | null) => void} setSelectedAddress - Función para establecer la dirección de entrega.
- * @property {'mercadoPago' | 'efectivo' | null} paymentMethod - Método de pago seleccionado ('mercadoPago', 'efectivo', o null).
- * @property {(method: 'mercadoPago' | 'efectivo' | null) => void} setPaymentMethod - Función para establecer el método de pago.
- */
 interface CartContextType {
   cart: CartItem[];
-  addToCart: (item: ArticuloManufacturado | ArticuloInsumo, quantity?: number) => void;
-  removeFromCart: (itemId: number) => void;
-  updateQuantity: (itemId: number, newQuantity: number) => void;
-  clearCart: () => void;
-  getCartTotal: () => number;
+  isLoading: boolean;
+  error: string | null;
+  addToCart: (item: ArticuloManufacturado, quantity?: number) => Promise<void>;
+  removeFromCart: (itemId: number) => Promise<void>;
+  updateQuantity: (itemId: number, newQuantity: number) => Promise<void>;
+  clearCart: () => Promise<void>;
   getCartItemCount: () => number;
-  getItemQuantity: (itemId: number) => number;
-
-  // NUEVAS PROPIEDADES PARA EL CHECKOUT
-  deliveryOption: 'local' | 'delivery' | null;
-  setDeliveryOption: (option: 'local' | 'delivery' | null) => void;
-  selectedAddress: Domicilio | null;
-  setSelectedAddress: (address: Domicilio | null) => void;
-  paymentMethod: 'mercadoPago' | 'efectivo' | null;
-  setPaymentMethod: (method: 'mercadoPago' | 'efectivo' | null) => void;
+  getItemQuantity: (articuloId: number) => number;
+  getCartTotal: () => number;
 }
 
-/**
- * @constant CartContext
- * @description Crea el contexto de React para el carrito. Inicialmente `undefined`.
- */
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-/**
- * @component CartProvider
- * @description Componente proveedor que encapsula la lógica del carrito de compras.
- * Proporciona el estado y las funciones del carrito a todos sus componentes hijos.
- * El estado del carrito se carga desde `localStorage` al inicio y se guarda cada vez que cambia.
- * @param {object} props - Las propiedades del componente.
- * @param {ReactNode} props.children - Los componentes hijos que tendrán acceso al contexto del carrito.
- */
+const carritoService = new CarritoService();
+const articuloManufacturadoService = new ArticuloManufacturadoService(); 
+
 export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  /**
-   * @state cart
-   * @description Estado que almacena el array de `CartItem`s.
-   * Se inicializa intentando cargar un carrito guardado desde `localStorage`.
-   * Si no hay un carrito guardado, se inicializa como un array vacío.
-   */
-  const [cart, setCart] = useState<CartItem[]>(() => {
-    try {
-      const savedCart = localStorage.getItem('el-buen-sabor-cart');
-      return savedCart ? JSON.parse(savedCart) : [];
-    } catch (error) {
-      console.error("Error al parsear el carrito de localStorage:", error);
-      return []; // Devuelve un carrito vacío en caso de error de parseo
+  const { getAccessTokenSilently, isAuthenticated } = useAuth0();
+  const { cliente, isLoading: isUserLoading } = useUser();
+
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [backendCart, setBackendCart] = useState<CarritoResponseDTO | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const enrichCartItems = useCallback(async (lightCart: CarritoResponseDTO): Promise<CartItem[]> => {
+    if (!lightCart.items || lightCart.items.length === 0) {
+      return [];
     }
-  });
+  
+    // 1. Obtener todos los IDs de artículos que necesitamos buscar
+    const articleIds = lightCart.items.map(item => item.articuloId);
+    if (articleIds.length === 0) return [];
 
-  // NUEVOS ESTADOS PARA EL CHECKOUT
-  const [deliveryOption, setDeliveryOption] = useState<'local' | 'delivery' | null>(null);
-  const [selectedAddress, setSelectedAddress] = useState<Domicilio | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<'mercadoPago' | 'efectivo' | null>(null);
+    // 2. Crear un array de promesas para obtener los detalles de cada artículo
+    const promises = articleIds.map(id =>
+      articuloManufacturadoService.getArticuloManufacturadoById(id)
+    );
+  
+    try {
+      // 3. Esperar a que todas las búsquedas de detalles se completen
+      const articulosDetallados = await Promise.all(promises);
+      
+      // 4. Crear un mapa para buscar fácilmente los detalles por ID
+      const articulosMap = new Map<number, ArticuloManufacturado>();
+      articulosDetallados.forEach(art => {
+        if (art && art.id) {
+          articulosMap.set(art.id, art);
+        }
+      });
+  
+      // 5. Construir el array "enriquecido" de forma segura
+      const richCartItems: CartItem[] = [];
+      lightCart.items.forEach(item => {
+        // Solo incluimos el ítem si tiene un ID y hemos encontrado sus detalles
+        if (item.id !== undefined && articulosMap.has(item.articuloId)) {
+          richCartItems.push({
+            id: item.id, // El ID ahora es un número garantizado
+            articulo: articulosMap.get(item.articuloId)!, // El '!' es seguro por el .has()
+            quantity: item.cantidad,
+          });
+        }
+      });
+  
+      return richCartItems;
+    } catch (err) {
+      console.error("Error al enriquecer el carrito:", err);
+      setError("No se pudieron cargar los detalles completos de los productos en el carrito.");
+      return [];
+    }
+  }, []);
 
-  /**
-   * @hook useEffect
-   * @description Hook que se ejecuta cada vez que el estado `cart` cambia.
-   * Persiste el estado actual del carrito en `localStorage`.
-   */
+  const fetchAndSetCart = useCallback(async () => {
+    if (!isAuthenticated || !cliente?.id) {
+      setCart([]);
+      setBackendCart(null);
+      setIsLoading(false);
+      return;
+    }
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const token = await getAccessTokenSilently();
+      const fetchedBackendCart = await carritoService.getCart(cliente.id, token);
+      setBackendCart(fetchedBackendCart);
+      const richItems = await enrichCartItems(fetchedBackendCart);
+      setCart(richItems);
+    } catch (err) {
+      console.error("Error al obtener el carrito:", err);
+      setError("No se pudo cargar el carrito.");
+      setCart([]);
+      setBackendCart(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isAuthenticated, cliente, getAccessTokenSilently, enrichCartItems]);
+
   useEffect(() => {
-    try {
-      localStorage.setItem('el-buen-sabor-cart', JSON.stringify(cart));
-    } catch (error) {
-      console.error("Error al guardar el carrito en localStorage:", error);
+    if (!isUserLoading) {
+      fetchAndSetCart();
     }
-  }, [cart]); // Dependencia: se re-ejecuta cada vez que `cart` cambia
-
-  /**
-   * @function addToCart
-   * @description Añade un artículo al carrito o incrementa su cantidad si ya existe.
-   * @param {ArticuloManufacturado | ArticuloInsumo} item - El artículo a añadir (puede ser manufacturado o insumo).
-   * @param {number} [quantity=1] - La cantidad de unidades a añadir. Por defecto es 1.
-   */
-  const addToCart = (item: ArticuloManufacturado | ArticuloInsumo, quantity: number = 1) => {
-    setCart((prevCart) => {
-      const existingItemIndex = prevCart.findIndex((cartItem) => cartItem.articulo.id === item.id);
-
-      if (existingItemIndex > -1) {
-        // Si el artículo ya está en el carrito, crea una nueva copia del carrito
-        // y actualiza la cantidad del ítem existente para evitar mutación directa.
-        const newCart = [...prevCart];
-        newCart[existingItemIndex] = {
-          ...newCart[existingItemIndex],
-          quantity: newCart[existingItemIndex].quantity + quantity,
-        };
-        return newCart;
-      } else {
-        // Si el artículo no está, lo añade como un nuevo `CartItem`.
-        return [...prevCart, { articulo: item, quantity }];
-      }
-    });
+  }, [isUserLoading, fetchAndSetCart]);
+  
+  const handleApiAndUpdateState = async (apiCall: () => Promise<CarritoResponseDTO>) => {
+    setIsLoading(true);
+    try {
+      const updatedBackendCart = await apiCall();
+      setBackendCart(updatedBackendCart);
+      const richItems = await enrichCartItems(updatedBackendCart);
+      setCart(richItems);
+    } catch (err) {
+      console.error("Error en operación del carrito:", err);
+      setError("No se pudo actualizar el carrito.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  /**
-   * @function removeFromCart
-   * @description Elimina un artículo del carrito por su ID.
-   * @param {number} itemId - El ID del artículo a eliminar del carrito.
-   */
-  const removeFromCart = (itemId: number) => {
-    setCart((prevCart) => prevCart.filter((item) => item.articulo.id !== itemId));
+  const addToCart = async (item: ArticuloManufacturado, quantity: number = 1) => {
+    if (!cliente?.id || !item.id) {
+      setError("Debes iniciar sesión para añadir productos.");
+      return;
+    }
+    const token = await getAccessTokenSilently();
+    await handleApiAndUpdateState(() => carritoService.addItem(cliente.id!, { articuloId: item.id!, cantidad: quantity }, token));
+  };
+  
+  const updateQuantity = async (itemId: number, newQuantity: number) => {
+    if (!cliente?.id) return;
+    const token = await getAccessTokenSilently();
+    if (newQuantity > 0) {
+      await handleApiAndUpdateState(() => carritoService.updateItemQuantity(cliente.id!, itemId, { nuevaCantidad: newQuantity }, token));
+    } else {
+      await handleApiAndUpdateState(() => carritoService.removeItem(cliente.id!, itemId, token));
+    }
   };
 
-  /**
-   * @function updateQuantity
-   * @description Actualiza la cantidad de un artículo específico en el carrito.
-   * Si `newQuantity` es 0 o menor, el artículo se elimina del carrito.
-   * @param {number} itemId - El ID del artículo cuya cantidad se actualizará.
-   * @param {number} newQuantity - La nueva cantidad deseada para el artículo.
-   */
-  const updateQuantity = (itemId: number, newQuantity: number) => {
-    setCart((prevCart) => {
-      const newCart = prevCart.map((item) =>
-        item.articulo.id === itemId ? { ...item, quantity: newQuantity } : item
-      );
-      // Filtra y elimina los ítems cuya cantidad sea 0 o menos.
-      return newCart.filter(item => item.quantity > 0);
-    });
+  const removeFromCart = async (itemId: number) => {
+    await updateQuantity(itemId, 0);
+  };
+  
+  const clearCart = async () => {
+    if (!cliente?.id) return;
+    const token = await getAccessTokenSilently();
+    await handleApiAndUpdateState(() => carritoService.clearCart(cliente.id!, token));
   };
 
-  /**
-   * @function getItemQuantity
-   * @description Obtiene la cantidad actual de un artículo específico en el carrito.
-   * @param {number} itemId - El ID del artículo cuya cantidad se desea obtener.
-   * @returns {number} La cantidad del artículo en el carrito, o 0 si no se encuentra.
-   */
-  const getItemQuantity = (itemId: number): number => {
-    const item = cart.find(cartItem => cartItem.articulo.id === itemId);
+  const getItemQuantity = (articuloId: number): number => {
+    const item = cart.find(cartItem => cartItem.articulo.id === articuloId);
     return item ? item.quantity : 0;
   };
-
-  /**
-   * @function clearCart
-   * @description Vacía completamente el carrito de compras y resetea las opciones de checkout.
-   */
-  const clearCart = () => {
-    setCart([]);
-    // Resetea también estas nuevas opciones de checkout
-    setDeliveryOption(null);
-    setSelectedAddress(null);
-    setPaymentMethod(null);
+  
+  const getCartItemCount = (): number => {
+    return cart.reduce((total, item) => total + item.quantity, 0);
   };
 
-  /**
-   * @function getCartTotal
-   * @description Calcula y devuelve el precio total de todos los artículos en el carrito.
-   * @returns {number} El total monetario del carrito.
-   */
-  const getCartTotal = () => {
-    return cart.reduce((total, item) => total + (item.articulo.precioVenta * item.quantity), 0);
-  };
-
-  /**
-   * @function getCartItemCount
-   * @description Calcula y devuelve el número total de unidades de artículos en el carrito.
-   * (Ej. si tienes 2 hamburguesas y 1 bebida, el conteo sería 3).
-   * @returns {number} El número total de ítems contados por cantidad.
-   */
-  const getCartItemCount = () => {
-    return cart.reduce((count, item) => count + item.quantity, 0);
+  const getCartTotal = (): number => {
+    return backendCart?.totalCarrito ?? 0;
   };
 
   return (
-    // Provee el estado del carrito y las funciones de manipulación a los componentes hijos
-    <CartContext.Provider
-      value={{
-        cart,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        getCartTotal,
-        getCartItemCount,
-        getItemQuantity,
-
-        // PROPORCIONA LOS NUEVOS VALORES DEL CONTEXTO
-        deliveryOption,
-        setDeliveryOption,
-        selectedAddress,
-        setSelectedAddress,
-        paymentMethod,
-        setPaymentMethod,
-      }}
-    >
+    <CartContext.Provider value={{ cart, isLoading, error, addToCart, removeFromCart, updateQuantity, clearCart, getCartItemCount, getItemQuantity, getCartTotal }}>
       {children}
     </CartContext.Provider>
   );
 };
 
-/**
- * @hook useCart
- * @description Hook personalizado para consumir el `CartContext`.
- * Simplifica el acceso a las funciones y el estado del carrito desde cualquier componente
- * que esté dentro de `CartProvider`. Lanza un error si se usa fuera del proveedor.
- * @returns {CartContextType} El objeto de contexto del carrito.
- * @throws {Error} Si `useCart` se usa fuera de un `CartProvider`.
- */
 export const useCart = () => {
   const context = useContext(CartContext);
   if (context === undefined) {
-    // Esto es un error de desarrollo, indica que el hook se usó incorrectamente.
     throw new Error('useCart must be used within a CartProvider');
   }
   return context;

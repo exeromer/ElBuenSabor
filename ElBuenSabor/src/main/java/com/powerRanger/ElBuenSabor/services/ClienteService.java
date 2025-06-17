@@ -1,17 +1,16 @@
 package com.powerRanger.ElBuenSabor.services;
 
 import com.powerRanger.ElBuenSabor.dtos.ClienteRequestDTO;
-import com.powerRanger.ElBuenSabor.dtos.ClienteResponseDTO;
-import com.powerRanger.ElBuenSabor.entities.Cliente;
+import com.powerRanger.ElBuenSabor.dtos.ClienteResponseDTO; // Importar DTO de respuesta
 import jakarta.validation.Valid;
 import java.util.List;
 
-public interface ClienteService extends BaseService<Cliente, Integer> {
+public interface ClienteService {
+    List<ClienteResponseDTO> getAllClientes(String searchTerm); // Modificado
+    ClienteResponseDTO getClienteById(Integer id) throws Exception;
+    ClienteResponseDTO getMyProfile(String auth0Id) throws Exception; // Metodo para obtener el perfil del cliente autenticado
 
-    List<ClienteResponseDTO> findAllClientes(String searchTerm);
-    ClienteResponseDTO findClienteById(Integer id) throws Exception;
-
-    ClienteResponseDTO getMyProfile(String auth0Id) throws Exception;
+    ClienteResponseDTO findOrCreateClienteByAuth0Id(String auth0Id, String email) throws Exception;
 
     ClienteResponseDTO createCliente(@Valid ClienteRequestDTO dto) throws Exception;
     ClienteResponseDTO updateCliente(Integer id, @Valid ClienteRequestDTO dto) throws Exception;

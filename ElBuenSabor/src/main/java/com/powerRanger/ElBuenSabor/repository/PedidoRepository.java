@@ -4,19 +4,23 @@ import com.powerRanger.ElBuenSabor.dtos.ClienteRankingDTO;
 import com.powerRanger.ElBuenSabor.entities.Pedido;
 import com.powerRanger.ElBuenSabor.entities.enums.Estado;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
+// Otros imports que puedas necesitar
 
-public interface PedidoRepository extends BaseRepository<Pedido, Integer> { // Cambiado a BaseRepository
+public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 
+    // --- MÉTODOS EXISTENTES QUE PUEDAS TENER ---
+    // ...
+
+    // 🟢 AÑADIR ESTE MÉTODO 👇
     List<Pedido> findByClienteIdAndEstadoActivoTrueOrderByFechaPedidoDesc(Integer clienteId);
 
-    Optional<Pedido> findByMercadoPagoPreferenceId(String mercadoPagoPreferenceId);
-
+    // --- NUEVOS MÉTODOS PARA RANKING DE CLIENTES ---
     @Query("SELECT NEW com.powerRanger.ElBuenSabor.dtos.ClienteRankingDTO(" +
             "c.id, CONCAT(c.nombre, ' ', c.apellido), c.email, " +
             "COUNT(p.id) AS cantidadPedidos, " +

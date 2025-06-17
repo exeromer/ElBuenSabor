@@ -3,6 +3,7 @@ package com.powerRanger.ElBuenSabor.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpMethod; // <--- Importación añadida
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
@@ -21,7 +22,10 @@ public class DevSecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorizeRequests ->
-                        authorizeRequests.anyRequest().permitAll() // Permite todo en dev
+                        authorizeRequests
+                                // Permitir solicitudes OPTIONS para CORS preflight
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // <--- LÍNEA AÑADIDA
+                                .anyRequest().permitAll() // Permite todo lo demás en dev
                 );
         return http.build();
     }

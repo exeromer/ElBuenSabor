@@ -21,7 +21,10 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
-public class Pedido extends BaseEntity {
+public class Pedido {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
 
     @NotNull(message = "La hora estimada de finalización es obligatoria")
     @JsonFormat(pattern = "HH:mm:ss")
@@ -79,28 +82,28 @@ public class Pedido extends BaseEntity {
     @NotNull(message = "El estado activo es obligatorio")
     private Boolean estadoActivo = true;
 
-    @Column(name = "mp_payment_id")
-    private String mercadoPagoPaymentId;
-
     @Column(name = "mp_preference_id")
-    private String mercadoPagoPreferenceId;
+    private String mpPreferenceId;
+
+    @Column(name = "mp_payment_id")
+    private String mpPaymentId;
 
     @Column(name = "mp_payment_status")
-    private String mercadoPagoPaymentStatus;
+    private String mpPaymentStatus;
 
     @Column(name = "descuento_aplicado")
     private Double descuentoAplicado;
-
 
     public Pedido() {
         this.detalles = new ArrayList<>();
         this.fechaPedido = LocalDate.now();
         this.estado = Estado.PENDIENTE;
         this.estadoActivo = true;
-        this.descuentoAplicado = 0.0;
     }
 
-    // Getters y Setters
+    // Getters y Setters (completos)
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
     public LocalTime getHoraEstimadaFinalizacion() { return horaEstimadaFinalizacion; }
     public void setHoraEstimadaFinalizacion(LocalTime horaEstimadaFinalizacion) { this.horaEstimadaFinalizacion = horaEstimadaFinalizacion; }
     public Double getTotal() { return total; }
@@ -129,15 +132,24 @@ public class Pedido extends BaseEntity {
     public void setFechaBaja(LocalDate fechaBaja) { this.fechaBaja = fechaBaja; }
     public Boolean getEstadoActivo() { return estadoActivo; }
     public void setEstadoActivo(Boolean estadoActivo) { this.estadoActivo = estadoActivo; }
-    public String getMercadoPagoPaymentId() { return mercadoPagoPaymentId; }
-    public void setMercadoPagoPaymentId(String mercadoPagoPaymentId) { this.mercadoPagoPaymentId = mercadoPagoPaymentId; }
-    public String getMercadoPagoPreferenceId() { return mercadoPagoPreferenceId; }
-    public void setMercadoPagoPreferenceId(String mercadoPagoPreferenceId) { this.mercadoPagoPreferenceId = mercadoPagoPreferenceId; }
-    public String getMercadoPagoPaymentStatus() { return mercadoPagoPaymentStatus; }
-    public void setMercadoPagoPaymentStatus(String mercadoPagoPaymentStatus) { this.mercadoPagoPaymentStatus = mercadoPagoPaymentStatus; }
-    public Double getDescuentoAplicado() { return descuentoAplicado; }
-    public void setDescuentoAplicado(Double descuentoAplicado) { this.descuentoAplicado = descuentoAplicado; }
 
+    public String getMpPreferenceId() {return mpPreferenceId;}
+
+    public void setMpPreferenceId(String mpPreferenceId) {this.mpPreferenceId = mpPreferenceId;}
+
+    public String getMpPaymentId() {return mpPaymentId;}
+
+    public void setMpPaymentId(String mpPaymentId) {this.mpPaymentId = mpPaymentId;}
+
+    public String getMpPaymentStatus() {return mpPaymentStatus;}
+
+    public void setMpPaymentStatus(String mpPaymentStatus) {this.mpPaymentStatus = mpPaymentStatus;}
+
+    public Double getDescuentoAplicado() {return descuentoAplicado;}
+
+    public void setDescuentoAplicado(Double descuentoAplicado) {this.descuentoAplicado = descuentoAplicado;}
+
+    // Métodos Helper
     public void addDetalle(DetallePedido detalle) {
         if (this.detalles == null) {
             this.detalles = new ArrayList<>();
@@ -158,15 +170,15 @@ public class Pedido extends BaseEntity {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Pedido pedido = (Pedido) o;
-        return Objects.equals(this.getId(), pedido.getId());
+        return Objects.equals(id, pedido.id);
     }
 
     @Override
-    public int hashCode() { return Objects.hash(this.getId()); }
+    public int hashCode() { return Objects.hash(id); }
 
     @Override
     public String toString() {
-        return "Pedido{" + "id=" + this.getId() + ", fechaPedido=" + fechaPedido + ", estado=" + estado + ", total=" + total +
+        return "Pedido{" + "id=" + id + ", fechaPedido=" + fechaPedido + ", estado=" + estado + ", total=" + total +
                 ", cliente=" + (cliente != null ? cliente.getNombre() + " " + cliente.getApellido() : "null") + '}';
     }
 }

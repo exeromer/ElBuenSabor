@@ -1,10 +1,8 @@
 package com.powerRanger.ElBuenSabor.services;
 
-import com.powerRanger.ElBuenSabor.dtos.*;
+import com.powerRanger.ElBuenSabor.dtos.*; // Importar todos los DTOs
 import com.powerRanger.ElBuenSabor.entities.*;
-import com.powerRanger.ElBuenSabor.repository.ArticuloRepository;
-import com.powerRanger.ElBuenSabor.repository.ImagenRepository;
-import com.powerRanger.ElBuenSabor.repository.PromocionRepository;
+import com.powerRanger.ElBuenSabor.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,72 +17,46 @@ import java.util.stream.Collectors;
 
 @Service
 @Validated
-public class PromocionServiceImpl extends BaseServiceImpl<Promocion, PromocionRepository> implements PromocionService {
+public class PromocionServiceImpl implements PromocionService {
 
+    @Autowired private PromocionRepository promocionRepository;
     @Autowired private ImagenRepository imagenRepository;
     @Autowired private ArticuloRepository articuloRepository;
+    // Inyectar servicios de Imagen y Artículo si los mappers están allí, o tener mappers aquí.
+    // Por simplicidad, haremos los mappers aquí.
 
-    public PromocionServiceImpl(PromocionRepository promocionRepository) {
-        super(promocionRepository);
+    // --- MAPPERS ---
+    private ArticuloSimpleResponseDTO convertArticuloToSimpleDto(Articulo articulo) {
+        if (articulo == null) return null;
+        ArticuloSimpleResponseDTO dto = new ArticuloSimpleResponseDTO();
+        dto.setId(articulo.getId());
+        dto.setDenominacion(articulo.getDenominacion());
+        dto.setPrecioVenta(articulo.getPrecioVenta());
+        return dto;
     }
 
-    // --- MÉTODOS ESPECÍFICOS IMPLEMENTADOS DESDE PromocionService ---
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<PromocionResponseDTO> findAllPromociones() {
-        try {
-            // Llama al método genérico heredado
-            return super.findAll().stream()
-                    .map(this::convertToResponseDto)
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new RuntimeException("Error al buscar las promociones: " + e.getMessage(), e);
+    private PromocionDetalleResponseDTO convertPromocionDetalleToDto(PromocionDetalle detalle) {
+        if (detalle == null) return null;
+        PromocionDetalleResponseDTO dto = new PromocionDetalleResponseDTO();
+        dto.setId(detalle.getId());
+        dto.setCantidad(detalle.getCantidad());
+        if (detalle.getArticulo() != null) {
+            dto.setArticulo(convertArticuloToSimpleDto(detalle.getArticulo()));
         }
+        return dto;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public PromocionResponseDTO findPromocionById(Integer id) throws Exception {
-        // Llama al método genérico heredado
-        Promocion promocion = super.findById(id);
-        return convertToResponseDto(promocion);
+    private ImagenResponseDTO convertImagenToDto(Imagen imagen) {
+        if (imagen == null) return null;
+        ImagenResponseDTO dto = new ImagenResponseDTO();
+        dto.setId(imagen.getId());
+        dto.setDenominacion(imagen.getDenominacion());
+        dto.setEstadoActivo(imagen.getEstadoActivo());
+        // Si ImagenResponseDTO necesita IDs de artículo/promoción, y tu entidad Imagen los tiene
+        // if (imagen.getArticulo() != null) dto.setArticuloId(imagen.getArticulo().getId());
+        // if (imagen.getPromocion() != null) dto.setPromocionId(imagen.getPromocion().getId());
+        return dto;
     }
-
-    @Override
-    @Transactional
-    public PromocionResponseDTO createPromocion(@Valid PromocionRequestDTO dto) throws Exception {
-        Promocion promocion = new Promocion();
-        promocion.setImagenes(new ArrayList<>());
-        promocion.setDetallesPromocion(new ArrayList<>());
-        mapRequestDtoToEntity(dto, promocion);
-
-        // Llama al método genérico heredado
-        Promocion promocionGuardada = super.save(promocion);
-        return convertToResponseDto(promocionGuardada);
-    }
-
-    @Override
-    @Transactional
-    public PromocionResponseDTO updatePromocion(Integer id, @Valid PromocionRequestDTO dto) throws Exception {
-        Promocion promocionExistente = super.findById(id);
-        mapRequestDtoToEntity(dto, promocionExistente);
-
-        // Llama al método genérico heredado
-        Promocion promocionActualizada = super.update(id, promocionExistente);
-        return convertToResponseDto(promocionActualizada);
-    }
-
-    @Override
-    @Transactional
-    public void softDelete(Integer id) throws Exception {
-        Promocion promocion = super.findById(id);
-        promocion.setEstadoActivo(false);
-        // Llama al método genérico heredado para guardar el cambio
-        super.save(promocion);
-    }
-
-    // --- MAPPERS Y LÓGICA PRIVADA (SIN CAMBIOS) ---
 
     private PromocionResponseDTO convertToResponseDto(Promocion promocion) {
         if (promocion == null) return null;
@@ -122,60 +94,83 @@ public class PromocionServiceImpl extends BaseServiceImpl<Promocion, PromocionRe
         promocion.setPrecioPromocional(dto.getPrecioPromocional());
         promocion.setEstadoActivo(dto.getEstadoActivo() != null ? dto.getEstadoActivo() : true);
 
+        // Manejo de Imágenes
         List<Imagen> imagenesActuales = new ArrayList<>(promocion.getImagenes());
         for(Imagen img : imagenesActuales) {
-            promocion.removeImagen(img);
+            promocion.removeImagen(img); // Desasociar y marcar para orphanRemoval
         }
         if (dto.getImagenIds() != null) {
             for (Integer imagenId : new HashSet<>(dto.getImagenIds())) {
                 Imagen imagen = imagenRepository.findById(imagenId)
                         .orElseThrow(() -> new Exception("Imagen no encontrada con ID: " + imagenId));
-                promocion.addImagen(imagen);
+                promocion.addImagen(imagen); // Helper se encarga de la bidireccionalidad
             }
         }
 
+        // Manejo de Detalles de Promoción
         List<PromocionDetalle> detallesActuales = new ArrayList<>(promocion.getDetallesPromocion());
         for(PromocionDetalle detalle : detallesActuales) {
-            promocion.removeDetallePromocion(detalle);
+            promocion.removeDetallePromocion(detalle); // Desasociar y marcar para orphanRemoval
         }
         if (dto.getDetallesPromocion() != null) {
             for (PromocionDetalleRequestDTO detalleDto : dto.getDetallesPromocion()) {
                 Articulo articulo = articuloRepository.findById(detalleDto.getArticuloId())
                         .orElseThrow(() -> new Exception("Artículo no encontrado con ID: " + detalleDto.getArticuloId()));
+
                 PromocionDetalle nuevoDetalle = new PromocionDetalle();
                 nuevoDetalle.setArticulo(articulo);
                 nuevoDetalle.setCantidad(detalleDto.getCantidad());
+                // Si PromocionDetalle tuviera estadoActivo, se setearía aquí
                 promocion.addDetallePromocion(nuevoDetalle);
             }
         }
     }
 
-    private ArticuloSimpleResponseDTO convertArticuloToSimpleDto(Articulo articulo) {
-        if (articulo == null) return null;
-        ArticuloSimpleResponseDTO dto = new ArticuloSimpleResponseDTO();
-        dto.setId(articulo.getId());
-        dto.setDenominacion(articulo.getDenominacion());
-        dto.setPrecioVenta(articulo.getPrecioVenta());
-        return dto;
+    @Override
+    @Transactional(readOnly = true)
+    public List<PromocionResponseDTO> getAll() {
+        return promocionRepository.findAll().stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
 
-    private PromocionDetalleResponseDTO convertPromocionDetalleToDto(PromocionDetalle detalle) {
-        if (detalle == null) return null;
-        PromocionDetalleResponseDTO dto = new PromocionDetalleResponseDTO();
-        dto.setId(detalle.getId());
-        dto.setCantidad(detalle.getCantidad());
-        if (detalle.getArticulo() != null) {
-            dto.setArticulo(convertArticuloToSimpleDto(detalle.getArticulo()));
-        }
-        return dto;
+    @Override
+    @Transactional(readOnly = true)
+    public PromocionResponseDTO getById(Integer id) throws Exception {
+        Promocion promocion = promocionRepository.findById(id)
+                .orElseThrow(() -> new Exception("Promoción no encontrada con ID: " + id));
+        return convertToResponseDto(promocion);
     }
 
-    private ImagenResponseDTO convertImagenToDto(Imagen imagen) {
-        if (imagen == null) return null;
-        ImagenResponseDTO dto = new ImagenResponseDTO();
-        dto.setId(imagen.getId());
-        dto.setDenominacion(imagen.getDenominacion());
-        dto.setEstadoActivo(imagen.getEstadoActivo());
-        return dto;
+    @Override
+    @Transactional
+    public PromocionResponseDTO create(@Valid PromocionRequestDTO dto) throws Exception {
+        Promocion promocion = new Promocion();
+        // Inicializar listas en la nueva promoción
+        promocion.setImagenes(new ArrayList<>());
+        promocion.setDetallesPromocion(new ArrayList<>());
+        mapRequestDtoToEntity(dto, promocion);
+        Promocion promocionGuardada = promocionRepository.save(promocion);
+        return convertToResponseDto(promocionGuardada);
+    }
+
+    @Override
+    @Transactional
+    public PromocionResponseDTO update(Integer id, @Valid PromocionRequestDTO dto) throws Exception {
+        Promocion promocionExistente = promocionRepository.findById(id)
+                .orElseThrow(() -> new Exception("Promoción no encontrada con ID: " + id));
+        mapRequestDtoToEntity(dto, promocionExistente);
+        Promocion promocionActualizada = promocionRepository.save(promocionExistente);
+        return convertToResponseDto(promocionActualizada);
+    }
+
+    @Override
+    @Transactional
+    public void softDelete(Integer id) throws Exception {
+        Promocion promocion = promocionRepository.findById(id)
+                .orElseThrow(() -> new Exception("Promoción no encontrada con ID: " + id));
+        promocion.setEstadoActivo(false);
+        // Si Promocion tuviera fechaBaja, se setearía aquí.
+        promocionRepository.save(promocion);
     }
 }

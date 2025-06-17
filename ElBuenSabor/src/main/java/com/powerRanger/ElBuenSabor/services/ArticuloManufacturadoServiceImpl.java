@@ -1,11 +1,19 @@
 package com.powerRanger.ElBuenSabor.services;
 
-import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoDetalleDTO;
 import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoRequestDTO;
-import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoResponseDTO;
-import com.powerRanger.ElBuenSabor.entities.*;
+import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoDetalleDTO; // DTO de Request para detalle
+import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoResponseDTO; // DTO de Response
+import com.powerRanger.ElBuenSabor.dtos.StockInsumoSucursalResponseDTO; // Importar StockInsumoSucursalResponseDTO
+import com.powerRanger.ElBuenSabor.entities.ArticuloManufacturado;
+import com.powerRanger.ElBuenSabor.entities.ArticuloManufacturadoDetalle;
+import com.powerRanger.ElBuenSabor.entities.ArticuloInsumo;
+import com.powerRanger.ElBuenSabor.entities.Categoria;
+import com.powerRanger.ElBuenSabor.entities.UnidadMedida;
 import com.powerRanger.ElBuenSabor.mappers.Mappers;
-import com.powerRanger.ElBuenSabor.repository.*;
+import com.powerRanger.ElBuenSabor.repository.ArticuloManufacturadoRepository;
+import com.powerRanger.ElBuenSabor.repository.ArticuloInsumoRepository;
+import com.powerRanger.ElBuenSabor.repository.CategoriaRepository;
+import com.powerRanger.ElBuenSabor.repository.UnidadMedidaRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,65 +26,14 @@ import java.util.stream.Collectors;
 
 @Service
 @Validated
-public class ArticuloManufacturadoServiceImpl extends BaseServiceImpl<ArticuloManufacturado, ArticuloManufacturadoRepository> implements ArticuloManufacturadoService {
+public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoService {
 
+    @Autowired private ArticuloManufacturadoRepository manufacturadoRepository;
     @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
     @Autowired private CategoriaRepository categoriaRepository;
     @Autowired private UnidadMedidaRepository unidadMedidaRepository;
     @Autowired private Mappers mappers;
-
-    public ArticuloManufacturadoServiceImpl(ArticuloManufacturadoRepository manufacturadoRepository) {
-        super(manufacturadoRepository);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ArticuloManufacturadoResponseDTO> findAllManufacturados(String searchTerm, Boolean estadoActivo) {
-        List<ArticuloManufacturado> manufacturados;
-        String trimmedSearchTerm = (searchTerm != null && !searchTerm.trim().isEmpty()) ? searchTerm.trim() : null;
-
-        if (trimmedSearchTerm != null) {
-            manufacturados = baseRepository.searchByDenominacionWithOptionalStatus(trimmedSearchTerm, estadoActivo);
-        } else {
-            manufacturados = baseRepository.findAllWithOptionalStatus(estadoActivo);
-        }
-
-        return manufacturados.stream().map(am -> {
-            ArticuloManufacturadoResponseDTO dto = (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(am);
-            ArticuloManufacturado amConDetalles = baseRepository.findById(am.getId()).orElse(am);
-            dto.setUnidadesDisponiblesCalculadas(calcularUnidadesDisponibles(amConDetalles));
-            return dto;
-        }).collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public ArticuloManufacturadoResponseDTO findManufacturadoById(Integer id) throws Exception {
-        ArticuloManufacturado manufacturado = super.findById(id);
-        ArticuloManufacturadoResponseDTO dto = (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(manufacturado);
-        dto.setUnidadesDisponiblesCalculadas(calcularUnidadesDisponibles(manufacturado));
-        return dto;
-    }
-
-    @Override
-    @Transactional
-    public ArticuloManufacturadoResponseDTO createArticuloManufacturado(@Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
-        ArticuloManufacturado am = new ArticuloManufacturado();
-        am.setImagenes(new ArrayList<>());
-        am.setManufacturadoDetalles(new ArrayList<>());
-        mapRequestDtoToEntity(dto, am);
-        ArticuloManufacturado amGuardado = super.save(am);
-        return (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(amGuardado);
-    }
-
-    @Override
-    @Transactional
-    public ArticuloManufacturadoResponseDTO updateArticuloManufacturado(Integer id, @Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
-        ArticuloManufacturado amExistente = super.findById(id);
-        mapRequestDtoToEntity(dto, amExistente);
-        ArticuloManufacturado amActualizado = super.update(id, amExistente);
-        return (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(amActualizado);
-    }
+    @Autowired private StockInsumoSucursalService stockInsumoSucursalService; // Inyectar el nuevo servicio de stock por sucursal
 
     private void mapRequestDtoToEntity(ArticuloManufacturadoRequestDTO dto, ArticuloManufacturado am) throws Exception {
         am.setDenominacion(dto.getDenominacion());
@@ -102,6 +59,7 @@ public class ArticuloManufacturadoServiceImpl extends BaseServiceImpl<ArticuloMa
             for (ArticuloManufacturadoDetalleDTO detalleDto : dto.getManufacturadoDetalles()) {
                 ArticuloInsumo insumo = articuloInsumoRepository.findById(detalleDto.getArticuloInsumoId())
                         .orElseThrow(() -> new Exception("ArticuloInsumo no encontrado con ID: " + detalleDto.getArticuloInsumoId()));
+
                 ArticuloManufacturadoDetalle nuevoDetalle = new ArticuloManufacturadoDetalle();
                 nuevoDetalle.setArticuloInsumo(insumo);
                 nuevoDetalle.setCantidad(detalleDto.getCantidad());
@@ -111,28 +69,130 @@ public class ArticuloManufacturadoServiceImpl extends BaseServiceImpl<ArticuloMa
         }
     }
 
-    private Integer calcularUnidadesDisponibles(ArticuloManufacturado manufacturado) {
+    @Override
+    @Transactional(readOnly = true)
+    public List<ArticuloManufacturadoResponseDTO> getAllArticuloManufacturados(String searchTerm, Boolean estadoActivo) {
+        List<ArticuloManufacturado> manufacturados;
+        String trimmedSearchTerm = (searchTerm != null && !searchTerm.trim().isEmpty()) ? searchTerm.trim() : null;
+
+        if (trimmedSearchTerm != null) {
+            manufacturados = manufacturadoRepository.searchByDenominacionWithOptionalStatus(trimmedSearchTerm, estadoActivo);
+        } else {
+            manufacturados = manufacturadoRepository.findAllWithOptionalStatus(estadoActivo);
+        }
+
+        return manufacturados.stream().map(am -> {
+            ArticuloManufacturadoResponseDTO dto = (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(am);
+            // Aquí no tenemos un sucursalId para calcular unidades disponibles.
+            // Se asume que para una lista general, las unidades disponibles se calcularán en el frontend
+            // cuando se seleccione una sucursal, o se mostrará "N/A" o "0".
+            dto.setUnidadesDisponiblesCalculadas(0); //
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ArticuloManufacturadoResponseDTO getArticuloManufacturadoById(Integer id) throws Exception {
+        System.out.println("DEBUG SERVICE: getArticuloManufacturadoById llamado con ID: " + id);
+        ArticuloManufacturado manufacturado = manufacturadoRepository.findById(id)
+                .orElseThrow(() -> new Exception("Artículo Manufacturado no encontrado con ID: " + id));
+
+        ArticuloManufacturadoResponseDTO dto = (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(manufacturado);
+        // Similar al getAll, no tenemos un sucursalId aquí para calcular unidades.
+        // Si este método es llamado para una vista de detalle donde ya se conoce la sucursal,
+        // la firma de este método debería incluir `Integer sucursalId`.
+        dto.setUnidadesDisponiblesCalculadas(0); //
+        System.out.println("DEBUG SERVICE: Manufacturado ID: " + dto.getId() + " (" + dto.getDenominacion() + ") - Unidades Disponibles Asignadas al DTO: " + dto.getUnidadesDisponiblesCalculadas());
+        return dto;
+    }
+
+    @Override
+    @Transactional
+    public ArticuloManufacturadoResponseDTO createArticuloManufacturado(@Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
+        ArticuloManufacturado am = new ArticuloManufacturado();
+        am.setImagenes(new ArrayList<>());
+        am.setManufacturadoDetalles(new ArrayList<>());
+
+        mapRequestDtoToEntity(dto, am);
+        ArticuloManufacturado amGuardado = manufacturadoRepository.save(am);
+
+        ArticuloManufacturadoResponseDTO responseDto = (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(amGuardado);
+        responseDto.setUnidadesDisponiblesCalculadas(0); //
+
+        return responseDto;
+    }
+
+    @Override
+    @Transactional
+    public ArticuloManufacturadoResponseDTO updateArticuloManufacturado(Integer id, @Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
+        ArticuloManufacturado amExistente = manufacturadoRepository.findById(id)
+                .orElseThrow(() -> new Exception("Artículo Manufacturado no encontrado con ID: " + id));
+
+        mapRequestDtoToEntity(dto, amExistente);
+        ArticuloManufacturado amActualizado = manufacturadoRepository.save(amExistente);
+
+        ArticuloManufacturadoResponseDTO responseDto = (ArticuloManufacturadoResponseDTO) mappers.convertArticuloToResponseDto(amActualizado);
+        responseDto.setUnidadesDisponiblesCalculadas(0); //
+
+        return responseDto;
+    }
+
+    @Override
+    @Transactional
+    public void deleteArticuloManufacturado(Integer id) throws Exception {
+        if (!manufacturadoRepository.existsById(id)) {
+            throw new Exception("Artículo Manufacturado no encontrado con ID: " + id + " para eliminar.");
+        }
+        manufacturadoRepository.deleteById(id);
+    }
+
+    // Método que ahora recibe sucursalId
+    public Integer calcularUnidadesDisponibles(ArticuloManufacturado manufacturado, Integer sucursalId) throws Exception {
+        System.out.println("DEBUG CALC_UNID: Calculando unidades para manufacturado ID: " + manufacturado.getId() + " - " + manufacturado.getDenominacion() + " en sucursal ID: " + sucursalId);
+
         if (manufacturado.getManufacturadoDetalles() == null || manufacturado.getManufacturadoDetalles().isEmpty()) {
+            System.out.println("DEBUG CALC_UNID: Manufacturado ID: " + manufacturado.getId() + " no tiene detalles de receta. Unidades disponibles: 0");
             return 0;
         }
+
         int unidadesDisponiblesMinimo = Integer.MAX_VALUE;
+
         for (ArticuloManufacturadoDetalle detalleReceta : manufacturado.getManufacturadoDetalles()) {
             ArticuloInsumo insumoComponente = detalleReceta.getArticuloInsumo();
-            if (insumoComponente == null) return 0;
+            if (insumoComponente == null) {
+                System.err.println("WARN: Detalle de receta para " + manufacturado.getDenominacion() + " tiene un insumo nulo.");
+                return 0;
+            }
+            System.out.println("DEBUG CALC_UNID:   Procesando componente de receta: " + insumoComponente.getDenominacion() + " (ID: " + insumoComponente.getId() + ")");
 
-            ArticuloInsumo insumoConStockActual = articuloInsumoRepository.findById(insumoComponente.getId()).orElse(null);
-            if (insumoConStockActual == null || insumoConStockActual.getStockActual() == null) return 0;
+            // OBTENER EL DTO DEL STOCK POR SUCURSAL
+            StockInsumoSucursalResponseDTO stockInsumoSucursalDTO = stockInsumoSucursalService.getStockByInsumoAndSucursal(
+                    insumoComponente.getId(), sucursalId);
 
-            double stockActual = insumoConStockActual.getStockActual();
-            double cantidadNecesariaPorUnidad = detalleReceta.getCantidad();
-            if (cantidadNecesariaPorUnidad <= 0) continue;
-            if (stockActual < cantidadNecesariaPorUnidad) return 0;
+            // Acceder al stockActual desde el DTO
+            Double stockActual = stockInsumoSucursalDTO.getStockActual();
+            Double cantidadNecesariaPorUnidad = detalleReceta.getCantidad();
+            System.out.println("DEBUG CALC_UNID:     Insumo: " + insumoComponente.getDenominacion() + " - Stock Actual LEÍDO: " + stockActual + ", Cantidad Necesaria por Receta: " + cantidadNecesariaPorUnidad);
+
+            if (cantidadNecesariaPorUnidad <= 0) {
+                System.err.println("WARN CALC_UNID:    Insumo " + insumoComponente.getDenominacion() + " (ID: " + insumoComponente.getId() + ") tiene cantidadNecesariaPorUnidad CERO/NEGATIVA. Esto es un error en la receta. Unidades disponibles: 0");
+                return 0;
+            }
+
+            if (stockActual == null || stockActual < cantidadNecesariaPorUnidad) {
+                System.out.println("DEBUG CALC_UNID:     STOCK INSUFICIENTE para " + insumoComponente.getDenominacion() + ". Se necesitan " + cantidadNecesariaPorUnidad + ", disponibles " + (stockActual != null ? stockActual : 0.0) + ". Unidades disponibles: 0");
+                return 0;
+            }
 
             int unidadesConEsteInsumo = (int) Math.floor(stockActual / cantidadNecesariaPorUnidad);
+            System.out.println("DEBUG CALC_UNID:     Unidades que se pueden hacer con " + insumoComponente.getDenominacion() + ": " + unidadesConEsteInsumo);
             if (unidadesConEsteInsumo < unidadesDisponiblesMinimo) {
                 unidadesDisponiblesMinimo = unidadesConEsteInsumo;
             }
         }
-        return (unidadesDisponiblesMinimo == Integer.MAX_VALUE) ? 0 : unidadesDisponiblesMinimo;
+        Integer resultadoFinal = (unidadesDisponiblesMinimo == Integer.MAX_VALUE) ? 0 : unidadesDisponiblesMinimo;
+        System.out.println("DEBUG CALC_UNID: Final para manufacturado ID: " + manufacturado.getId() + " - Unidades Disponibles Calculadas: " + resultadoFinal);
+        return resultadoFinal;
     }
 }

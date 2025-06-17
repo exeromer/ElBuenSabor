@@ -12,7 +12,6 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -29,8 +28,8 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity(prePostEnabled = true) // Habilita @PreAuthorize, @PostAuthorize en métodos
-@Profile("!dev") // No se activará si el perfil "dev" está activo
+@EnableMethodSecurity(prePostEnabled = true)
+@Profile("!dev")
 public class SecurityConfig {
 
 
@@ -47,76 +46,75 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(authorizeRequests ->
                         authorizeRequests
-                                // ENDPOINTS PÚBLICOS
+                                // =================================================================================
+                                // 1. ENDPOINTS PÚBLICOS - Accesibles por CUALQUIERA (autenticado o no)
+                                // =================================================================================
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Pre-flight requests de CORS
+                                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll() // Swagger
+                                .requestMatchers("/ws/**").permitAll() // Websockets
+
+                                // Endpoints públicos de la API
                                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
-                                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/files/view/{filename}").permitAll()
 
-                                // LÍNEA AÑADIDA PARA WEBSOCKETS
-                                .requestMatchers("/ws/**").permitAll()
-
-                                // Permitir a cualquier usuario AUTENTICADO intentar acceder a su propio detalle vía auth0Id.
-                                .requestMatchers(HttpMethod.GET, "/api/usuarios/auth0/{auth0Id}").authenticated()
-
-                                // Permitir GET para ciertas entidades de catálogo sin autenticación
+                                // Endpoints de LECTURA de catálogos (Artículos, Categorías, etc.)
                                 .requestMatchers(HttpMethod.GET, "/api/categorias/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/unidadesmedida/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/articulos/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/articulosinsumo/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/articulosmanufacturados/**").permitAll()
 
-                                // REGLAS DE AUTORIZACIÓN ESPECÍFICAS
-                                .requestMatchers(HttpMethod.POST, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
-                                .requestMatchers(HttpMethod.PUT, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
-                                .requestMatchers(HttpMethod.DELETE, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                // =================================================================================
+                                // 2. ENDPOINTS PARA USUARIOS AUTENTICADOS - Requieren login, sin importar el rol
+                                // =================================================================================
+                                .requestMatchers(HttpMethod.GET, "/api/usuarios/auth0/{auth0Id}").authenticated()
 
-                                .requestMatchers(HttpMethod.POST, "/api/articulos/**", "/api/articulosinsumo/**", "/api/articulosmanufacturados/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
-                                .requestMatchers(HttpMethod.PUT, "/api/articulos/**", "/api/articulosinsumo/**", "/api/articulosmanufacturados/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
-                                .requestMatchers(HttpMethod.DELETE, "/api/articulos/**", "/api/articulosinsumo/**", "/api/articulosmanufacturados/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
-
-                                // Gestión de usuarios solo por ADMIN
-                                .requestMatchers(HttpMethod.GET, "/api/usuarios").hasAuthority("ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.POST, "/api/usuarios").hasAuthority("ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.PUT, "/api/usuarios/{id}").hasAuthority("ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.DELETE, "/api/usuarios/{id}").hasAuthority("ROLE_ADMIN")
-
-                                // Pedidos
+                                // =================================================================================
+                                // 3. REGLAS ESPECÍFICAS POR ROL
+                                // =================================================================================
+                                // ---- CLIENTE ----
                                 .requestMatchers(HttpMethod.POST, "/api/pedidos").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.POST, "/api/pedidos/cliente/{clienteId}/desde-carrito").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.GET, "/api/pedidos/mis-pedidos").hasAuthority("ROLE_CLIENTE")
-                                .requestMatchers(HttpMethod.GET, "/api/pedidos/cliente/{clienteId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.GET, "/api/pedidos/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
-                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/estado/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
-                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/{id}/estado").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
-
-                                // Carrito
+                                .requestMatchers(HttpMethod.GET, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.PUT, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.GET, "/api/clientes/{clienteId}/carrito").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.POST, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.PUT, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE")
-                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE")
-                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items/**").hasAuthority("ROLE_CLIENTE")
 
-                                // Clientes
-                                .requestMatchers(HttpMethod.GET, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE")
-                                .requestMatchers(HttpMethod.PUT, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE")
+                                // ---- CLIENTE y ADMIN ----
+                                .requestMatchers(HttpMethod.GET, "/api/clientes/usuario/{auth0Id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/api/pedidos/cliente/{clienteId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
                                 .requestMatchers(HttpMethod.POST,"/api/domicilios/").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
                                 .requestMatchers(HttpMethod.PUT,"/api/domicilios/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
                                 .requestMatchers(HttpMethod.DELETE,"/api/domicilios/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                                .requestMatchers("/api/clientes/**").hasAuthority("ROLE_ADMIN")
 
-                                // Facturas
-                                .requestMatchers(HttpMethod.GET,"/api/facturas/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
+                                // ---- EMPLEADOS (Cualquier tipo) y ADMIN ----
+                                .requestMatchers(HttpMethod.POST, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.PUT, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.DELETE, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.POST, "/api/articulos/**", "/api/articulosinsumo/**", "/api/articulosmanufacturados/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.PUT, "/api/articulos/**", "/api/articulosinsumo/**", "/api/articulosmanufacturados/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.DELETE, "/api/articulos/**", "/api/articulosinsumo/**", "/api/articulosmanufacturados/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.GET, "/api/pedidos/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/estado/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/{id}/estado").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.PUT,"/api/facturas/anular/{id}").hasAnyAuthority("ROLE_ADMIN","ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.POST,"/api/facturas/generar-desde-pedido").hasAnyAuthority("ROLE_ADMIN","ROLE_EMPLEADO")
-
-                                // Imagenes
                                 .requestMatchers(HttpMethod.POST, "/api/files/upload").hasAnyAuthority( "ROLE_ADMIN", "ROLE_EMPLEADO")
-                                .requestMatchers(HttpMethod.GET, "/api/files/view/{filename}").permitAll()
 
-                                // Estadisticas
-                                .requestMatchers(HttpMethod.GET, "/api/estadisticas/**").hasAuthority("ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.POST, "/api/estadisticas/**").hasAuthority("ROLE_ADMIN")
+                                // ---- CUALQUIER USUARIO LOGUEADO PUEDE VER SU FACTURA ----
+                                .requestMatchers(HttpMethod.GET,"/api/facturas/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
 
-                                // Cualquier otra petición requiere autenticación
+                                // ---- SOLO ADMIN ----
+                                .requestMatchers("/api/clientes/**").hasAuthority("ROLE_ADMIN") // Regla general para clientes al final
+                                .requestMatchers("/api/usuarios/**").hasAuthority("ROLE_ADMIN")
+                                .requestMatchers("/api/estadisticas/**").hasAuthority("ROLE_ADMIN")
+
+                                // =================================================================================
+                                // 4. CATCH-ALL - Cualquier otra petición no definida arriba, requiere autenticación
+                                // =================================================================================
                                 .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2ResourceServer ->

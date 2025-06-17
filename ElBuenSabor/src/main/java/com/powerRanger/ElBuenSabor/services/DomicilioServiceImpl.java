@@ -1,10 +1,10 @@
 package com.powerRanger.ElBuenSabor.services;
 
 import com.powerRanger.ElBuenSabor.dtos.DomicilioRequestDTO;
-import com.powerRanger.ElBuenSabor.dtos.DomicilioResponseDTO;
-import com.powerRanger.ElBuenSabor.dtos.LocalidadResponseDTO;
-import com.powerRanger.ElBuenSabor.dtos.PaisResponseDTO;
-import com.powerRanger.ElBuenSabor.dtos.ProvinciaResponseDTO;
+import com.powerRanger.ElBuenSabor.dtos.DomicilioResponseDTO; // DTO de respuesta para Domicilio
+import com.powerRanger.ElBuenSabor.dtos.LocalidadResponseDTO; // DTO de respuesta para Localidad
+import com.powerRanger.ElBuenSabor.dtos.ProvinciaResponseDTO; // DTO de respuesta para Provincia
+import com.powerRanger.ElBuenSabor.dtos.PaisResponseDTO;      // DTO de respuesta para Pais
 import com.powerRanger.ElBuenSabor.entities.Domicilio;
 import com.powerRanger.ElBuenSabor.entities.Localidad;
 import com.powerRanger.ElBuenSabor.entities.Pais;
@@ -13,83 +13,50 @@ import com.powerRanger.ElBuenSabor.repository.DomicilioRepository;
 import com.powerRanger.ElBuenSabor.repository.LocalidadRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Transactional; // Spring's Transactional
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
-import java.util.stream.Collectors;
+// import java.util.stream.Collectors; // No se usa directamente si mapeas individualmente
 
 @Service
 @Validated
-public class DomicilioServiceImpl extends BaseServiceImpl<Domicilio, DomicilioRepository> implements DomicilioService {
+public class DomicilioServiceImpl implements DomicilioService {
 
     @Autowired
-    private LocalidadRepository localidadRepository;
+    private DomicilioRepository domicilioRepository;
+    @Autowired
+    private LocalidadRepository localidadRepository; // Para buscar Localidad al crear/actualizar
 
-    public DomicilioServiceImpl(DomicilioRepository domicilioRepository) {
-        super(domicilioRepository);
+    // Métodos de Mapeo Anidados (podrían estar en sus respectivos servicios o en una clase Mapper)
+    private PaisResponseDTO convertPaisToDto(Pais pais) {
+        if (pais == null) return null;
+        PaisResponseDTO dto = new PaisResponseDTO();
+        dto.setId(pais.getId());
+        dto.setNombre(pais.getNombre());
+        return dto;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<DomicilioResponseDTO> findAllDomicilios() {
-        try {
-            return super.findAll().stream()
-                    .map(this::convertToDto)
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new RuntimeException("Error al buscar domicilios: " + e.getMessage(), e);
-        }
+    private ProvinciaResponseDTO convertProvinciaToDto(Provincia provincia) {
+        if (provincia == null) return null;
+        ProvinciaResponseDTO dto = new ProvinciaResponseDTO();
+        dto.setId(provincia.getId());
+        dto.setNombre(provincia.getNombre());
+        dto.setPais(convertPaisToDto(provincia.getPais())); // Anidar DTO de Pais
+        return dto;
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public DomicilioResponseDTO findDomicilioById(Integer id) throws Exception {
-        return convertToDto(super.findById(id));
+    private LocalidadResponseDTO convertLocalidadToDto(Localidad localidad) {
+        if (localidad == null) return null;
+        LocalidadResponseDTO dto = new LocalidadResponseDTO();
+        dto.setId(localidad.getId());
+        dto.setNombre(localidad.getNombre());
+        dto.setProvincia(convertProvinciaToDto(localidad.getProvincia())); // Anidar DTO de Provincia
+        return dto;
     }
 
-    @Override
-    @Transactional
-    public DomicilioResponseDTO createDomicilio(@Valid DomicilioRequestDTO dto) throws Exception {
-        Localidad localidad = localidadRepository.findById(dto.getLocalidadId())
-                .orElseThrow(() -> new Exception("Localidad no encontrada con ID: " + dto.getLocalidadId()));
-
-        Domicilio domicilio = new Domicilio();
-        domicilio.setCalle(dto.getCalle());
-        domicilio.setNumero(dto.getNumero());
-        domicilio.setCp(dto.getCp());
-        domicilio.setLocalidad(localidad);
-
-        return convertToDto(super.save(domicilio));
-    }
-
-    @Override
-    @Transactional
-    public DomicilioResponseDTO updateDomicilio(Integer id, @Valid DomicilioRequestDTO dto) throws Exception {
-        Domicilio domicilioExistente = super.findById(id);
-
-        Localidad localidad = localidadRepository.findById(dto.getLocalidadId())
-                .orElseThrow(() -> new Exception("Localidad no encontrada con ID: " + dto.getLocalidadId()));
-
-        domicilioExistente.setCalle(dto.getCalle());
-        domicilioExistente.setNumero(dto.getNumero());
-        domicilioExistente.setCp(dto.getCp());
-        domicilioExistente.setLocalidad(localidad);
-
-        return convertToDto(super.update(id, domicilioExistente));
-    }
-
-    @Override
-    @Transactional
-    public boolean delete(Integer id) throws Exception {
-        Domicilio domicilioExistente = super.findById(id);
-        if (domicilioExistente.getClientes() != null && !domicilioExistente.getClientes().isEmpty()) {
-            throw new Exception("No se puede eliminar el Domicilio ID " + id + " porque está siendo utilizado por uno o más clientes.");
-        }
-        return super.delete(id);
-    }
-
+    // Método de Mapeo Principal de Entidad Domicilio a DomicilioResponseDTO
     private DomicilioResponseDTO convertToDto(Domicilio domicilio) {
         DomicilioResponseDTO dto = new DomicilioResponseDTO();
         dto.setId(domicilio.getId());
@@ -99,11 +66,73 @@ public class DomicilioServiceImpl extends BaseServiceImpl<Domicilio, DomicilioRe
         if (domicilio.getLocalidad() != null) {
             dto.setLocalidad(convertLocalidadToDto(domicilio.getLocalidad()));
         }
+        // Si decides incluir IDs de clientes:
+        // if (domicilio.getClientes() != null) {
+        //     dto.setClienteIds(domicilio.getClientes().stream().map(Cliente::getId).collect(Collectors.toList()));
+        // }
         return dto;
     }
 
-    // Mappers anidados
-    private LocalidadResponseDTO convertLocalidadToDto(Localidad localidad) { if (localidad == null) return null; LocalidadResponseDTO dto = new LocalidadResponseDTO(); dto.setId(localidad.getId()); dto.setNombre(localidad.getNombre()); dto.setProvincia(convertProvinciaToDto(localidad.getProvincia())); return dto; }
-    private ProvinciaResponseDTO convertProvinciaToDto(Provincia provincia) { if (provincia == null) return null; ProvinciaResponseDTO dto = new ProvinciaResponseDTO(); dto.setId(provincia.getId()); dto.setNombre(provincia.getNombre()); dto.setPais(convertPaisToDto(provincia.getPais())); return dto; }
-    private PaisResponseDTO convertPaisToDto(Pais pais) { if (pais == null) return null; PaisResponseDTO dto = new PaisResponseDTO(); dto.setId(pais.getId()); dto.setNombre(pais.getNombre()); return dto; }
+    @Override
+    @Transactional(readOnly = true)
+    public List<DomicilioResponseDTO> getAll() {
+        List<Domicilio> domicilios = domicilioRepository.findAll();
+        return domicilios.stream()
+                .map(this::convertToDto)
+                .collect(java.util.stream.Collectors.toList()); // Explicit Collectors import
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public DomicilioResponseDTO getById(Integer id) throws Exception {
+        Domicilio domicilio = domicilioRepository.findById(id)
+                .orElseThrow(() -> new Exception("Domicilio no encontrado con ID: " + id));
+        return convertToDto(domicilio);
+    }
+
+    @Override
+    @Transactional
+    public Domicilio create(@Valid DomicilioRequestDTO dto) throws Exception {
+        Localidad localidad = localidadRepository.findById(dto.getLocalidadId())
+                .orElseThrow(() -> new Exception("Localidad no encontrada con ID: " + dto.getLocalidadId()));
+
+        Domicilio domicilio = new Domicilio();
+        domicilio.setCalle(dto.getCalle());
+        domicilio.setNumero(dto.getNumero());
+        domicilio.setCp(dto.getCp());
+        domicilio.setLocalidad(localidad);
+        return domicilioRepository.save(domicilio);
+    }
+
+    @Override
+    @Transactional
+    public Domicilio update(Integer id, @Valid DomicilioRequestDTO dto) throws Exception {
+        Domicilio domicilioExistente = domicilioRepository.findById(id) // Buscar primero
+                .orElseThrow(() -> new Exception("Domicilio no encontrado con ID: " + id));
+
+        Localidad localidad = localidadRepository.findById(dto.getLocalidadId())
+                .orElseThrow(() -> new Exception("Localidad no encontrada con ID: " + dto.getLocalidadId()));
+
+        domicilioExistente.setCalle(dto.getCalle());
+        domicilioExistente.setNumero(dto.getNumero());
+        domicilioExistente.setCp(dto.getCp());
+        domicilioExistente.setLocalidad(localidad);
+        return domicilioRepository.save(domicilioExistente);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Integer id) throws Exception {
+        Domicilio domicilioExistente = domicilioRepository.findById(id)
+                .orElseThrow(() -> new Exception("Domicilio no encontrado con ID: " + id + " para eliminar."));
+
+        if (domicilioExistente.getClientes() != null && !domicilioExistente.getClientes().isEmpty()) {
+            throw new Exception("No se puede eliminar el Domicilio ID " + id + " porque está siendo utilizado por uno o más clientes.");
+        }
+        // Aquí también deberías verificar si está en uso por Sucursal antes de borrar.
+        // if (sucursalRepository.existsByDomicilioId(id)) { // Necesitarías SucursalRepository y el método
+        //     throw new Exception("No se puede eliminar el Domicilio ID " + id + " porque está siendo utilizado por una sucursal.");
+        // }
+        domicilioRepository.delete(domicilioExistente);
+    }
 }
