@@ -1,0 +1,64 @@
+# Archivos compilados de Java
+*.class
+*.jar
+*.war
+*.ear
+target/
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Archivos de logs
+logs/
+*.log
+
+# Directorio de subida de archivos
+/uploads/
+
+# Archivos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Archivos de IDEs
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea/
+*.iws
+*.iml
+*.ipr
+# Descomenta si generas archivos de workspace específicos de IntelliJ fuera de .idea/
+# *.iws.disabled
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+# 'build/' ya está cubierto por la sección general de target/build,
+# pero lo dejamos por si NetBeans tiene alguna particularidad.
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# Archivos de Maven Wrapper (si quieres que los usuarios lo descarguen ellos mismos)
+# Usualmente se comitean, pero si no quieres:
+# !.mvn/wrapper/maven-wrapper.jar
+# !.mvn/wrapper/maven-wrapper.properties
+# !.mvn/wrapper/MavenWrapperDownloader.java
+# !mvnw
+# !mvnw.cmd
+
+# Archivos temporales y de caché de Maven
+*.lastUpdated
+*resolver-status.properties

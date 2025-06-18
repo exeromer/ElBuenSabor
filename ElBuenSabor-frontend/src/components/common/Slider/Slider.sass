@@ -1,0 +1,32 @@
+@use "../../../styles/_vars" as *
+
+.slider
+  background-color: #fff
+  height: 500px
+  max-width: 100%
+  margin-bottom: 0
+  border-radius: $br2
+  box-shadow: $shadow
+  overflow: hidden
+  z-index: 1
+  .carousel-item
+    transition: transform 1s ease-in-out, opacity 1s ease-in-out
+  .carousel-caption
+    padding: $p2
+    border-radius: $br2
+    max-width: 80%
+    margin: $m1
+    background-color: $bg-transparent-dark
+  .slider-image-contenedor
+    background-color: green
+    height: 500px
+    width: 500px
+    margin: $m1
+  .slider-img
+    max-height: 200px
+    max-width: 200px
+    object-fit: cover
+    width: 100%
+  .custom-arrow
+    font-size: $f-s-3
+    color: $coloer-grey

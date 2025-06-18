@@ -1,0 +1,65 @@
+@use "../../../styles/vars" as *
+
+.app-footer
+  background-color: $color-grey
+  color: $color-ivory
+  padding: 2rem 0 
+
+  .footer-container
+    max-width: 1200px 
+    margin: $m1
+
+  .footer-row-content
+    margin-bottom: 2rem
+
+  .footer-col
+    padding: 0 1rem 
+
+    .footer-heading
+      color: $color-ivory
+      font-size: 1.25rem
+      margin-bottom: 1rem
+      font-weight: bold
+
+    .footer-contact-item
+      margin-bottom: 0.5rem 
+      font-size: 0.95rem
+
+      .footer-icon
+        color: $color-ivory
+        margin-right: 0.5rem 
+
+    .footer-list
+      padding-left: 0 
+
+      .footer-list-item
+        margin-bottom: 0.5rem
+
+        .footer-link
+          color: $color-ivory
+          transition: color 0.3s ease
+
+          &:hover
+            color: $color-mist
+            text-decoration: underline
+
+  .footer-divider
+    border-color: $color-ivory
+    margin-top: 2rem
+    margin-bottom: 1.5rem
+
+  .footer-row-copyright
+    .footer-col-copyright
+      padding-top: 1rem
+
+      .footer-copyright-text
+        font-size: 0.85rem
+        color: $color-ivory
+
+@media (max-width: 768px)
+  .app-footer
+    .footer-col
+      text-align: center 
+      margin-bottom: 1.5rem 
+    .footer-list
+      padding-left: 0 
