@@ -36,7 +36,7 @@ public class FacturaServiceImpl implements FacturaService {
     @Autowired private StockInsumoSucursalService stockInsumoSucursalService; // Inyectar el nuevo servicio
     private static final Logger logger = LoggerFactory.getLogger(FacturaServiceImpl.class); // Inicializar Logger
 
-    // --- MAPPERS (o usar la clase Mappers inyectada) ---
+    // --- MAPPERS ---
     private FacturaResponseDTO convertToResponseDto(Factura factura) {
         if (factura == null) return null;
         FacturaResponseDTO dto = new FacturaResponseDTO();

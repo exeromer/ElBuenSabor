@@ -1,12 +1,14 @@
 package com.powerRanger.ElBuenSabor.dtos;
 
 public class CarritoItemResponseDTO {
-    private Long id; // ID del CarritoItem
+    private Long id;
     private Integer articuloId;
     private String articuloDenominacion;
     private Integer cantidad;
     private Double precioUnitarioAlAgregar;
-    private Double subtotalItem; // Calculado: cantidad * precioUnitarioAlAgregar
+    private Double subtotalItem;
+    private Integer promocionAplicadaId;
+    private Double descuentoAplicadoPorPromocion; // Monto del descuento que se aplicó a este ítem
 
     public CarritoItemResponseDTO() {
     }
@@ -58,5 +60,21 @@ public class CarritoItemResponseDTO {
 
     public void setSubtotalItem(Double subtotalItem) {
         this.subtotalItem = subtotalItem;
+    }
+
+    public Integer getPromocionAplicadaId() {
+        return promocionAplicadaId;
+    }
+
+    public void setPromocionAplicadaId(Integer promocionAplicadaId) {
+        this.promocionAplicadaId = promocionAplicadaId;
+    }
+
+    public Double getDescuentoAplicadoPorPromocion() {
+        return descuentoAplicadoPorPromocion;
+    }
+
+    public void setDescuentoAplicadoPorPromocion(Double descuentoAplicadoPorPromocion) {
+        this.descuentoAplicadoPorPromocion = descuentoAplicadoPorPromocion;
     }
 }

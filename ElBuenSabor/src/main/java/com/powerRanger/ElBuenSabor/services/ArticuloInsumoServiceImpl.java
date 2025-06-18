@@ -49,7 +49,8 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
 
         insumo.setPrecioCompra(dto.getPrecioCompra());
         insumo.setEsParaElaborar(dto.getEsParaElaborar());
-        // Los campos stockActual y stockMinimo ya no están en ArticuloInsumo, se gestionan en StockInsumoSucursal
+        // stockActual y stockMinimo ya no están en ArticuloInsumoRequestDTO
+        // Por lo tanto, no se mapean aquí.
     }
 
     @Override
@@ -68,9 +69,11 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
         return insumos.stream()
                 .map(insumo -> {
                     ArticuloInsumoResponseDTO dto = (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(insumo);
-                    // Stock actual y mínimo ya no se recuperan directamente de ArticuloInsumo
-                    dto.setStockActual(null); // O 0.0, ya que es stock general y ahora es por sucursal
-                    dto.setstockMinimo(null); // O 0.0
+                    // Stock actual y mínimo ya no se recuperan directamente de ArticuloInsumo.
+                    // Estos campos fueron ELIMINADOS de ArticuloInsumoResponseDTO.
+                    // Se elimina la asignación a null.
+                    // dto.setStockActual(null); // ELIMINADO
+                    // dto.setstockMinimo(null); // ELIMINADO
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -82,9 +85,11 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
         ArticuloInsumo insumo = articuloInsumoRepository.findById(id)
                 .orElseThrow(() -> new Exception("Artículo Insumo no encontrado con ID: " + id));
         ArticuloInsumoResponseDTO dto = (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(insumo);
-        // Stock actual y mínimo ya no se recuperan directamente de ArticuloInsumo
-        dto.setStockActual(null);
-        dto.setstockMinimo(null);
+        // Stock actual y mínimo ya no se recuperan directamente de ArticuloInsumo.
+        // Estos campos fueron ELIMINADOS de ArticuloInsumoResponseDTO.
+        // Se elimina la asignación a null.
+        // dto.setStockActual(null); // ELIMINADO
+        // dto.setstockMinimo(null); // ELIMINADO
         return dto;
     }
 
@@ -93,21 +98,12 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
     public ArticuloInsumoResponseDTO createArticuloInsumo(@Valid ArticuloInsumoRequestDTO dto) throws Exception {
         ArticuloInsumo insumo = new ArticuloInsumo();
         insumo.setImagenes(new ArrayList<>()); // Inicializar la lista si la entidad la tiene
-        mapDtoToEntity(dto, insumo); // Usar el helper
+        mapDtoToEntity(dto, insumo); // Usar el helper para mapear los campos del insumo
         ArticuloInsumo guardado = articuloInsumoRepository.save(insumo);
 
-        // Al crear un nuevo insumo, se debe inicializar su stock en cada sucursal existente
-        List<Sucursal> sucursales = sucursalRepository.findAll();
-        for (Sucursal sucursal : sucursales) {
-            StockInsumoSucursal stockInsumoSucursal = new StockInsumoSucursal(
-                    guardado,
-                    sucursal,
-                    dto.getStockActual() != null ? dto.getStockActual() : 0.0, // Stock inicial del DTO
-                    dto.getstockMinimo() != null ? dto.getstockMinimo() : 0.0  // Stock mínimo del DTO
-            );
-            stockInsumoSucursalRepository.save(stockInsumoSucursal);
-            guardado.addStockInsumoSucursal(stockInsumoSucursal); // Asocia el stock a la entidad
-        }
+        // AHORA: La creación del insumo NO inicializa automáticamente stocks en todas las sucursales.
+        // Esto se hará explícitamente vía StockInsumoSucursalController/Service
+        // o en el DataInitializer para datos de prueba.
 
         return (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(guardado);
     }
@@ -117,20 +113,13 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
     public ArticuloInsumoResponseDTO updateArticuloInsumo(Integer id, @Valid ArticuloInsumoRequestDTO dto) throws Exception {
         ArticuloInsumo insumoExistente = articuloInsumoRepository.findById(id)
                 .orElseThrow(() -> new Exception("Artículo Insumo no encontrado con ID: " + id));
-        mapDtoToEntity(dto, insumoExistente); // Esto actualiza campos del insumo, no el stock
+        mapDtoToEntity(dto, insumoExistente); // Esto actualiza campos del insumo (denominación, precio, etc.)
         ArticuloInsumo actualizado = articuloInsumoRepository.save(insumoExistente);
 
-        // Actualizar los registros de StockInsumoSucursal asociados a este insumo
-        List<StockInsumoSucursal> stocksPorSucursal = stockInsumoSucursalRepository.findByArticuloInsumo(actualizado);
-        for (StockInsumoSucursal stock : stocksPorSucursal) {
-            if (dto.getStockActual() != null) {
-                stock.setStockActual(dto.getStockActual());
-            }
-            if (dto.getstockMinimo() != null) {
-                stock.setStockMinimo(dto.getstockMinimo());
-            }
-            stockInsumoSucursalRepository.save(stock);
-        }
+        // AHORA: La actualización del insumo NO modifica sus stocks en StockInsumoSucursal.
+        // Los stocks se modifican solo a través de StockInsumoSucursalController/Service
+        // de forma específica por sucursal, o en el caso del ArticuloManufacturadoService,
+        // cuando se descuenta por la venta.
 
         return (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(actualizado);
     }
@@ -142,6 +131,8 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
                 .orElseThrow(() -> new Exception("Artículo Insumo no encontrado con ID: " + id + " para eliminar."));
         // Debido a CascadeType.ALL y orphanRemoval=true en ArticuloInsumo.stockPorSucursal,
         // al eliminar el insumo, sus registros de stock por sucursal se eliminarán automáticamente.
+        // Por lo tanto, la siguiente línea es redundante y ha sido eliminada.
+        // stockInsumoSucursalRepository.deleteByArticuloInsumo(insumo); // ELIMINADO
         articuloInsumoRepository.delete(insumo);
     }
 }

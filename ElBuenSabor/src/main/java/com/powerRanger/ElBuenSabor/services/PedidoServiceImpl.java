@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.LocalDateTime; // Importar LocalDateTime
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -25,11 +26,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.Set;    // ¡Importar Set!
+import java.util.HashSet; // ¡Importar HashSet!
 
-// Importaciones añadidas/verificadas
 import com.powerRanger.ElBuenSabor.dtos.MercadoPagoCreatePreferenceDTO;
 import com.powerRanger.ElBuenSabor.entities.Usuario;
-
+import com.powerRanger.ElBuenSabor.entities.enums.TipoPromocion; // Importar TipoPromocion desde entities.enums
 
 @Service
 @Validated
@@ -47,7 +49,8 @@ public class PedidoServiceImpl implements PedidoService {
     @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
     @Autowired private LocalidadRepository localidadRepository;
     @Autowired private MercadoPagoService mercadoPagoService;
-    @Autowired private StockInsumoSucursalService stockInsumoSucursalService; // Inyectar el nuevo servicio
+    @Autowired private StockInsumoSucursalService stockInsumoSucursalService;
+    @Autowired private PromocionService promocionService; // ¡Inyectamos PromocionService!
     private static final Logger logger = LoggerFactory.getLogger(PedidoServiceImpl.class);
 
     // --- MAPPERS (Como los tenías) ---
@@ -67,6 +70,11 @@ public class PedidoServiceImpl implements PedidoService {
         dto.setCantidad(detalle.getCantidad());
         dto.setSubTotal(detalle.getSubTotal());
         dto.setArticulo(convertArticuloToSimpleDto(detalle.getArticulo()));
+        // Añadir campos de promoción al DTO
+        if (detalle.getPromocionAplicada() != null) {
+            dto.setPromocionAplicadaId(detalle.getPromocionAplicada().getId());
+        }
+        dto.setDescuentoAplicadoPorPromocion(detalle.getDescuentoAplicadoPorPromocion());
         return dto;
     }
     private PaisResponseDTO convertPaisToDto(Pais pais) {
@@ -343,10 +351,19 @@ public class PedidoServiceImpl implements PedidoService {
         }
         logger.info("Sucursal validada. ID: {}", sucursalPedido.getId());
 
+        // --- Obtener promociones activas para la sucursal ---
+        List<PromocionResponseDTO> promocionesActivasDTO = promocionService.getPromocionesActivasPorSucursal(
+                sucursalPedido.getId(),
+                LocalDateTime.now().toLocalDate(),
+                LocalDateTime.now().toLocalTime()
+        );
+        logger.info("Se encontraron {} promociones activas para la sucursal ID {}.", promocionesActivasDTO.size(), sucursalPedido.getId());
+
         // --- Lógica de Stock por Sucursal ---
-        // Map para almacenar las cantidades de insumos a reducir por insumoId
         Map<Integer, Double> insumosAReducirMap = new HashMap<>();
         logger.info("Iniciando Pre-Verificación de Stock...");
+
+        Set<Integer> articulosProcesadosPorCombo = new HashSet<>();
 
         for (CarritoItem item : carrito.getItems()) {
             Articulo articuloBaseDelCarrito = item.getArticulo();
@@ -359,13 +376,11 @@ public class PedidoServiceImpl implements PedidoService {
                 ArticuloInsumo insumo = optInsumoStock.get();
                 logger.info("Es ArticuloInsumo: {}, ID: {}", insumo.getDenominacion(), insumo.getId());
 
-                if (insumo.getEsParaElaborar() != null && insumo.getEsParaElaborar()) {
+                if (Boolean.TRUE.equals(insumo.getEsParaElaborar())) {
                     logger.warn("El artículo insumo '{}' (ID: {}) es 'para elaborar' y se intentó vender directamente. Su stock NO se gestiona para venta directa en esta lógica.", insumo.getDenominacion(), insumo.getId());
                     throw new Exception("El insumo '" + insumo.getDenominacion() + "' (ID: " + insumo.getId() + ") no se puede vender directamente. Está marcado para elaboración.");
                 }
 
-                // Obtener el stock del insumo para la sucursal del pedido
-                // CORRECCIÓN: La variable debe ser StockInsumoSucursalResponseDTO
                 StockInsumoSucursalResponseDTO stockInsumoSucursal = stockInsumoSucursalService.getStockByInsumoAndSucursal(
                         insumo.getId(), sucursalPedido.getId()
                 );
@@ -385,7 +400,7 @@ public class PedidoServiceImpl implements PedidoService {
                     ArticuloManufacturado manufacturado = optManufStock.get();
                     logger.info("Es ArticuloManufacturado: {}, ID: {}", manufacturado.getDenominacion(), manufacturado.getId());
 
-                    if (manufacturado.getEstadoActivo() == null || !manufacturado.getEstadoActivo()){
+                    if (Boolean.FALSE.equals(manufacturado.getEstadoActivo())){
                         throw new Exception("El artículo manufacturado '" + manufacturado.getDenominacion() + "' ya no está disponible.");
                     }
 
@@ -404,15 +419,13 @@ public class PedidoServiceImpl implements PedidoService {
                         ArticuloInsumo insumoComponenteOriginal = detalleRecetaItem.getArticuloInsumo();
                         if (insumoComponenteOriginal == null) throw new Exception ("Error en la receta de '"+manufacturado.getDenominacion()+"'.");
 
-                        // Obtener el stock del insumo componente para la sucursal del pedido
-                        // CORRECCIÓN: La variable debe ser StockInsumoSucursalResponseDTO
                         StockInsumoSucursalResponseDTO stockInsumoCompSucursal = stockInsumoSucursalService.getStockByInsumoAndSucursal(
                                 insumoComponenteOriginal.getId(), sucursalPedido.getId()
                         );
                         Double stockActualInsumoCompSucursal = stockInsumoCompSucursal.getStockActual();
 
                         logger.info("--> Insumo de receta: {}, Stock Actual: {}, Cantidad Receta: {}", insumoComponenteOriginal.getDenominacion(), stockActualInsumoCompSucursal, detalleRecetaItem.getCantidad());
-                        if (insumoComponenteOriginal.getEstadoActivo() == null || !insumoComponenteOriginal.getEstadoActivo()){
+                        if (Boolean.FALSE.equals(insumoComponenteOriginal.getEstadoActivo())){
                             throw new Exception("El insumo componente '" + insumoComponenteOriginal.getDenominacion() + "' ya no está disponible.");
                         }
                         double cantidadNecesariaComponenteTotal = detalleRecetaItem.getCantidad() * cantidadPedida;
@@ -446,18 +459,89 @@ public class PedidoServiceImpl implements PedidoService {
         double costoTotalPedido = 0.0;
         logger.info("Iniciando cálculo de Total y TotalCosto. costoTotalPedido inicial: {}", costoTotalPedido);
 
+        // --- Aplicación de promociones y cálculo de totales ---
         for (CarritoItem item : carrito.getItems()) {
             DetallePedido detallePedido = new DetallePedido();
-            Articulo articuloDelItem;
-            // Se asume que item.getArticulo() ya es una entidad proxy o completa
-            // No es necesario recargar con findById si JPA ya la trajo en el carrito.
-            articuloDelItem = item.getArticulo();
+            Articulo articuloDelItem = item.getArticulo();
 
             logger.info("Procesando para DetallePedido: Articulo '{}' (ID: {}), Clase Real Obtenida: {}, Cantidad: {}", articuloDelItem.getDenominacion(), articuloDelItem.getId(), articuloDelItem.getClass().getName(), item.getCantidad());
             detallePedido.setArticulo(articuloDelItem);
             detallePedido.setCantidad(item.getCantidad());
+
             double subTotalItem = item.getCantidad() * item.getPrecioUnitarioAlAgregar();
+            double descuentoAplicadoPorPromocion = 0.0;
+            Promocion promocionAplicada = null; // Para almacenar la entidad Promocion si aplica
+
+            // Si el item ya trae una promoción pre-aplicada desde el carrito, la usamos.
+            // Esto es importante si el carrito ya tiene lógica para seleccionar la mejor promoción.
+            if (item.getPromocionAplicada() != null && item.getDescuentoAplicadoPorPromocion() != null && item.getDescuentoAplicadoPorPromocion() > 0) {
+                promocionAplicada = item.getPromocionAplicada();
+                descuentoAplicadoPorPromocion = item.getDescuentoAplicadoPorPromocion();
+                subTotalItem -= descuentoAplicadoPorPromocion;
+                logger.info("--> Promoción pre-aplicada desde CarritoItem para {}. Descuento: ${}", articuloDelItem.getDenominacion(), descuentoAplicadoPorPromocion);
+            } else {
+                // Si no hay promoción pre-aplicada, buscamos la mejor promoción para este artículo.
+                if (!articulosProcesadosPorCombo.contains(articuloDelItem.getId())) {
+                    Optional<PromocionResponseDTO> optPromocionIndividual = promocionesActivasDTO.stream()
+                            // Filtramos por promociones que contengan el artículo del carrito
+                            .filter(p -> p.getPromocionDetalles().stream()
+                                    .anyMatch(pd -> pd.getArticulo() != null && pd.getArticulo().getId().equals(articuloDelItem.getId())))
+                            // Ordenamos para encontrar la más ventajosa (esto puede necesitar más complejidad)
+                            .sorted((p1, p2) -> {
+                                // Aquí se puede definir una lógica de prioridad más compleja
+                                // Por ejemplo, si un 2x1 es siempre mejor que un porcentaje, etc.
+                                // Para simplificar, priorizamos PORCENTAJE sobre CANTIDAD y mayor descuento.
+                                if (p1.getTipoPromocion() == TipoPromocion.PORCENTAJE && p2.getTipoPromocion() == TipoPromocion.CANTIDAD) {
+                                    return -1; // Porcentaje es "mejor" por defecto (puedes cambiar esto)
+                                }
+                                if (p1.getTipoPromocion() == TipoPromocion.CANTIDAD && p2.getTipoPromocion() == TipoPromocion.PORCENTAJE) {
+                                    return 1; // Cantidad es "peor" por defecto
+                                }
+                                if (p1.getTipoPromocion() == TipoPromocion.PORCENTAJE) {
+                                    return Double.compare(p2.getPorcentajeDescuento(), p1.getPorcentajeDescuento()); // Mayor porcentaje
+                                }
+                                if (p1.getTipoPromocion() == TipoPromocion.CANTIDAD) {
+                                    return Double.compare(p1.getPrecioPromocional(), p2.getPrecioPromocional()); // Menor precio final
+                                }
+                                return 0;
+                            })
+                            .findFirst();
+
+                    if (optPromocionIndividual.isPresent()) {
+                        PromocionResponseDTO promoDto = optPromocionIndividual.get();
+                        // Mapear el DTO a la entidad Promocion para asignarlo al DetallePedido
+                        promocionAplicada = mapPromocionResponseToEntity(promoDto);
+
+                        // Calcular el descuento basado en el tipo de promoción
+                        if (promoDto.getTipoPromocion() == TipoPromocion.PORCENTAJE) {
+                            descuentoAplicadoPorPromocion = subTotalItem * (promoDto.getPorcentajeDescuento() / 100.0);
+                        } else if (promoDto.getTipoPromocion() == TipoPromocion.CANTIDAD) {
+                            // Para promociones de tipo CANTIDAD (ej. 2x1, combos):
+                            // Esto asume que 'precioPromocional' es el precio final de la promoción
+                            // y que se aplica a una cantidad específica.
+                            // Si es un 2x1, el descuento sería el precio de un artículo.
+                            // Esta lógica debe ser muy específica según cómo definas tus promociones de CANTIDAD.
+                            // Por ahora, asumimos que 'precioPromocional' es el precio final del ITEM individual en promoción
+                            // y el descuento es la diferencia con el precio regular unitario, multiplicado por la cantidad.
+                            descuentoAplicadoPorPromocion = (item.getPrecioUnitarioAlAgregar() - promoDto.getPrecioPromocional()) * item.getCantidad();
+                            descuentoAplicadoPorPromocion = Math.max(0, descuentoAplicadoPorPromocion); // Asegurar que no sea negativo
+
+                            // Si la promoción de CANTIDAD implica un combo de varios artículos,
+                            // necesitarías una lógica más avanzada para procesar múltiples CarritoItems
+                            // juntos y evitar que se apliquen individualmente.
+                            // Aquí es donde 'articulosProcesadosPorCombo' sería útil si hubiera combos complejos.
+                            // Por ahora, solo se marca si se aplicó un descuento por cantidad.
+                            // Si el COMBO es un artículo manufacturado que representa un combo, entonces ya se gestiona su stock y precio.
+                        }
+                        subTotalItem -= descuentoAplicadoPorPromocion;
+                        logger.info("--> Promoción aplicada por lógica de servicio para {}. Tipo: {}, Descuento: ${}", articuloDelItem.getDenominacion(), promoDto.getTipoPromocion(), descuentoAplicadoPorPromocion);
+                    }
+                }
+            }
+
             detallePedido.setSubTotal(subTotalItem);
+            detallePedido.setPromocionAplicada(promocionAplicada);
+            detallePedido.setDescuentoAplicadoPorPromocion(descuentoAplicadoPorPromocion);
             totalGeneralPedido += subTotalItem;
 
             if (articuloDelItem instanceof ArticuloInsumo) {
@@ -506,13 +590,14 @@ public class PedidoServiceImpl implements PedidoService {
             nuevoPedido.addDetalle(detallePedido);
         }
 
-        double descuento = 0.0;
+        // --- Aplicar descuento global (TAKEAWAY/EFECTIVO) después de las promociones individuales ---
+        double descuentoGlobal = 0.0;
         if (pedidoRequest.getTipoEnvio() == TipoEnvio.TAKEAWAY && pedidoRequest.getFormaPago() == FormaPago.EFECTIVO) {
-            descuento = totalGeneralPedido * 0.10;
-            logger.info("Descuento del 10% aplicado para TAKEAWAY/EFECTIVO: -${}", descuento);
-            totalGeneralPedido -= descuento;
+            descuentoGlobal = totalGeneralPedido * 0.10;
+            logger.info("Descuento del 10% aplicado para TAKEAWAY/EFECTIVO: -${}", descuentoGlobal);
+            totalGeneralPedido -= descuentoGlobal;
         }
-        nuevoPedido.setDescuentoAplicado(descuento);
+        nuevoPedido.setDescuentoAplicado(descuentoGlobal); // Este campo ahora refleja solo el descuento global
 
         nuevoPedido.setTotal(totalGeneralPedido);
         nuevoPedido.setTotalCosto(costoTotalPedido);
@@ -522,7 +607,6 @@ public class PedidoServiceImpl implements PedidoService {
         for (Map.Entry<Integer, Double> entry : insumosAReducirMap.entrySet()) {
             Integer insumoId = entry.getKey();
             Double cantidadADescontar = entry.getValue();
-            // Utilizar el servicio de StockInsumoSucursal para reducir el stock
             stockInsumoSucursalService.reduceStock(insumoId, sucursalPedido.getId(), cantidadADescontar);
             logger.info("--> Stock para Insumo ID {} en Sucursal ID {} reducido en {}. (Lógica de StockInsumoSucursalService)", insumoId, sucursalPedido.getId(), cantidadADescontar);
         }
@@ -549,6 +633,60 @@ public class PedidoServiceImpl implements PedidoService {
         logger.info("FIN - crearPedidoDesdeCarrito ejecutado exitosamente para Pedido ID: {}", pedidoGuardado.getId());
 
         return convertToResponseDto(pedidoGuardado);
+    }
+
+    // Helper para convertir PromocionResponseDTO a Promocion (Entidad)
+    // Se ha ajustado para manejar los detalles de la promoción y el artículo asociado.
+    private Promocion mapPromocionResponseToEntity(PromocionResponseDTO dto) {
+        if (dto == null) return null;
+        Promocion promocion = new Promocion();
+        promocion.setId(dto.getId());
+        promocion.setDenominacion(dto.getDenominacion());
+        promocion.setFechaDesde(dto.getFechaDesde());
+        promocion.setFechaHasta(dto.getFechaHasta());
+        promocion.setHoraDesde(dto.getHoraDesde());
+        promocion.setHoraHasta(dto.getHoraHasta());
+        promocion.setDescripcion(dto.getDescripcion());
+        promocion.setPrecioPromocional(dto.getPrecioPromocional());
+        promocion.setPorcentajeDescuento(dto.getPorcentajeDescuento());
+        promocion.setTipoPromocion(dto.getTipoPromocion());
+
+        // Mapear los detalles de la promoción si existen en el DTO
+        if (dto.getPromocionDetalles() != null) {
+            Set<PromocionDetalle> detalles = new HashSet<>();
+            for (PromocionDetalleResponseDTO detalleDto : dto.getPromocionDetalles()) {
+                PromocionDetalle detalle = new PromocionDetalle();
+                detalle.setId(detalleDto.getId());
+                detalle.setCantidad(detalleDto.getCantidad());
+                // Mapear el Artículo si existe
+                if (detalleDto.getArticulo() != null) {
+                    Articulo articulo = new Articulo(); // Crear una instancia de Articulo
+                    articulo.setId(detalleDto.getArticulo().getId());
+                    articulo.setDenominacion(detalleDto.getArticulo().getDenominacion());
+                    articulo.setPrecioVenta(detalleDto.getArticulo().getPrecioVenta());
+                    // Asegúrate de que si Articulo es una clase abstracta, esto sea un ArticuloManufacturado o ArticuloInsumo
+                    // Para este mapeo simple, si solo necesitas el ID, esto podría ser suficiente.
+                    // Si necesitas el objeto completo con herencia, deberías buscarlo en el repositorio.
+                    detalle.setArticulo(articulo);
+                }
+                detalles.add(detalle);
+            }
+            promocion.setPromocionDetalles(detalles);
+        }
+
+        // Mapear sucursales si existen en el DTO (aunque para DetallePedido no se usa directamente)
+        if (dto.getSucursales() != null) {
+            Set<Sucursal> sucursales = new HashSet<>();
+            for (SucursalSimpleResponseDTO sucursalDto : dto.getSucursales()) {
+                Sucursal sucursal = new Sucursal();
+                sucursal.setId(sucursalDto.getId());
+                sucursal.setNombre(sucursalDto.getNombre());
+                sucursales.add(sucursal);
+            }
+            promocion.setSucursales(sucursales);
+        }
+
+        return promocion;
     }
 
     @Override
@@ -578,7 +716,7 @@ public class PedidoServiceImpl implements PedidoService {
         }
 
         if (pedido.getEstado() != Estado.PENDIENTE) {
-            throw new Exception("El pedido con ID " + pedido.getId() + " no está en un estado válido para generar pago. Estado actual: " + pedido.getEstado());
+            throw new Exception("El pedido con ID " + dto.getPedidoId() + " no está en un estado válido para generar pago. Estado actual: " + pedido.getEstado());
         }
 
         try {
@@ -625,16 +763,13 @@ public class PedidoServiceImpl implements PedidoService {
         pedido.setFechaBaja(LocalDate.now());
         if (pedido.getEstado() != Estado.CANCELADO && pedido.getEstado() != Estado.RECHAZADO && pedido.getEstado() != Estado.ENTREGADO) {
             pedido.setEstado(Estado.CANCELADO);
-            // Si el pedido no estaba entregado, ni cancelado ni rechazado, y se cancela, se debe restituir el stock
             restituirStockDePedido(pedido);
         }
         pedidoRepository.save(pedido);
     }
 
-    // Nuevo método para restituir stock al anular/cancelar un pedido
     private void restituirStockDePedido(Pedido pedido) throws Exception {
         logger.info("Iniciando restitución de stock para Pedido ID: {}", pedido.getId());
-        // Se asume que el pedido ya tiene sus detalles cargados (puede ser LAZY, pero la transacción ayuda)
         if (pedido.getDetalles() == null || pedido.getDetalles().isEmpty()) {
             logger.warn("El pedido ID {} no tiene detalles. No se restituirá stock.", pedido.getId());
             return;
@@ -650,15 +785,13 @@ public class PedidoServiceImpl implements PedidoService {
             Articulo articuloDelDetalle = detallePedido.getArticulo();
             int cantidadPedida = detallePedido.getCantidad();
 
-            // Refrescar el artículo para asegurarse de obtener la instancia concreta con las relaciones de herencia
-            // Esto es crucial para que el 'instanceof' funcione correctamente si el artículo viene como proxy.
             Articulo refreshedArticulo = articuloRepository.findById(articuloDelDetalle.getId())
                     .orElseThrow(() -> new Exception("Artículo del detalle ID " + articuloDelDetalle.getId() + " no encontrado para restitución."));
 
 
             if (refreshedArticulo instanceof ArticuloInsumo) {
                 ArticuloInsumo insumo = (ArticuloInsumo) refreshedArticulo;
-                if (insumo.getEsParaElaborar() != null && insumo.getEsParaElaborar()) {
+                if (Boolean.TRUE.equals(insumo.getEsParaElaborar())) {
                     logger.info("Insumo '{}' (ID: {}) es 'para elaborar'. No se restituye directamente su stock para venta.", insumo.getDenominacion(), insumo.getId());
                 } else {
                     stockInsumoSucursalService.addStock(insumo.getId(), sucursalId, (double) cantidadPedida);
@@ -668,7 +801,6 @@ public class PedidoServiceImpl implements PedidoService {
                 ArticuloManufacturado manufacturado = (ArticuloManufacturado) refreshedArticulo;
                 List<ArticuloManufacturadoDetalle> detallesReceta = manufacturado.getManufacturadoDetalles();
 
-                // Si los detalles no están cargados (LAZY) o están vacíos, recargarlos
                 if (detallesReceta == null || detallesReceta.isEmpty()) {
                     ArticuloManufacturado loadedManufacturado = articuloManufacturadoRepository.findById(manufacturado.getId())
                             .orElseThrow(() -> new Exception("Articulo Manufacturado " + manufacturado.getId() + " no encontrado para restitución."));

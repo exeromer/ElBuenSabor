@@ -36,9 +36,6 @@ public class CarritoServiceImpl implements CarritoService {
     @Autowired
     private ClienteRepository clienteRepository;
 
-    // No se inyecta StockInsumoSucursalService aquí ya que la validación de stock
-    // detallada (por sucursal) se realiza en PedidoServiceImpl al crear el pedido.
-
     private void validarPropietarioCliente(Cliente clienteDelPath) throws AccessDeniedException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         String auth0Id = null;
@@ -158,10 +155,6 @@ public class CarritoServiceImpl implements CarritoService {
                 !carritoItem.getCarrito().getCliente().getId().equals(cliente.getId())) {
             throw new Exception("El ítem no pertenece al carrito del cliente especificado.");
         }
-
-        // No se realiza validación de stock detallada aquí.
-        // Se asume que el frontend ya mostrará la disponibilidad basada en el stock de sucursal
-        // y la validación final se hará al crear el pedido.
 
         carritoItem.setCantidad(nuevaCantidad);
         carritoItemRepository.save(carritoItem);

@@ -11,7 +11,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
-import java.util.List; // Necesario para la lista de sucursales
+import java.util.HashSet; // Importar HashSet para Set
+import java.util.List;
+import java.util.Set; // Importar Set
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -32,11 +34,10 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired private ClienteRepository clienteRepository;
     @Autowired private PedidoRepository pedidoRepository;
     @Autowired private FacturaRepository facturaRepository;
-    // Repositorio para la nueva entidad de stock por sucursal
     @Autowired private StockInsumoSucursalRepository stockInsumoSucursalRepository;
 
     private ArticuloManufacturado pizzaMargaritaInstance;
-    private ArticuloInsumo gaseosaInstance; // Para facilitar el uso en pedidos
+    private ArticuloInsumo gaseosaInstance;
 
     @Override
     @Transactional
@@ -45,6 +46,8 @@ public class DataInitializer implements CommandLineRunner {
         System.out.println("INICIANDO: DataInitializer - Cargando datos de prueba...");
         System.out.println("====================================================================");
 
+        // Solo carga datos si la base de datos está vacía para evitar duplicados en reinicios.
+        // Se puede ajustar esta condición si se necesita siempre borrar y recargar.
         if (empresaRepository.count() > 0) {
             System.out.println("DataInitializer: Los datos de prueba parecen ya existir. No se realiza la carga.");
             System.out.println("====================================================================");
@@ -56,7 +59,7 @@ public class DataInitializer implements CommandLineRunner {
         // --- Datos Geográficos ---
         System.out.println("Cargando Datos Geográficos...");
         Pais argentina = new Pais(); argentina.setNombre("Argentina"); paisRepository.save(argentina);
-        Pais chile = new Pais(); chile.setNombre("Chile"); paisRepository.save(chile);
+        // ... (otros países y provincias)
         Provincia mendoza = new Provincia(); mendoza.setNombre("Mendoza"); mendoza.setPais(argentina); provinciaRepository.save(mendoza);
         Provincia cordoba = new Provincia(); cordoba.setNombre("Córdoba"); cordoba.setPais(argentina); provinciaRepository.save(cordoba);
         Localidad ciudadMendoza = new Localidad(); ciudadMendoza.setNombre("Ciudad de Mendoza"); ciudadMendoza.setProvincia(mendoza); localidadRepository.save(ciudadMendoza);
@@ -99,28 +102,24 @@ public class DataInitializer implements CommandLineRunner {
         suc2E1.setEmpresa(empresa1); suc2E1.setDomicilio(domSuc2E1); suc2E1.addCategoria(catPizzas); suc2E1.setEstadoActivo(true);
         sucursalRepository.save(suc2E1);
 
-        // Obtener todas las sucursales para inicializar stocks
+        // Es importante obtener todas las sucursales DESPUÉS de guardarlas
         List<Sucursal> todasLasSucursales = sucursalRepository.findAll();
 
 
         // --- Artículos Insumo ---
         System.out.println("Cargando Artículos Insumo...");
         ArticuloInsumo harina = new ArticuloInsumo();
-        harina.setDenominacion("Harina 000 (Gramos)"); harina.setPrecioVenta(0.05); // Precio por gramo
-        harina.setUnidadMedida(umGramos);
-        harina.setCategoria(catInsumos); harina.setEstadoActivo(true); harina.setPrecioCompra(0.02);
+        harina.setDenominacion("Harina 000 (Gramos)"); harina.setPrecioVenta(0.05);
+        harina.setUnidadMedida(umGramos); harina.setCategoria(catInsumos); harina.setEstadoActivo(true); harina.setPrecioCompra(0.02);
         harina.setEsParaElaborar(true);
         articuloInsumoRepository.save(harina);
-        // Inicializar stock para cada sucursal
         for (Sucursal sucursal : todasLasSucursales) {
             stockInsumoSucursalRepository.save(new StockInsumoSucursal(harina, sucursal, 10000.0, 2000.0));
         }
 
-
         ArticuloInsumo quesoMuzzaInsumo = new ArticuloInsumo();
         quesoMuzzaInsumo.setDenominacion("Queso Muzzarella (Gramos)"); quesoMuzzaInsumo.setPrecioVenta(0.20);
-        quesoMuzzaInsumo.setUnidadMedida(umGramos);
-        quesoMuzzaInsumo.setCategoria(catInsumos); quesoMuzzaInsumo.setEstadoActivo(true); quesoMuzzaInsumo.setPrecioCompra(0.10);
+        quesoMuzzaInsumo.setUnidadMedida(umGramos); quesoMuzzaInsumo.setCategoria(catInsumos); quesoMuzzaInsumo.setEstadoActivo(true); quesoMuzzaInsumo.setPrecioCompra(0.10);
         quesoMuzzaInsumo.setEsParaElaborar(true);
         articuloInsumoRepository.save(quesoMuzzaInsumo);
         for (Sucursal sucursal : todasLasSucursales) {
@@ -129,7 +128,7 @@ public class DataInitializer implements CommandLineRunner {
 
         ArticuloInsumo tomateTriturado = new ArticuloInsumo();
         tomateTriturado.setDenominacion("Tomate Triturado (ml)"); tomateTriturado.setPrecioVenta(0.08);
-        tomateTriturado.setUnidadMedida(umGramos); // Usaremos Gramos como proxy para ml
+        tomateTriturado.setUnidadMedida(umGramos);
         tomateTriturado.setCategoria(catInsumos); tomateTriturado.setEstadoActivo(true); tomateTriturado.setPrecioCompra(0.04);
         tomateTriturado.setEsParaElaborar(true);
         articuloInsumoRepository.save(tomateTriturado);
@@ -140,7 +139,7 @@ public class DataInitializer implements CommandLineRunner {
         ArticuloInsumo panHamburguesa = new ArticuloInsumo();
         panHamburguesa.setDenominacion("Pan de Hamburguesa"); panHamburguesa.setPrecioVenta(1.0); panHamburguesa.setUnidadMedida(umUnidad);
         panHamburguesa.setCategoria(catInsumos); panHamburguesa.setEstadoActivo(true); panHamburguesa.setPrecioCompra(0.5);
-        panHamburguesa.setEsParaElaborar(true); // Es para elaborar hamburguesas
+        panHamburguesa.setEsParaElaborar(true);
         articuloInsumoRepository.save(panHamburguesa);
         for (Sucursal sucursal : todasLasSucursales) {
             stockInsumoSucursalRepository.save(new StockInsumoSucursal(panHamburguesa, sucursal, 200.0, 40.0));
@@ -150,7 +149,7 @@ public class DataInitializer implements CommandLineRunner {
         carneMolidaGramos.setDenominacion("Carne Molida Vacuna (Gramos)"); carneMolidaGramos.setPrecioVenta(0.15);
         carneMolidaGramos.setUnidadMedida(umGramos);
         carneMolidaGramos.setCategoria(catInsumos); carneMolidaGramos.setEstadoActivo(true); carneMolidaGramos.setPrecioCompra(0.08);
-        carneMolidaGramos.setEsParaElaborar(true); // Es para elaborar hamburguesas
+        carneMolidaGramos.setEsParaElaborar(true);
         articuloInsumoRepository.save(carneMolidaGramos);
         for (Sucursal sucursal : todasLasSucursales) {
             stockInsumoSucursalRepository.save(new StockInsumoSucursal(carneMolidaGramos, sucursal, 4000.0, 800.0));
@@ -159,7 +158,7 @@ public class DataInitializer implements CommandLineRunner {
         this.gaseosaInstance = new ArticuloInsumo();
         gaseosaInstance.setDenominacion("Gaseosa Cola 500ml"); gaseosaInstance.setPrecioVenta(4.0); gaseosaInstance.setUnidadMedida(umUnidad);
         gaseosaInstance.setCategoria(catBebidas); gaseosaInstance.setEstadoActivo(true); gaseosaInstance.setPrecioCompra(1.5);
-        gaseosaInstance.setEsParaElaborar(false); // No es para elaborar, se vende directamente
+        gaseosaInstance.setEsParaElaborar(false);
         articuloInsumoRepository.save(gaseosaInstance);
         for (Sucursal sucursal : todasLasSucursales) {
             stockInsumoSucursalRepository.save(new StockInsumoSucursal(gaseosaInstance, sucursal, 100.0, 30.0));
@@ -175,20 +174,20 @@ public class DataInitializer implements CommandLineRunner {
         pizzaMargaritaInstance.setTiempoEstimadoMinutos(20); pizzaMargaritaInstance.setPreparacion("Preparación de muzzarella...");
 
         ArticuloManufacturadoDetalle amdHarinaMuzza = new ArticuloManufacturadoDetalle();
-        amdHarinaMuzza.setArticuloInsumo(harina); // Harina (Gramos)
-        amdHarinaMuzza.setCantidad(300.0); // 300 gramos
+        amdHarinaMuzza.setArticuloInsumo(harina);
+        amdHarinaMuzza.setCantidad(300.0);
         amdHarinaMuzza.setEstadoActivo(true);
         pizzaMargaritaInstance.addManufacturadoDetalle(amdHarinaMuzza);
 
         ArticuloManufacturadoDetalle amdQuesoMuzza = new ArticuloManufacturadoDetalle();
-        amdQuesoMuzza.setArticuloInsumo(quesoMuzzaInsumo); // Queso (Gramos)
-        amdQuesoMuzza.setCantidad(250.0); // 250 gramos
+        amdQuesoMuzza.setArticuloInsumo(quesoMuzzaInsumo);
+        amdQuesoMuzza.setCantidad(250.0);
         amdQuesoMuzza.setEstadoActivo(true);
         pizzaMargaritaInstance.addManufacturadoDetalle(amdQuesoMuzza);
 
         ArticuloManufacturadoDetalle amdSalsaMuzza = new ArticuloManufacturadoDetalle();
-        amdSalsaMuzza.setArticuloInsumo(tomateTriturado); // Tomate (ml/Gramos)
-        amdSalsaMuzza.setCantidad(100.0); // 100 ml/gramos
+        amdSalsaMuzza.setArticuloInsumo(tomateTriturado);
+        amdSalsaMuzza.setCantidad(100.0);
         amdSalsaMuzza.setEstadoActivo(true);
         pizzaMargaritaInstance.addManufacturadoDetalle(amdSalsaMuzza);
         articuloManufacturadoRepository.save(pizzaMargaritaInstance);
@@ -201,13 +200,13 @@ public class DataInitializer implements CommandLineRunner {
 
         ArticuloManufacturadoDetalle amdPanHamb = new ArticuloManufacturadoDetalle();
         amdPanHamb.setArticuloInsumo(panHamburguesa);
-        amdPanHamb.setCantidad(2.0); // 2 unidades de pan
+        amdPanHamb.setCantidad(2.0);
         amdPanHamb.setEstadoActivo(true);
         hamburguesaClasica.addManufacturadoDetalle(amdPanHamb);
 
         ArticuloManufacturadoDetalle amdCarneHamb = new ArticuloManufacturadoDetalle();
-        amdCarneHamb.setArticuloInsumo(carneMolidaGramos); // Carne (Gramos)
-        amdCarneHamb.setCantidad(150.0); // 150 gramos
+        amdCarneHamb.setArticuloInsumo(carneMolidaGramos);
+        amdCarneHamb.setCantidad(150.0);
         amdCarneHamb.setEstadoActivo(true);
         hamburguesaClasica.addManufacturadoDetalle(amdCarneHamb);
         articuloManufacturadoRepository.save(hamburguesaClasica);
@@ -215,18 +214,66 @@ public class DataInitializer implements CommandLineRunner {
 
         // --- Promociones ---
         System.out.println("Cargando Promociones...");
-        Promocion promo1Suc1 = new Promocion();
-        promo1Suc1.setDenominacion("2x1 Muzzarellas"); promo1Suc1.setFechaDesde(LocalDate.now()); promo1Suc1.setFechaHasta(LocalDate.now().plusMonths(1));
-        promo1Suc1.setHoraDesde(LocalTime.of(19,0)); promo1Suc1.setHoraHasta(LocalTime.of(23,0));
-        promo1Suc1.setDescripcionDescuento("Llevate 2 pizzas muzzarella al precio de 1");
-        promo1Suc1.setPrecioPromocional(pizzaMargaritaInstance.getPrecioVenta());
-        promo1Suc1.setEstadoActivo(true);
-        PromocionDetalle pd1Promo1 = new PromocionDetalle(); pd1Promo1.setArticulo(pizzaMargaritaInstance); pd1Promo1.setCantidad(2);
-        promo1Suc1.addDetallePromocion(pd1Promo1);
-        promocionRepository.save(promo1Suc1);
-        suc1E1.addPromocion(promo1Suc1); // Asocia la promoción a la sucursal 1
-        sucursalRepository.save(suc1E1); // Guarda la sucursal para persistir la relación
 
+        // Promoción: 2x1 Pizza Muzzarella en Sucursal 1 (Colón)
+        Promocion promo2x1Muzza = new Promocion();
+        promo2x1Muzza.setDenominacion("2x1 Pizza Muzzarella");
+        promo2x1Muzza.setFechaDesde(LocalDate.of(2025, 6, 1)); // Fecha pasada para prueba
+        promo2x1Muzza.setFechaHasta(LocalDate.of(2025, 7, 31)); // Fecha futura para prueba
+        promo2x1Muzza.setHoraDesde(LocalTime.of(19, 0));
+        promo2x1Muzza.setHoraHasta(LocalTime.of(23, 0));
+        promo2x1Muzza.setDescripcionDescuento("Llevate 2 pizzas muzzarella al precio de 1");
+        promo2x1Muzza.setPrecioPromocional(pizzaMargaritaInstance.getPrecioVenta()); // Precio de 1 pizza
+        promo2x1Muzza.setTipoPromocion(TipoPromocion.CANTIDAD); // Tipo de promoción
+        promo2x1Muzza.setPorcentajeDescuento(0.0); // No aplica porcentaje
+        promo2x1Muzza.setEstadoActivo(true); // Activa por administrador
+
+        PromocionDetalle pd1Promo2x1 = new PromocionDetalle();
+        pd1Promo2x1.setArticulo(pizzaMargaritaInstance);
+        pd1Promo2x1.setCantidad(2); // Se necesitan 2 para la promoción, se paga 1
+        promo2x1Muzza.addDetallePromocion(pd1Promo2x1);
+
+        // Asociar a sucursales
+        Set<Sucursal> sucursalesPromo2x1 = new HashSet<>();
+        sucursalesPromo2x1.add(suc1E1); // Solo en Sucursal Colón
+        promo2x1Muzza.setSucursales(sucursalesPromo2x1); // Establecer la colección de sucursales
+
+        promocionRepository.save(promo2x1Muzza); // Guardar la promoción
+        // Asegurar bidireccionalidad para Sucursal
+        for (Sucursal sucursal : sucursalesPromo2x1) {
+            sucursal.addPromocion(promo2x1Muzza); // Añadir la promoción a la sucursal
+            sucursalRepository.save(sucursal); // Guardar la sucursal para persistir la relación
+        }
+
+
+        // Promoción: 10% de descuento en Hamburguesas en Sucursal 2 (Guaymallén)
+        Promocion promo10PctHamb = new Promocion();
+        promo10PctHamb.setDenominacion("10% OFF Hamburguesas");
+        promo10PctHamb.setFechaDesde(LocalDate.of(2025, 6, 1));
+        promo10PctHamb.setFechaHasta(LocalDate.of(2025, 7, 31));
+        promo10PctHamb.setHoraDesde(LocalTime.of(12, 0));
+        promo10PctHamb.setHoraHasta(LocalTime.of(15, 0)); // Horario de almuerzo
+        promo10PctHamb.setDescripcionDescuento("10% de descuento en todas las hamburguesas");
+        promo10PctHamb.setPrecioPromocional(null); // No aplica precio promocional
+        promo10PctHamb.setTipoPromocion(TipoPromocion.PORCENTAJE); // Tipo de promoción
+        promo10PctHamb.setPorcentajeDescuento(10.0); // 10% de descuento
+        promo10PctHamb.setEstadoActivo(true);
+
+        PromocionDetalle pd1Promo10Pct = new PromocionDetalle();
+        pd1Promo10Pct.setArticulo(hamburguesaClasica);
+        pd1Promo10Pct.setCantidad(1); // Aplica por unidad
+        promo10PctHamb.addDetallePromocion(pd1Promo10Pct);
+
+        // Asociar a sucursales
+        Set<Sucursal> sucursalesPromo10Pct = new HashSet<>();
+        sucursalesPromo10Pct.add(suc2E1); // Solo en Sucursal Guaymallén
+        promo10PctHamb.setSucursales(sucursalesPromo10Pct);
+
+        promocionRepository.save(promo10PctHamb);
+        for (Sucursal sucursal : sucursalesPromo10Pct) {
+            sucursal.addPromocion(promo10PctHamb);
+            sucursalRepository.save(sucursal);
+        }
 
         // --- Usuarios y Clientes ---
         System.out.println("Cargando Usuarios y Clientes...");
@@ -244,7 +291,7 @@ public class DataInitializer implements CommandLineRunner {
             pedido1.setTipoEnvio(TipoEnvio.DELIVERY);
             pedido1.setFormaPago(FormaPago.EFECTIVO);
             pedido1.setEstado(Estado.ENTREGADO);
-            pedido1.setSucursal(suc1E1); // Asigna al pedido la sucursal 1
+            pedido1.setSucursal(suc1E1);
             pedido1.setCliente(cliente1);
             pedido1.setDomicilio(domCli1);
 

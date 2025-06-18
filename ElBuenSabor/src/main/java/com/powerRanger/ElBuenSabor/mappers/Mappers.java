@@ -1,11 +1,11 @@
-package com.powerRanger.ElBuenSabor.mappers; // O el paquete que elijas
+package com.powerRanger.ElBuenSabor.mappers;
 
 import com.powerRanger.ElBuenSabor.dtos.*;
 import com.powerRanger.ElBuenSabor.entities.*;
-import org.springframework.stereotype.Component; // Si quieres inyectarlo
+import org.springframework.stereotype.Component;
 import java.util.stream.Collectors;
 
-@Component // Para poder inyectarlo si decides hacerlo así
+@Component
 public class Mappers {
 
     public UnidadMedidaResponseDTO convertUnidadMedidaToDto(UnidadMedida um) {
@@ -25,9 +25,8 @@ public class Mappers {
         return dto;
     }
 
-    public ImagenResponseDTO convertImagenToDto(Imagen img) {
-        // Este es un ejemplo, asumiendo que ImagenResponseDTO tiene estos campos.
-        // Ajusta según tu ImagenResponseDTO real.
+    // Renombrado de convertImagenToDto a convertImagenToResponseDto para consistencia
+    public ImagenResponseDTO convertImagenToResponseDto(Imagen img) {
         if (img == null) return null;
         ImagenResponseDTO dto = new ImagenResponseDTO();
         dto.setId(img.getId());
@@ -52,7 +51,7 @@ public class Mappers {
         ArticuloManufacturadoDetalleResponseDTO dto = new ArticuloManufacturadoDetalleResponseDTO();
         dto.setId(amd.getId());
         dto.setCantidad(amd.getCantidad());
-        dto.setEstadoActivo(amd.getEstadoActivo()); // Asumiendo que Detalle tiene estadoActivo
+        dto.setEstadoActivo(amd.getEstadoActivo());
         if (amd.getArticuloInsumo() != null) {
             dto.setArticuloInsumo(convertArticuloToSimpleDto(amd.getArticuloInsumo()));
         }
@@ -68,10 +67,6 @@ public class Mappers {
             ArticuloInsumo insumo = (ArticuloInsumo) articulo;
             ArticuloInsumoResponseDTO dto = new ArticuloInsumoResponseDTO();
             dto.setPrecioCompra(insumo.getPrecioCompra());
-            // stockActual y stockMinimo ya no están en la entidad ArticuloInsumo
-            // El servicio que llame a este mapper será responsable de obtener y asignar el stock por sucursal si es necesario.
-            // dto.setStockActual(insumo.getStockActual()); // ELIMINADO
-            // dto.setstockMinimo(insumo.getstockMinimo()); // ELIMINADO
             dto.setEsParaElaborar(insumo.getEsParaElaborar());
             baseDto = dto;
         } else if (articulo instanceof ArticuloManufacturado) {
@@ -83,7 +78,7 @@ public class Mappers {
             if (manufacturado.getManufacturadoDetalles() != null) {
                 dto.setManufacturadoDetalles(
                         manufacturado.getManufacturadoDetalles().stream()
-                                .map(this::convertAmdToDto) // Llama al mapper de detalle
+                                .map(this::convertAmdToDto)
                                 .collect(Collectors.toList())
                 );
             }
@@ -92,7 +87,6 @@ public class Mappers {
             throw new IllegalStateException("Tipo de Artículo desconocido: " + articulo.getClass().getName());
         }
 
-        // Poblar campos comunes de ArticuloBaseResponseDTO
         baseDto.setId(articulo.getId());
         baseDto.setDenominacion(articulo.getDenominacion());
         baseDto.setPrecioVenta(articulo.getPrecioVenta());
@@ -106,7 +100,7 @@ public class Mappers {
         }
         if (articulo.getImagenes() != null) {
             baseDto.setImagenes(articulo.getImagenes().stream()
-                    .map(this::convertImagenToDto) // Reutiliza el mapper de Imagen
+                    .map(this::convertImagenToResponseDto) // Usar el nombre corregido
                     .collect(Collectors.toList()));
         }
         return baseDto;
@@ -131,6 +125,14 @@ public class Mappers {
             dto.setSucursalId(stock.getSucursal().getId());
             dto.setSucursalNombre(stock.getSucursal().getNombre());
         }
+        return dto;
+    }
+
+    public SucursalSimpleResponseDTO convertSucursalToSimpleDto(Sucursal sucursal) {
+        if (sucursal == null) return null;
+        SucursalSimpleResponseDTO dto = new SucursalSimpleResponseDTO();
+        dto.setId(sucursal.getId());
+        dto.setNombre(sucursal.getNombre());
         return dto;
     }
 }

@@ -3,7 +3,8 @@ package com.powerRanger.ElBuenSabor.controllers;
 import com.powerRanger.ElBuenSabor.dtos.StockInsumoSucursalRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.StockInsumoSucursalResponseDTO;
 import com.powerRanger.ElBuenSabor.services.StockInsumoSucursalService;
-import jakarta.validation.ConstraintViolationException;
+// Importaciones de excepción ya no son necesarias si se manejan globalmente
+// import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -11,145 +12,126 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.List; // Ya no necesitamos Map para errores, solo para el ControllerAdvice
+
 
 @RestController
 @RequestMapping("/api/stockinsumosucursal")
-@Validated
+@Validated // Habilita la validación para los parámetros de los métodos
 public class StockInsumoSucursalController {
 
     @Autowired
     private StockInsumoSucursalService stockInsumoSucursalService;
 
-    // --- MÉTODOS HELPER (sin cambios) ---
-    private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
-        errorResponse.put("error", "Error de validación");
-        errorResponse.put("mensajes", e.getConstraintViolations().stream()
-                .map(cv -> cv.getPropertyPath() + ": " + cv.getMessage())
-                .collect(Collectors.toList()));
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse);
-    }
+    // Métodos helper handleConstraintViolation y handleGenericException se ELIMINAN de aquí,
+    // ya que serán manejados por el @ControllerAdvice
 
-    private ResponseEntity<Map<String, Object>> handleGenericException(Exception e, HttpStatus status) {
-        Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("status", status.value());
-        errorResponse.put("error", e.getMessage());
-        return ResponseEntity.status(status).body(errorResponse);
-    }
-
-    // --- ENDPOINTS CORREGIDOS ---
-
+    /**
+     * Obtiene todos los registros de stock de insumos por sucursal.
+     * @return ResponseEntity con la lista de StockInsumoSucursalResponseDTO.
+     */
     @GetMapping
-    public ResponseEntity<?> getAllStockInsumoSucursal() { // <--- TIPO CORREGIDO
-        try {
-            List<StockInsumoSucursalResponseDTO> stocks = stockInsumoSucursalService.getAllStockInsumoSucursal();
-            if (stocks.isEmpty()) {
-                return ResponseEntity.noContent().build();
-            }
-            return ResponseEntity.ok(stocks);
-        } catch (Exception e) {
-            return handleGenericException(e, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getStockInsumoSucursalById(@PathVariable Integer id) { // <--- TIPO CORREGIDO
-        try {
-            StockInsumoSucursalResponseDTO stockDto = stockInsumoSucursalService.getStockInsumoSucursalById(id);
-            return ResponseEntity.ok(stockDto);
-        } catch (Exception e) {
-            return handleGenericException(e, HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @GetMapping("/insumo/{insumoId}/sucursal/{sucursalId}")
-    public ResponseEntity<?> getStockByInsumoAndSucursal( // <--- TIPO CORREGIDO
-                                                          @PathVariable Integer insumoId,
-                                                          @PathVariable Integer sucursalId) {
-        try {
-            StockInsumoSucursalResponseDTO stockDto = stockInsumoSucursalService.getStockByInsumoAndSucursal(insumoId, sucursalId);
-            return ResponseEntity.ok(stockDto);
-        } catch (Exception e) {
-            return handleGenericException(e, HttpStatus.NOT_FOUND);
-        }
-    }
-
-    @PostMapping
-    public ResponseEntity<?> createStockInsumoSucursal(@Valid @RequestBody StockInsumoSucursalRequestDTO dto) { // <--- TIPO CORREGIDO
-        try {
-            StockInsumoSucursalResponseDTO createdStock = stockInsumoSucursalService.createStockInsumoSucursal(dto);
-            return new ResponseEntity<>(createdStock, HttpStatus.CREATED);
-        } catch (ConstraintViolationException e) {
-            return handleConstraintViolation(e);
-        } catch (Exception e) {
-            HttpStatus status = e.getMessage().contains("ya existe") ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
-            return handleGenericException(e, status);
-        }
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateStockInsumoSucursal(@PathVariable Integer id, @Valid @RequestBody StockInsumoSucursalRequestDTO dto) { // <--- TIPO CORREGIDO
-        try {
-            StockInsumoSucursalResponseDTO updatedStock = stockInsumoSucursalService.updateStockInsumoSucursal(id, dto);
-            return ResponseEntity.ok(updatedStock);
-        } catch (ConstraintViolationException e) {
-            return handleConstraintViolation(e);
-        } catch (Exception e) {
-            HttpStatus status = e.getMessage().contains("no encontrado") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
-            return handleGenericException(e, status);
-        }
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteStockInsumoSucursal(@PathVariable Integer id) { // <--- TIPO CORREGIDO
-        try {
-            stockInsumoSucursalService.deleteStockInsumoSucursal(id);
+    public ResponseEntity<List<StockInsumoSucursalResponseDTO>> getAllStockInsumoSucursal() throws Exception {
+        // El try-catch se simplifica o se elimina si el ControllerAdvice lo maneja todo
+        List<StockInsumoSucursalResponseDTO> stocks = stockInsumoSucursalService.getAllStockInsumoSucursal();
+        if (stocks.isEmpty()) {
             return ResponseEntity.noContent().build();
-        } catch (Exception e) {
-            return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
+        return ResponseEntity.ok(stocks);
     }
 
+    /**
+     * Obtiene un registro de stock de insumo por sucursal por su ID.
+     * @param id ID del registro de stock.
+     * @return ResponseEntity con el StockInsumoSucursalResponseDTO.
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<StockInsumoSucursalResponseDTO> getStockInsumoSucursalById(@PathVariable Integer id) throws Exception {
+        StockInsumoSucursalResponseDTO stockDto = stockInsumoSucursalService.getStockInsumoSucursalById(id);
+        return ResponseEntity.ok(stockDto);
+    }
+
+    /**
+     * Obtiene el stock de un insumo específico en una sucursal específica.
+     * @param insumoId ID del ArticuloInsumo.
+     * @param sucursalId ID de la Sucursal.
+     * @return ResponseEntity con el StockInsumoSucursalResponseDTO.
+     */
+    @GetMapping("/insumo/{insumoId}/sucursal/{sucursalId}")
+    public ResponseEntity<StockInsumoSucursalResponseDTO> getStockByInsumoAndSucursal(
+            @PathVariable Integer insumoId,
+            @PathVariable Integer sucursalId) throws Exception {
+        StockInsumoSucursalResponseDTO stockDto = stockInsumoSucursalService.getStockByInsumoAndSucursal(insumoId, sucursalId);
+        return ResponseEntity.ok(stockDto);
+    }
+
+    /**
+     * Crea un nuevo registro de stock de insumo por sucursal.
+     * @param dto DTO con los datos del stock.
+     * @return ResponseEntity con el StockInsumoSucursalResponseDTO creado.
+     */
+    @PostMapping
+    public ResponseEntity<StockInsumoSucursalResponseDTO> createStockInsumoSucursal(@Valid @RequestBody StockInsumoSucursalRequestDTO dto) throws Exception {
+        StockInsumoSucursalResponseDTO createdStock = stockInsumoSucursalService.createStockInsumoSucursal(dto);
+        return new ResponseEntity<>(createdStock, HttpStatus.CREATED);
+    }
+
+    /**
+     * Actualiza un registro de stock de insumo por sucursal existente.
+     * @param id ID del registro de stock a actualizar.
+     * @param dto DTO con los datos actualizados.
+     * @return ResponseEntity con el StockInsumoSucursalResponseDTO actualizado.
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<StockInsumoSucursalResponseDTO> updateStockInsumoSucursal(@PathVariable Integer id, @Valid @RequestBody StockInsumoSucursalRequestDTO dto) throws Exception {
+        StockInsumoSucursalResponseDTO updatedStock = stockInsumoSucursalService.updateStockInsumoSucursal(id, dto);
+        return ResponseEntity.ok(updatedStock);
+    }
+
+    /**
+     * Elimina un registro de stock de insumo por sucursal por su ID.
+     * @param id ID del registro de stock a eliminar.
+     * @return ResponseEntity sin contenido si la eliminación fue exitosa.
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteStockInsumoSucursal(@PathVariable Integer id) throws Exception {
+        stockInsumoSucursalService.deleteStockInsumoSucursal(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * Reduce el stock actual de un insumo en una sucursal específica.
+     * Ideal para operaciones de salida de stock.
+     * @param insumoId ID del ArticuloInsumo.
+     * @param sucursalId ID de la Sucursal.
+     * @param cantidad Cantidad a reducir.
+     * @return ResponseEntity con el StockInsumoSucursalResponseDTO actualizado.
+     */
     @PutMapping("/reduceStock/insumo/{insumoId}/sucursal/{sucursalId}/cantidad/{cantidad}")
-    public ResponseEntity<?> reduceStock( // <--- TIPO CORREGIDO
-                                          @PathVariable Integer insumoId,
-                                          @PathVariable Integer sucursalId,
-                                          @PathVariable Double cantidad) {
-        try {
-            stockInsumoSucursalService.reduceStock(insumoId, sucursalId, cantidad);
-            StockInsumoSucursalResponseDTO updatedStock = stockInsumoSucursalService.getStockByInsumoAndSucursal(insumoId, sucursalId);
-            return ResponseEntity.ok(updatedStock);
-        } catch (Exception e) {
-            HttpStatus status = HttpStatus.BAD_REQUEST;
-            if (e.getMessage().contains("no encontrado")) {
-                status = HttpStatus.NOT_FOUND;
-            } else if (e.getMessage().contains("Stock insuficiente")) {
-                status = HttpStatus.CONFLICT;
-            }
-            return handleGenericException(e, status);
-        }
+    public ResponseEntity<StockInsumoSucursalResponseDTO> reduceStock(
+            @PathVariable Integer insumoId,
+            @PathVariable Integer sucursalId,
+            @PathVariable Double cantidad) throws Exception {
+        stockInsumoSucursalService.reduceStock(insumoId, sucursalId, cantidad);
+        StockInsumoSucursalResponseDTO updatedStock = stockInsumoSucursalService.getStockByInsumoAndSucursal(insumoId, sucursalId);
+        return ResponseEntity.ok(updatedStock);
     }
 
+    /**
+     * Añade stock actual a un insumo en una sucursal específica.
+     * Ideal para operaciones de entrada de stock.
+     * @param insumoId ID del ArticuloInsumo.
+     * @param sucursalId ID de la Sucursal.
+     * @param cantidad Cantidad a añadir.
+     * @return ResponseEntity con el StockInsumoSucursalResponseDTO actualizado.
+     */
     @PutMapping("/addStock/insumo/{insumoId}/sucursal/{sucursalId}/cantidad/{cantidad}")
-    public ResponseEntity<?> addStock( // <--- TIPO CORREGIDO
-                                       @PathVariable Integer insumoId,
-                                       @PathVariable Integer sucursalId,
-                                       @PathVariable Double cantidad) {
-        try {
-            stockInsumoSucursalService.addStock(insumoId, sucursalId, cantidad);
-            StockInsumoSucursalResponseDTO updatedStock = stockInsumoSucursalService.getStockByInsumoAndSucursal(insumoId, sucursalId);
-            return ResponseEntity.ok(updatedStock);
-        } catch (Exception e) {
-            HttpStatus status = HttpStatus.BAD_REQUEST;
-            if (e.getMessage().contains("no encontrado")) {
-                status = HttpStatus.NOT_FOUND;
-            }
-            return handleGenericException(e, status);
-        }
+    public ResponseEntity<StockInsumoSucursalResponseDTO> addStock(
+            @PathVariable Integer insumoId,
+            @PathVariable Integer sucursalId,
+            @PathVariable Double cantidad) throws Exception {
+        stockInsumoSucursalService.addStock(insumoId, sucursalId, cantidad);
+        StockInsumoSucursalResponseDTO updatedStock = stockInsumoSucursalService.getStockByInsumoAndSucursal(insumoId, sucursalId);
+        return ResponseEntity.ok(updatedStock);
     }
 }

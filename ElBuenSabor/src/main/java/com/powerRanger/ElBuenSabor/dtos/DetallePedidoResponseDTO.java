@@ -1,13 +1,12 @@
 package com.powerRanger.ElBuenSabor.dtos;
 
-// Asumimos que ya tienes ArticuloSimpleResponseDTO
-// import com.powerRanger.ElBuenSabor.dtos.ArticuloSimpleResponseDTO;
-
 public class DetallePedidoResponseDTO {
     private Integer id;
     private Integer cantidad;
     private Double subTotal;
-    private ArticuloSimpleResponseDTO articulo; // Para mostrar info básica del artículo
+    private ArticuloSimpleResponseDTO articulo;
+    private Integer promocionAplicadaId;
+    private Double descuentoAplicadoPorPromocion;
 
     // Getters y Setters
     public Integer getId() { return id; }
@@ -18,4 +17,8 @@ public class DetallePedidoResponseDTO {
     public void setSubTotal(Double subTotal) { this.subTotal = subTotal; }
     public ArticuloSimpleResponseDTO getArticulo() { return articulo; }
     public void setArticulo(ArticuloSimpleResponseDTO articulo) { this.articulo = articulo; }
+    public Integer getPromocionAplicadaId() {return promocionAplicadaId;}
+    public void setPromocionAplicadaId(Integer promocionAplicadaId) {this.promocionAplicadaId = promocionAplicadaId;}
+    public Double getDescuentoAplicadoPorPromocion() {return descuentoAplicadoPorPromocion;}
+    public void setDescuentoAplicadoPorPromocion(Double descuentoAplicadoPorPromocion) {this.descuentoAplicadoPorPromocion = descuentoAplicadoPorPromocion;}
 }

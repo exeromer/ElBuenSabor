@@ -36,8 +36,12 @@ public class DetallePedido {
     @JoinColumn(name = "pedido_id", nullable = false)
     private Pedido pedido;
 
-    // Eliminamos estadoActivo y pagoRealizado de aquí, ya que no los estamos usando y son más propios del Pedido.
-    // Si los necesitas, puedes volver a añadirlos con @NotNull.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "promocion_aplicada_id", nullable = true) // Puede ser nulo si no hay promoción
+    private Promocion promocionAplicada;
+
+    @Column(name = "descuento_aplicado_por_promocion", nullable = true) // Puede ser nulo o 0.0
+    private Double descuentoAplicadoPorPromocion = 0.0; // Inicializar a 0.0 por defecto
 
     public DetallePedido() {}
 
@@ -52,6 +56,10 @@ public class DetallePedido {
     public void setArticulo(Articulo articulo) { this.articulo = articulo; }
     public Pedido getPedido() { return pedido; }
     public void setPedido(Pedido pedido) { this.pedido = pedido; }
+    public Promocion getPromocionAplicada() { return promocionAplicada; }
+    public void setPromocionAplicada(Promocion promocionAplicada) { this.promocionAplicada = promocionAplicada; }
+    public Double getDescuentoAplicadoPorPromocion() { return descuentoAplicadoPorPromocion;}
+    public void setDescuentoAplicadoPorPromocion(Double descuentoAplicadoPorPromocion) { this.descuentoAplicadoPorPromocion = descuentoAplicadoPorPromocion; }
 
     @Override
     public boolean equals(Object o) {
@@ -68,6 +76,8 @@ public class DetallePedido {
     public String toString() {
         return "DetallePedido{" + "id=" + id + ", cantidad=" + cantidad + ", subTotal=" + subTotal +
                 ", articuloId=" + (articulo != null ? articulo.getId() : "null") +
-                ", pedidoId=" + (pedido != null ? pedido.getId() : "null") + '}';
+                ", pedidoId=" + (pedido != null ? pedido.getId() : "null") +
+                ", promocionAplicadaId=" + (promocionAplicada != null ? promocionAplicada.getId() : "null") +
+                ", descuentoAplicadoPorPromocion=" + descuentoAplicadoPorPromocion + '}';
     }
 }

@@ -1,6 +1,8 @@
 package com.powerRanger.ElBuenSabor.dtos;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.powerRanger.ElBuenSabor.entities.enums.TipoPromocion; // Importar el enum TipoPromocion
+
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
@@ -19,10 +21,14 @@ public class PromocionResponseDTO {
     private LocalTime horaHasta;
     private String descripcionDescuento;
     private Double precioPromocional;
+    private TipoPromocion tipoPromocion;
+    private Double porcentajeDescuento;
     private Boolean estadoActivo;
 
-    private List<ImagenResponseDTO> imagenes = new ArrayList<>(); // Usaremos ImagenResponseDTO
+    private List<ImagenResponseDTO> imagenes = new ArrayList<>();
     private List<PromocionDetalleResponseDTO> detallesPromocion = new ArrayList<>();
+
+    private List<SucursalSimpleResponseDTO> sucursales = new ArrayList<>();
 
     // Getters y Setters
     public Integer getId() { return id; }
@@ -41,10 +47,17 @@ public class PromocionResponseDTO {
     public void setDescripcionDescuento(String descripcionDescuento) { this.descripcionDescuento = descripcionDescuento; }
     public Double getPrecioPromocional() { return precioPromocional; }
     public void setPrecioPromocional(Double precioPromocional) { this.precioPromocional = precioPromocional; }
+
+    public TipoPromocion getTipoPromocion() { return tipoPromocion; }
+    public void setTipoPromocion(TipoPromocion tipoPromocion) { this.tipoPromocion = tipoPromocion; }
+    public Double getPorcentajeDescuento() { return porcentajeDescuento; }
+    public void setPorcentajeDescuento(Double porcentajeDescuento) { this.porcentajeDescuento = porcentajeDescuento; }
     public Boolean getEstadoActivo() { return estadoActivo; }
     public void setEstadoActivo(Boolean estadoActivo) { this.estadoActivo = estadoActivo; }
     public List<ImagenResponseDTO> getImagenes() { return imagenes; }
     public void setImagenes(List<ImagenResponseDTO> imagenes) { this.imagenes = imagenes; }
     public List<PromocionDetalleResponseDTO> getDetallesPromocion() { return detallesPromocion; }
     public void setDetallesPromocion(List<PromocionDetalleResponseDTO> detallesPromocion) { this.detallesPromocion = detallesPromocion; }
+    public List<SucursalSimpleResponseDTO> getSucursales() { return sucursales; }
+    public void setSucursales(List<SucursalSimpleResponseDTO> sucursales) { this.sucursales = sucursales; }
 }

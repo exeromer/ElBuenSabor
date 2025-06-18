@@ -15,6 +15,10 @@ import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
+import java.util.HashSet;
+
+import com.powerRanger.ElBuenSabor.entities.enums.TipoPromocion;
 
 @Entity
 @JsonIdentityInfo(
@@ -54,15 +58,29 @@ public class Promocion {
     @DecimalMin(value = "0.0", message = "El precio promocional no puede ser negativo")
     private Double precioPromocional;
 
+    @DecimalMin(value = "0.0", message = "El porcentaje de descuento no puede ser negativo")
+    private Double porcentajeDescuento;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @NotNull(message = "El tipo de promoción es obligatorio")
+    private TipoPromocion tipoPromocion;
+
+
     @OneToMany(mappedBy = "promocion", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<Imagen> imagenes = new ArrayList<>();
 
     @OneToMany(mappedBy = "promocion", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private List<PromocionDetalle> detallesPromocion = new ArrayList<>();
+    private Set<PromocionDetalle> detallesPromocion = new HashSet<>();
 
-    // Si la relación fuera bidireccional y Promocion tuviera conocimiento de sus sucursales:
-    // @ManyToMany(mappedBy = "promociones", fetch = FetchType.LAZY)
-    // private List<Sucursal> sucursales = new ArrayList<>();
+    @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "promocion_sucursal",
+            joinColumns = @JoinColumn(name = "promocion_id"),
+            inverseJoinColumns = @JoinColumn(name = "sucursal_id")
+    )
+    private Set<Sucursal> sucursales = new HashSet<>();
+
 
     @Column(name = "estadoActivo", nullable = false)
     @NotNull(message = "El estado activo es obligatorio")
@@ -70,8 +88,8 @@ public class Promocion {
 
     public Promocion() {
         this.imagenes = new ArrayList<>();
-        this.detallesPromocion = new ArrayList<>();
-        // if (this.sucursales == null) this.sucursales = new ArrayList<>(); // Si se descomenta sucursales
+        this.detallesPromocion = new HashSet<>();
+        this.sucursales = new HashSet<>();
     }
 
     // Getters y Setters
@@ -91,14 +109,25 @@ public class Promocion {
     public void setDescripcionDescuento(String descripcionDescuento) { this.descripcionDescuento = descripcionDescuento; }
     public Double getPrecioPromocional() { return precioPromocional; }
     public void setPrecioPromocional(Double precioPromocional) { this.precioPromocional = precioPromocional; }
+
+    public Double getPorcentajeDescuento() { return porcentajeDescuento; }
+    public void setPorcentajeDescuento(Double porcentajeDescuento) { this.porcentajeDescuento = porcentajeDescuento; }
+    public TipoPromocion getTipoPromocion() { return tipoPromocion; }
+    public void setTipoPromocion(TipoPromocion tipoPromocion) { this.tipoPromocion = tipoPromocion; }
+
+
     public List<Imagen> getImagenes() { return imagenes; }
     public void setImagenes(List<Imagen> imagenes) { this.imagenes = imagenes; }
-    public List<PromocionDetalle> getDetallesPromocion() { return detallesPromocion; }
-    public void setDetallesPromocion(List<PromocionDetalle> detallesPromocion) { this.detallesPromocion = detallesPromocion; }
+
+    public Set<PromocionDetalle> getDetallesPromocion() { return detallesPromocion; }
+    public void setDetallesPromocion(Set<PromocionDetalle> detallesPromocion) { this.detallesPromocion = detallesPromocion; }
+
+    public Set<Sucursal> getSucursales() { return sucursales; }
+    public void setSucursales(Set<Sucursal> sucursales) { this.sucursales = sucursales; }
+
+
     public Boolean getEstadoActivo() { return estadoActivo; }
     public void setEstadoActivo(Boolean estadoActivo) { this.estadoActivo = estadoActivo; }
-    // public List<Sucursal> getSucursales() { return sucursales; } // Si se descomenta sucursales
-    // public void setSucursales(List<Sucursal> sucursales) { this.sucursales = sucursales; } // Si se descomenta sucursales
 
     // Métodos Helper
     public void addImagen(Imagen imagen) {
@@ -107,27 +136,38 @@ public class Promocion {
         imagen.setPromocion(this);
     }
     public void removeImagen(Imagen imagen) {
-        if (this.imagenes != null) this.imagenes.remove(imagen);
-        imagen.setPromocion(null);
+        if (this.imagenes != null) {
+            this.imagenes.remove(imagen);
+            imagen.setPromocion(null);
+        }
     }
     public void addDetallePromocion(PromocionDetalle detalle) {
-        if (this.detallesPromocion == null) this.detallesPromocion = new ArrayList<>();
-        this.detallesPromocion.add(detalle);
-        detalle.setPromocion(this);
+        if (this.detallesPromocion == null) this.detallesPromocion = new HashSet<>();
+        if (this.detallesPromocion.add(detalle)) {
+            detalle.setPromocion(this);
+        }
     }
     public void removeDetallePromocion(PromocionDetalle detalle) {
-        if (this.detallesPromocion != null) this.detallesPromocion.remove(detalle);
-        detalle.setPromocion(null);
+        if (this.detallesPromocion != null && this.detallesPromocion.remove(detalle)) {
+            detalle.setPromocion(null);
+        }
     }
-    // Si se descomenta sucursales:
-    // public void addSucursal(Sucursal sucursal) {
-    //    if (this.sucursales == null) this.sucursales = new ArrayList<>();
-    //    if (!this.sucursales.contains(sucursal)) this.sucursales.add(sucursal);
-    // }
-    // public void removeSucursal(Sucursal sucursal) {
-    //    if (this.sucursales != null) this.sucursales.remove(sucursal);
-    // }
-
+    public void addSucursal(Sucursal sucursal) {
+        if (this.sucursales == null) this.sucursales = new HashSet<>();
+        if (this.sucursales.add(sucursal)) {
+            if (sucursal.getPromociones() == null) {
+                sucursal.setPromociones(new HashSet<>());
+            }
+            sucursal.getPromociones().add(this);
+        }
+    }
+    public void removeSucursal(Sucursal sucursal) {
+        if (this.sucursales != null && this.sucursales.remove(sucursal)) {
+            if (sucursal.getPromociones() != null) {
+                sucursal.getPromociones().remove(this);
+            }
+        }
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -142,6 +182,12 @@ public class Promocion {
 
     @Override
     public String toString() {
-        return "Promocion{" + "id=" + id + ", denominacion='" + denominacion + '\'' + ", estadoActivo=" + estadoActivo + '}';
+        // VERSÍON SIMPLIFICADA PARA DEPURAR EL ERROR
+        return "Promocion{" +
+                "id=" + id +
+                ", denominacion='" + denominacion + '\'' +
+                ", tipoPromocion=" + tipoPromocion +
+                ", estadoActivo=" + estadoActivo +
+                '}';
     }
 }

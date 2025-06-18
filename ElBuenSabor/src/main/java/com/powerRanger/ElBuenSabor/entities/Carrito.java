@@ -26,10 +26,6 @@ public class Carrito {
     @Column(name = "fecha_ultima_modificacion", nullable = false)
     private LocalDateTime fechaUltimaModificacion;
 
-    // orphanRemoval=true asegura que si un CarritoItem se quita de esta lista
-    // y se guarda el Carrito, el CarritoItem huérfano se elimina de la BD.
-    // CascadeType.ALL propaga todas las operaciones (PERSIST, MERGE, REMOVE, REFRESH, DETACH)
-    // a los CarritoItem asociados.
     @OneToMany(mappedBy = "carrito", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<CarritoItem> items = new ArrayList<>();
 
