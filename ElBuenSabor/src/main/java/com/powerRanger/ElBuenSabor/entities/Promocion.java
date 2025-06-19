@@ -156,11 +156,12 @@ public class Promocion {
         if (this.sucursales == null) this.sucursales = new HashSet<>();
         if (this.sucursales.add(sucursal)) {
             if (sucursal.getPromociones() == null) {
-                sucursal.setPromociones(new HashSet<>());
+                sucursal.setPromociones(new ArrayList<>());
             }
             sucursal.getPromociones().add(this);
         }
     }
+
     public void removeSucursal(Sucursal sucursal) {
         if (this.sucursales != null && this.sucursales.remove(sucursal)) {
             if (sucursal.getPromociones() != null) {

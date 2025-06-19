@@ -457,6 +457,7 @@ public class PedidoServiceImpl implements PedidoService {
 
         double totalGeneralPedido = 0.0;
         double costoTotalPedido = 0.0;
+        double descuentoTotalPromociones = 0.0;
         logger.info("Iniciando cálculo de Total y TotalCosto. costoTotalPedido inicial: {}", costoTotalPedido);
 
         // --- Aplicación de promociones y cálculo de totales ---
@@ -468,81 +469,56 @@ public class PedidoServiceImpl implements PedidoService {
             detallePedido.setArticulo(articuloDelItem);
             detallePedido.setCantidad(item.getCantidad());
 
+            double subTotalSinDescuento = item.getCantidad() * item.getPrecioUnitarioAlAgregar();
             double subTotalItem = item.getCantidad() * item.getPrecioUnitarioAlAgregar();
             double descuentoAplicadoPorPromocion = 0.0;
             Promocion promocionAplicada = null; // Para almacenar la entidad Promocion si aplica
 
             // Si el item ya trae una promoción pre-aplicada desde el carrito, la usamos.
             // Esto es importante si el carrito ya tiene lógica para seleccionar la mejor promoción.
-            if (item.getPromocionAplicada() != null && item.getDescuentoAplicadoPorPromocion() != null && item.getDescuentoAplicadoPorPromocion() > 0) {
-                promocionAplicada = item.getPromocionAplicada();
-                descuentoAplicadoPorPromocion = item.getDescuentoAplicadoPorPromocion();
-                subTotalItem -= descuentoAplicadoPorPromocion;
-                logger.info("--> Promoción pre-aplicada desde CarritoItem para {}. Descuento: ${}", articuloDelItem.getDenominacion(), descuentoAplicadoPorPromocion);
-            } else {
-                // Si no hay promoción pre-aplicada, buscamos la mejor promoción para este artículo.
-                if (!articulosProcesadosPorCombo.contains(articuloDelItem.getId())) {
-                    Optional<PromocionResponseDTO> optPromocionIndividual = promocionesActivasDTO.stream()
-                            // Filtramos por promociones que contengan el artículo del carrito
-                            .filter(p -> p.getPromocionDetalles().stream()
-                                    .anyMatch(pd -> pd.getArticulo() != null && pd.getArticulo().getId().equals(articuloDelItem.getId())))
-                            // Ordenamos para encontrar la más ventajosa (esto puede necesitar más complejidad)
-                            .sorted((p1, p2) -> {
-                                // Aquí se puede definir una lógica de prioridad más compleja
-                                // Por ejemplo, si un 2x1 es siempre mejor que un porcentaje, etc.
-                                // Para simplificar, priorizamos PORCENTAJE sobre CANTIDAD y mayor descuento.
-                                if (p1.getTipoPromocion() == TipoPromocion.PORCENTAJE && p2.getTipoPromocion() == TipoPromocion.CANTIDAD) {
-                                    return -1; // Porcentaje es "mejor" por defecto (puedes cambiar esto)
-                                }
-                                if (p1.getTipoPromocion() == TipoPromocion.CANTIDAD && p2.getTipoPromocion() == TipoPromocion.PORCENTAJE) {
-                                    return 1; // Cantidad es "peor" por defecto
-                                }
-                                if (p1.getTipoPromocion() == TipoPromocion.PORCENTAJE) {
-                                    return Double.compare(p2.getPorcentajeDescuento(), p1.getPorcentajeDescuento()); // Mayor porcentaje
-                                }
-                                if (p1.getTipoPromocion() == TipoPromocion.CANTIDAD) {
-                                    return Double.compare(p1.getPrecioPromocional(), p2.getPrecioPromocional()); // Menor precio final
-                                }
-                                return 0;
-                            })
-                            .findFirst();
+            if (!articulosProcesadosPorCombo.contains(articuloDelItem.getId())) {
+                Optional<PromocionResponseDTO> optPromocion = promocionesActivasDTO.stream()
+                        .filter(p -> p.getDetallesPromocion().stream()
+                                .anyMatch(pd -> pd.getArticulo() != null && pd.getArticulo().getId().equals(articuloDelItem.getId())))
+                        .findFirst();
 
-                    if (optPromocionIndividual.isPresent()) {
-                        PromocionResponseDTO promoDto = optPromocionIndividual.get();
-                        // Mapear el DTO a la entidad Promocion para asignarlo al DetallePedido
-                        promocionAplicada = mapPromocionResponseToEntity(promoDto);
+                if (optPromocion.isPresent()) {
+                    PromocionResponseDTO promoDto = optPromocion.get();
+                    logger.info("--> Promoción encontrada para '{}': {}", articuloDelItem.getDenominacion(), promoDto.getDenominacion());
 
-                        // Calcular el descuento basado en el tipo de promoción
-                        if (promoDto.getTipoPromocion() == TipoPromocion.PORCENTAJE) {
-                            descuentoAplicadoPorPromocion = subTotalItem * (promoDto.getPorcentajeDescuento() / 100.0);
-                        } else if (promoDto.getTipoPromocion() == TipoPromocion.CANTIDAD) {
-                            // Para promociones de tipo CANTIDAD (ej. 2x1, combos):
-                            // Esto asume que 'precioPromocional' es el precio final de la promoción
-                            // y que se aplica a una cantidad específica.
-                            // Si es un 2x1, el descuento sería el precio de un artículo.
-                            // Esta lógica debe ser muy específica según cómo definas tus promociones de CANTIDAD.
-                            // Por ahora, asumimos que 'precioPromocional' es el precio final del ITEM individual en promoción
-                            // y el descuento es la diferencia con el precio regular unitario, multiplicado por la cantidad.
-                            descuentoAplicadoPorPromocion = (item.getPrecioUnitarioAlAgregar() - promoDto.getPrecioPromocional()) * item.getCantidad();
-                            descuentoAplicadoPorPromocion = Math.max(0, descuentoAplicadoPorPromocion); // Asegurar que no sea negativo
+                    // Lógica para PORCENTAJE
+                    if (promoDto.getTipoPromocion() == TipoPromocion.PORCENTAJE) {
+                        descuentoAplicadoPorPromocion = subTotalSinDescuento * (promoDto.getPorcentajeDescuento() / 100.0);
+                        logger.info("--> Calculando Descuento PORCENTAJE: -${}", descuentoAplicadoPorPromocion);
 
-                            // Si la promoción de CANTIDAD implica un combo de varios artículos,
-                            // necesitarías una lógica más avanzada para procesar múltiples CarritoItems
-                            // juntos y evitar que se apliquen individualmente.
-                            // Aquí es donde 'articulosProcesadosPorCombo' sería útil si hubiera combos complejos.
-                            // Por ahora, solo se marca si se aplicó un descuento por cantidad.
-                            // Si el COMBO es un artículo manufacturado que representa un combo, entonces ya se gestiona su stock y precio.
+                        // Lógica para CANTIDAD (ej: 2x1)
+                    } else if (promoDto.getTipoPromocion() == TipoPromocion.CANTIDAD) {
+                        PromocionDetalleResponseDTO detallePromo = promoDto.getDetallesPromocion().stream().findFirst().orElse(null);
+                        if (detallePromo != null && item.getCantidad() >= detallePromo.getCantidad()) {
+                            int vecesAplicada = item.getCantidad() / detallePromo.getCantidad();
+                            double precioOriginalLote = detallePromo.getCantidad() * item.getPrecioUnitarioAlAgregar();
+                            double descuentoPorLote = precioOriginalLote - promoDto.getPrecioPromocional();
+                            descuentoAplicadoPorPromocion = descuentoPorLote * vecesAplicada;
+                            logger.info("--> Calculando Descuento CANTIDAD: -${}", descuentoAplicadoPorPromocion);
+                        } else {
+                            logger.warn("--> La cantidad pedida ({}) no cumple el requisito ({}) de la promoción '{}'", item.getCantidad(), detallePromo != null ? detallePromo.getCantidad() : "N/A", promoDto.getDenominacion());
                         }
-                        subTotalItem -= descuentoAplicadoPorPromocion;
-                        logger.info("--> Promoción aplicada por lógica de servicio para {}. Tipo: {}, Descuento: ${}", articuloDelItem.getDenominacion(), promoDto.getTipoPromocion(), descuentoAplicadoPorPromocion);
                     }
+
+                    if (descuentoAplicadoPorPromocion > 0) {
+                        promocionAplicada = mapPromocionResponseToEntity(promoDto);
+                    }
+                } else {
+                    logger.info("--> No se encontraron promociones activas para '{}'", articuloDelItem.getDenominacion());
                 }
             }
 
-            detallePedido.setSubTotal(subTotalItem);
+            double subTotalFinal = subTotalSinDescuento - descuentoAplicadoPorPromocion;
+            detallePedido.setSubTotal(subTotalFinal);
             detallePedido.setPromocionAplicada(promocionAplicada);
             detallePedido.setDescuentoAplicadoPorPromocion(descuentoAplicadoPorPromocion);
-            totalGeneralPedido += subTotalItem;
+
+            totalGeneralPedido += subTotalFinal;
 
             if (articuloDelItem instanceof ArticuloInsumo) {
                 ArticuloInsumo insumo = (ArticuloInsumo) articuloDelItem;
@@ -646,15 +622,15 @@ public class PedidoServiceImpl implements PedidoService {
         promocion.setFechaHasta(dto.getFechaHasta());
         promocion.setHoraDesde(dto.getHoraDesde());
         promocion.setHoraHasta(dto.getHoraHasta());
-        promocion.setDescripcion(dto.getDescripcion());
+        promocion.setDescripcionDescuento(dto.getDescripcionDescuento());
         promocion.setPrecioPromocional(dto.getPrecioPromocional());
         promocion.setPorcentajeDescuento(dto.getPorcentajeDescuento());
         promocion.setTipoPromocion(dto.getTipoPromocion());
 
         // Mapear los detalles de la promoción si existen en el DTO
-        if (dto.getPromocionDetalles() != null) {
+        if (dto.getDetallesPromocion() != null) {
             Set<PromocionDetalle> detalles = new HashSet<>();
-            for (PromocionDetalleResponseDTO detalleDto : dto.getPromocionDetalles()) {
+            for (PromocionDetalleResponseDTO detalleDto : dto.getDetallesPromocion()) {
                 PromocionDetalle detalle = new PromocionDetalle();
                 detalle.setId(detalleDto.getId());
                 detalle.setCantidad(detalleDto.getCantidad());
@@ -671,7 +647,7 @@ public class PedidoServiceImpl implements PedidoService {
                 }
                 detalles.add(detalle);
             }
-            promocion.setPromocionDetalles(detalles);
+            promocion.setDetallesPromocion(detalles);
         }
 
         // Mapear sucursales si existen en el DTO (aunque para DetallePedido no se usa directamente)

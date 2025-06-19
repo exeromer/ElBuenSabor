@@ -75,13 +75,15 @@ public class SecurityConfig {
                                 // ---- CLIENTE ----
                                 .requestMatchers(HttpMethod.POST, "/api/pedidos").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.POST, "/api/pedidos/cliente/{clienteId}/desde-carrito").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.POST, "/api/pedidos/crearDesdeCarrito").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.GET, "/api/pedidos/mis-pedidos").hasAuthority("ROLE_CLIENTE")
-                                .requestMatchers(HttpMethod.GET, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.PUT, "/api/clientes/perfil").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.GET, "/api/clientes/{clienteId}/carrito").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.POST, "/api/clientes/{clienteId}/carrito/items").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.PUT, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items/**").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers("/api/carrito/**").hasAuthority("ROLE_CLIENTE") // Rutas del carrito
+                                .requestMatchers("/api/domicilios/**").hasAuthority("ROLE_CLIENTE") // Cliente gestiona sus domicilios
 
                                 // ---- CLIENTE y ADMIN ----
                                 .requestMatchers(HttpMethod.GET, "/api/clientes/usuario/{auth0Id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
@@ -89,6 +91,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.POST,"/api/domicilios/").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
                                 .requestMatchers(HttpMethod.PUT,"/api/domicilios/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
                                 .requestMatchers(HttpMethod.DELETE,"/api/domicilios/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
+                                .requestMatchers(HttpMethod.GET, "/api/clientes/perfil").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
 
                                 // ---- EMPLEADOS (Cualquier tipo) y ADMIN ----
                                 .requestMatchers(HttpMethod.POST, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")

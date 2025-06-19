@@ -3,8 +3,6 @@ package com.powerRanger.ElBuenSabor.controllers;
 import com.powerRanger.ElBuenSabor.dtos.StockInsumoSucursalRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.StockInsumoSucursalResponseDTO;
 import com.powerRanger.ElBuenSabor.services.StockInsumoSucursalService;
-// Importaciones de excepción ya no son necesarias si se manejan globalmente
-// import jakarta.validation.ConstraintViolationException;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -12,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List; // Ya no necesitamos Map para errores, solo para el ControllerAdvice
+import java.util.List;
 
 
 @RestController
