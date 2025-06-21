@@ -1,69 +1,58 @@
-/**
- * @file categoriaService.ts
- * @description Provee funciones para interactuar con los endpoints de Categorías de la API.
- * Incluye operaciones CRUD para categorías.
- */
+import apiClient from '../services/apiClient';
+import type { CategoriaResponse } from '../types/types';
 
-import apiClient, { setAuthToken } from './apiClient';
-import type { Categoria } from '../types/types';
+// La entidad Categoria para POST/PUT, según el controller
+type CategoriaCreateOrUpdate = {
+    id?: number;
+    denominacion: string;
+    estadoActivo?: boolean;
+    // Agrega aquí otros campos si son necesarios para crear/actualizar
+};
 
-/**
- * @class CategoriaService
- * @description Clase que encapsula las operaciones de la API relacionadas con Categorías.
- */
 export class CategoriaService {
   /**
-   * @function getCategorias
-   * @description Obtiene todas las categorías activas.
-   * @returns {Promise<Categoria[]>} Una promesa que resuelve con un array de categorías.
-   * @throws {Error} Si ocurre un error durante la petición.
+   * Obtiene todas las categorías.
    */
-  async getCategorias(): Promise<Categoria[]> {
-    try {
-      const response = await apiClient.get<Categoria[]>('/categorias');
-      return response.data.filter(cat => cat.estadoActivo);
-    } catch (error) {
-      console.error('Error al obtener categorías:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * @function createCategoria
-   * @description Crea una nueva categoría. Requiere un token de autenticación.
-   * @param {Categoria} data - Los datos de la categoría a crear.
-   * @param {string} token - El token JWT para la autenticación.
-   * @returns {Promise<Categoria>} Una promesa que resuelve con la categoría creada.
-   */
-  async createCategoria(data: Categoria, token: string): Promise<Categoria> {
-    setAuthToken(token);
-    const response = await apiClient.post<Categoria>('/categorias', data);
+  static async getAll(): Promise<CategoriaResponse[]> {
+    const response = await apiClient.get<CategoriaResponse[]>('/categorias');
     return response.data;
   }
 
   /**
-   * @function updateCategoria
-   * @description Actualiza una categoría existente. Requiere un token de autenticación.
-   * @param {number} id - El ID de la categoría a actualizar.
-   * @param {Categoria} data - Los nuevos datos de la categoría.
-   * @param {string} token - El token JWT para la autenticación.
-   * @returns {Promise<Categoria>} Una promesa que resuelve con la categoría actualizada.
+   * Obtiene una categoría por su ID.
+   * @param id - El ID de la categoría.
    */
-  async updateCategoria(id: number, data: Categoria, token: string): Promise<Categoria> {
-    setAuthToken(token);
-    const response = await apiClient.put<Categoria>(`/categorias/${id}`, data);
+  static async getById(id: number): Promise<CategoriaResponse> {
+    const response = await apiClient.get<CategoriaResponse>(`/categorias/${id}`);
     return response.data;
   }
 
   /**
-   * @function deleteCategoria
-   * @description Elimina (lógicamente) una categoría. Requiere un token de autenticación.
-   * @param {number} id - El ID de la categoría a eliminar.
-   * @param {string} token - El token JWT para la autenticación.
-   * @returns {Promise<void>} Una promesa que resuelve cuando la operación se completa.
+   * Crea una nueva categoría.
+   * NOTA: El backend espera una entidad, no un DTO.
+   * @param data - Los datos de la categoría a crear.
    */
-  async deleteCategoria(id: number, token: string): Promise<void> {
-    setAuthToken(token);
+  static async create(data: CategoriaCreateOrUpdate): Promise<CategoriaResponse> {
+    const response = await apiClient.post<CategoriaResponse>('/categorias', data);
+    return response.data;
+  }
+
+  /**
+   * Actualiza una categoría.
+   * NOTA: El backend espera una entidad, no un DTO.
+   * @param id - El ID de la categoría a actualizar.
+   * @param data - Los nuevos datos.
+   */
+  static async update(id: number, data: CategoriaCreateOrUpdate): Promise<CategoriaResponse> {
+    const response = await apiClient.put<CategoriaResponse>(`/categorias/${id}`, data);
+    return response.data;
+  }
+  
+  /**
+   * Elimina una categoría.
+   * @param id - El ID de la categoría a eliminar.
+   */
+  static async delete(id: number): Promise<void> {
     await apiClient.delete(`/categorias/${id}`);
   }
 }

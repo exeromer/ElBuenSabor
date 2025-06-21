@@ -1,41 +1,49 @@
-/**
- * @file sucursalService.ts
- * @description Provee funciones para interactuar con los endpoints de Sucursales de la API.
- * Incluye operaciones para obtener sucursales.
- */
+import apiClient from '../services/apiClient';
+import type { SucursalRequest, SucursalResponse } from '../types/types';
 
-import apiClient from './apiClient';
-import type { Sucursal } from '../types/types';
-
-/**
- * @class SucursalService
- * @description Clase que encapsula las operaciones de la API relacionadas con Sucursales.
- */
-export class SucursalService { // <-- Clase exportada
-
+export class SucursalService {
   /**
-   * @function getSucursales
-   * @description Obtiene todas las sucursales activas.
-   * @returns {Promise<Sucursal[]>} Una promesa que resuelve con un array de sucursales.
-   * @throws {Error} Si ocurre un error durante la petición.
+   * Crea una nueva sucursal.
+   * @param data - Los datos de la sucursal.
    */
-  async getSucursales(): Promise<Sucursal[]> {
-    try {
-      const response = await apiClient.get<Sucursal[]>('/sucursales');
-      return response.data.filter(s => s.estadoActivo);
-    } catch (error) {
-      console.error('Error al obtener sucursales:', error);
-      throw error;
-    }
-  }
-
-  // Puedes añadir más métodos CRUD para Sucursales aquí si los necesitas en el futuro,
-  // como getSucursalById, createSucursal, updateSucursal, deleteSucursal.
-  // Por ejemplo:
-  /*
-  async getSucursalById(id: number): Promise<Sucursal> {
-    const response = await apiClient.get<Sucursal>(`/sucursales/${id}`);
+  static async create(data: SucursalRequest): Promise<SucursalResponse> {
+    const response = await apiClient.post<SucursalResponse>('/sucursales', data);
     return response.data;
   }
-  */
+
+  /**
+   * Obtiene todas las sucursales.
+   */
+  static async getAll(): Promise<SucursalResponse[]> {
+    const response = await apiClient.get<SucursalResponse[]>('/sucursales');
+    return response.data;
+  }
+
+  /**
+   * Obtiene una sucursal por su ID.
+   * @param id - El ID de la sucursal.
+   */
+  static async getById(id: number): Promise<SucursalResponse> {
+    const response = await apiClient.get<SucursalResponse>(`/sucursales/${id}`);
+    return response.data;
+  }
+
+  /**
+   * Actualiza una sucursal.
+   * @param id - El ID de la sucursal a actualizar.
+   * @param data - Los nuevos datos.
+   */
+  static async update(id: number, data: SucursalRequest): Promise<SucursalResponse> {
+    const response = await apiClient.put<SucursalResponse>(`/sucursales/${id}`, data);
+    return response.data;
+  }
+
+  /**
+   * Realiza un borrado lógico de una sucursal.
+   * @param id - El ID de la sucursal.
+   */
+  static async delete(id: number): Promise<{ mensaje: string }> {
+    const response = await apiClient.delete<{ mensaje: string }>(`/sucursales/${id}`);
+    return response.data;
+  }
 }

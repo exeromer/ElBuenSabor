@@ -1,97 +1,86 @@
-// Nueva carpeta/ElBuenSabor-frontend/src/services/pedidoService.ts
-
-/**
- * @file pedidoService.ts
- * @description Provee funciones para interactuar con los endpoints de Pedidos de la API.
- * Incluye operaciones para obtener pedidos de un cliente y crear nuevos pedidos.
- */
-
-import apiClient, { setAuthToken } from './apiClient';
-// Importamos Pedido, PedidoRequestDTO y PreferenceMP para los tipos
-import type { Pedido, PedidoRequestDTO, PreferenceMP, CrearPedidoRequestDTO } from '../types/types'; 
-
-// Definimos la clase PedidoService
+import apiClient from '../services/apiClient';
+import type { PedidoRequest, PedidoResponse, CrearPedidoRequest, PedidoEstadoRequest } from '../types/types';
+import type { Estado } from '../types/enums';
 export class PedidoService {
+  /**
+   * Crea un pedido para el cliente autenticado.
+   * @param data - Los datos del pedido.
+   */
+  static async create(data: PedidoRequest): Promise<PedidoResponse> {
+    const response = await apiClient.post<PedidoResponse>('/pedidos', data);
+    return response.data;
+  }
+  
+  /**
+   * Crea un pedido como administrador (requiere clienteId en el DTO).
+   * @param data - Los datos del pedido, incluyendo clienteId.
+   */
+  static async createByAdmin(data: PedidoRequest): Promise<PedidoResponse> {
+    const response = await apiClient.post<PedidoResponse>('/pedidos/admin', data);
+    return response.data;
+  }
 
-    /**
-     * @function getPedidosByClienteAuth0Id
-     * @description Obtiene una lista de pedidos asociados a un cliente específico,
-     * identificado por su ID de Auth0. Requiere un token de autenticación.
-     * @param {string} auth0Id - El ID de Auth0 del cliente. (Aunque el endpoint lo obtiene del token, se mantiene para claridad).
-     * @param {string} token - El token JWT para la autenticación.
-     * @returns {Promise<Pedido[]>} Una promesa que resuelve con un array de pedidos.
-     * @throws {Error} Si ocurre un error durante la petición.
-     */
-    async getPedidosByClienteAuth0Id(auth0Id: string, token: string): Promise<Pedido[]> {
-        setAuthToken(token);
-        try {
-            const response = await apiClient.get<Pedido[]>(`/pedidos/mis-pedidos`);
-            return response.data;
-        } catch (error) {
-            console.error(`Error al obtener pedidos para Auth0 ID ${auth0Id}:`, error);
-            throw error;
-        }
-    }
+  /**
+   * Obtiene todos los pedidos (ruta de admin).
+   */
+  static async getAll(): Promise<PedidoResponse[]> {
+    const response = await apiClient.get<PedidoResponse[]>('/pedidos');
+    return response.data;
+  }
 
-        /**
-     * @function crearPedidoDesdeCarrito
-     * @description Crea un nuevo pedido desde el carrito de un cliente. Llama al endpoint especializado del backend.
-     * @param {number} clienteId - El ID del cliente que realiza el pedido.
-     * @param {CrearPedidoRequestDTO} pedidoData - Los datos del pedido, incluyendo domicilio y forma de pago.
-     * @param {string} token - El token JWT para la autenticación.
-     * @returns {Promise<any>} Resuelve con la respuesta del backend (que puede ser el Pedido o un objeto con datos de Mercado Pago).
-     */
-    async crearPedidoDesdeCarrito(clienteId: number, pedidoData: CrearPedidoRequestDTO, token: string): Promise<any> {
-        setAuthToken(token);
-        try {
-            // Este es el endpoint correcto y robusto de tu backend que maneja toda la lógica.
-            const response = await apiClient.post(`/pedidos/cliente/${clienteId}/desde-carrito`, pedidoData);
-            return response.data;
-        } catch (error) {
-            console.error('Error al crear pedido desde el carrito:', error);
-            throw error;
-        }
-    }
+  /**
+   * Obtiene los pedidos del usuario actualmente autenticado.
+   */
+  static async getMisPedidos(): Promise<PedidoResponse[]> {
+    const response = await apiClient.get<PedidoResponse[]>('/pedidos/mis-pedidos');
+    return response.data;
+  }
+  
+  /**
+   * Obtiene todos los pedidos de un cliente específico por su ID.
+   * @param clienteId - El ID del cliente.
+   */
+  static async getByClienteId(clienteId: number): Promise<PedidoResponse[]> {
+    const response = await apiClient.get<PedidoResponse[]>(`/pedidos/cliente/${clienteId}`);
+    return response.data;
+  }
+  
+  /**
+   * Obtiene un pedido por su ID.
+   * @param id - El ID del pedido.
+   */
+  static async getById(id: number): Promise<PedidoResponse> {
+    const response = await apiClient.get<PedidoResponse>(`/pedidos/${id}`);
+    return response.data;
+  }
+  
+  /**
+   * Crea un pedido a partir del carrito de un cliente.
+   * @param clienteId - El ID del cliente.
+   * @param data - Datos adicionales del pedido (dirección, tipo de envío, etc.).
+   */
+  static async createFromCarrito(clienteId: number, data: CrearPedidoRequest): Promise<PedidoResponse> {
+    const response = await apiClient.post<PedidoResponse>(`/pedidos/cliente/${clienteId}/desde-carrito`, data);
+    return response.data;
+  }
 
-    /**
-     * @function createPedido
-     * @description Crea un nuevo pedido en el backend.
-     * @param {PedidoRequestDTO} pedidoData - Los datos del pedido a crear.
-     * @param {string} token - El token JWT para la autenticación.
-     * @returns {Promise<Pedido>} Una promesa que resuelve con el pedido creado.
-     * @throws {Error} Si ocurre un error durante la creación del pedido.
-     */
-    async createPedido(pedidoData: PedidoRequestDTO, token: string): Promise<Pedido> {
-        setAuthToken(token);
-        try {
-            // El endpoint '/pedidos' de tu backend espera un PedidoRequestDTO.
-            // La respuesta debería ser el Pedido completo una vez creado.
-            const response = await apiClient.post<Pedido>('/pedidos', pedidoData);
-            return response.data;
-        } catch (error) {
-            console.error('Error al crear pedido:', error);
-            throw error;
-        }
-    }
-
-    /**
-     * @function createPreferenceMercadoPago
-     * @description Envía los datos del pedido al backend para crear una preferencia de pago en Mercado Pago.
-     * @param {PedidoRequestDTO} pedidoData - El objeto del pedido a procesar para Mercado Pago (en formato DTO).
-     * @param {string} token - El token JWT para la autenticación.
-     * @returns {Promise<string | null>} Una promesa que resuelve con el ID de la preferencia de Mercado Pago o null si falla.
-     * @throws {Error} Si ocurre un error durante la creación de la preferencia.
-     */
-    async createPreferenceMercadoPago(pedidoData: PedidoRequestDTO, token: string): Promise<string | null> { // <-- Cambiado 'pedido: Pedido' a 'pedidoData: PedidoRequestDTO'
-        setAuthToken(token);
-        try {
-            // Asume que tu backend tiene un endpoint /pedidos/create_preference_mp que espera un PedidoRequestDTO
-            // y devuelve un objeto con la propiedad 'id' (el ID de la preferencia de MP)
-            const response = await apiClient.post<PreferenceMP>(`/pedidos/create_preference_mp`, pedidoData); // <-- Ahora pasa pedidoData
-            return response.data.id;
-        } catch (error) {
-            console.error('Error creating Mercado Pago preference:', error);
-            throw error;
-        }
-    }
+  /**
+   * Actualiza el estado de un pedido.
+   * @param id - El ID del pedido.
+   * @param nuevoEstado - El nuevo estado del pedido.
+   */
+  static async updateEstado(id: number, nuevoEstado: Estado): Promise<PedidoResponse> {
+    const requestData: PedidoEstadoRequest = { nuevoEstado };
+    const response = await apiClient.put<PedidoResponse>(`/pedidos/${id}/estado`, requestData);
+    return response.data;
+  }
+  
+  /**
+   * Realiza un borrado lógico de un pedido.
+   * @param id - El ID del pedido.
+   */
+  static async delete(id: number): Promise<{ mensaje: string }> {
+    const response = await apiClient.delete<{ mensaje: string }>(`/pedidos/${id}`);
+    return response.data;
+  }
 }

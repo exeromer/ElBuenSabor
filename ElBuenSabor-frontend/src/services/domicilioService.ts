@@ -1,53 +1,48 @@
-/**
- * @file domicilioService.ts
- * @description Provee funciones para interactuar con los endpoints de Domicilios de la API.
- * Incluye operaciones CRUD para domicilios.
- */
+import apiClient from '../services/apiClient';
+import type { DomicilioRequest, DomicilioResponse } from '../types/types';
 
-import apiClient, { setAuthToken } from './apiClient';
-import type { Domicilio, DomicilioRequestDTO } from '../types/types';
-
-/**
- * @class DomicilioService
- * @description Clase que encapsula las operaciones de la API relacionadas con Domicilios.
- */
 export class DomicilioService {
   /**
-   * @function createDomicilio
-   * @description Crea un nuevo domicilio. Requiere un token de autenticación.
-   * @param {DomicilioRequestDTO} data - Los datos del domicilio a crear.
-   * @param {string} token - El token JWT para la autenticación.
-   * @returns {Promise<Domicilio>} Una promesa que resuelve con el domicilio creado.
+   * Crea un nuevo domicilio.
+   * @param data - Los datos del domicilio a crear.
    */
-  async createDomicilio(data: DomicilioRequestDTO, token: string): Promise<Domicilio> {
-    setAuthToken(token);
-    const response = await apiClient.post<Domicilio>('/domicilios', data);
+  static async create(data: DomicilioRequest): Promise<DomicilioResponse> {
+    const response = await apiClient.post<DomicilioResponse>('/domicilios', data);
     return response.data;
   }
 
   /**
-   * @function updateDomicilio
-   * @description Actualiza un domicilio existente. Requiere un token de autenticación.
-   * @param {number} id - El ID del domicilio a actualizar.
-   * @param {DomicilioRequestDTO} data - Los nuevos datos del domicilio.
-   * @param {string} token - El token JWT para la autenticación.
-   * @returns {Promise<Domicilio>} Una promesa que resuelve con el domicilio actualizado.
+   * Obtiene todos los domicilios.
    */
-  async updateDomicilio(id: number, data: DomicilioRequestDTO, token: string): Promise<Domicilio> {
-    setAuthToken(token);
-    const response = await apiClient.put<Domicilio>(`/domicilios/${id}`, data);
+  static async getAll(): Promise<DomicilioResponse[]> {
+    const response = await apiClient.get<DomicilioResponse[]>('/domicilios');
     return response.data;
   }
 
   /**
-   * @function deleteDomicilio
-   * @description Elimina (lógicamente) un domicilio. Requiere un token de autenticación.
-   * @param {number} id - El ID del domicilio a eliminar.
-   * @param {string} token - El token JWT para la autenticación.
-   * @returns {Promise<void>} Una promesa que resuelve cuando la operación se completa.
+   * Obtiene un domicilio por su ID.
+   * @param id - El ID del domicilio.
    */
-  async deleteDomicilio(id: number, token: string): Promise<void> {
-    setAuthToken(token);
+  static async getById(id: number): Promise<DomicilioResponse> {
+    const response = await apiClient.get<DomicilioResponse>(`/domicilios/${id}`);
+    return response.data;
+  }
+  
+  /**
+   * Actualiza un domicilio existente.
+   * @param id - El ID del domicilio a actualizar.
+   * @param data - Los nuevos datos del domicilio.
+   */
+  static async update(id: number, data: DomicilioRequest): Promise<DomicilioResponse> {
+    const response = await apiClient.put<DomicilioResponse>(`/domicilios/${id}`, data);
+    return response.data;
+  }
+  
+  /**
+   * Elimina un domicilio.
+   * @param id - El ID del domicilio a eliminar.
+   */
+  static async delete(id: number): Promise<void> {
     await apiClient.delete(`/domicilios/${id}`);
   }
 }

@@ -1,70 +1,53 @@
-/**
- * @file unidadMedidaService.ts
- * @description Provee funciones para interactuar con los endpoints de Unidades de Medida de la API.
- * Incluye operaciones CRUD para unidades de medida.
- */
+import apiClient from '../services/apiClient';
+import type { UnidadMedidaResponse } from '../types/types';
 
-import apiClient, { setAuthToken } from './apiClient';
-import type { UnidadMedida } from '../types/types';
+type UnidadMedidaCreateOrUpdate = {
+    id?: number;
+    denominacion: string;
+};
 
-/**
- * @class UnidadMedidaService
- * @description Clase que encapsula las operaciones de la API relacionadas con Unidades de Medida.
- */
-export class UnidadMedidaService { // <-- Clase exportada
-
+export class UnidadMedidaService {
   /**
-   * @function getUnidadesMedida
-   * @description Obtiene todas las unidades de medida.
-   * @returns {Promise<UnidadMedida[]>} Una promesa que resuelve con un array de unidades de medida.
-   * @throws {Error} Si ocurre un error durante la petición.
+   * Obtiene todas las unidades de medida.
    */
-  async getUnidadesMedida(): Promise<UnidadMedida[]> {
-    try {
-      const response = await apiClient.get<UnidadMedida[]>('/unidadesmedida');
-      return response.data;
-    } catch (error) {
-      console.error('Error al obtener unidades de medida:', error);
-      throw error;
-    }
+  static async getAll(): Promise<UnidadMedidaResponse[]> {
+    const response = await apiClient.get<UnidadMedidaResponse[]>('/unidadesmedida');
+    return response.data;
   }
-
+  
   /**
-   * @function createUnidadMedida
-   * @description Crea una nueva unidad de medida. Requiere un token de autenticación.
-   * @param {UnidadMedida} data - Los datos de la unidad de medida a crear.
-   * @param {string} token - El token JWT para la autenticación.
-   * @returns {Promise<UnidadMedida>} Una promesa que resuelve con la unidad de medida creada.
+   * Obtiene una unidad de medida por su ID.
+   * @param id - El ID de la unidad.
    */
-  async createUnidadMedida(data: UnidadMedida, token: string): Promise<UnidadMedida> {
-    setAuthToken(token);
-    const response = await apiClient.post<UnidadMedida>('/unidadesmedida', data);
+  static async getById(id: number): Promise<UnidadMedidaResponse> {
+    const response = await apiClient.get<UnidadMedidaResponse>(`/unidadesmedida/${id}`);
     return response.data;
   }
 
   /**
-   * @function updateUnidadMedida
-   * @description Actualiza una unidad de medida existente. Requiere un token de autenticación.
-   * @param {number} id - El ID de la unidad de medida a actualizar.
-   * @param {UnidadMedida} data - Los nuevos datos de la unidad de medida.
-   * @param {string} token - El token JWT para la autenticación.
-   * @returns {Promise<UnidadMedida>} Una promesa que resuelve con la unidad de medida actualizada.
+   * Crea una nueva unidad de medida.
+   * @param data - Datos de la unidad.
    */
-  async updateUnidadMedida(id: number, data: UnidadMedida, token: string): Promise<UnidadMedida> {
-    setAuthToken(token);
-    const response = await apiClient.put<UnidadMedida>(`/unidadesmedida/${id}`, data);
+  static async create(data: UnidadMedidaCreateOrUpdate): Promise<UnidadMedidaResponse> {
+    const response = await apiClient.post<UnidadMedidaResponse>('/unidadesmedida', data);
     return response.data;
   }
 
   /**
-   * @function deleteUnidadMedida
-   * @description Elimina (lógicamente) una unidad de medida. Requiere un token de autenticación.
-   * @param {number} id - El ID de la unidad de medida a eliminar.
-   * @param {string} token - El token JWT para la autenticación.
-   * @returns {Promise<void>} Una promesa que resuelve cuando la operación se completa.
+   * Actualiza una unidad de medida.
+   * @param id - El ID de la unidad a actualizar.
+   * @param data - Los nuevos datos.
    */
-  async deleteUnidadMedida(id: number, token: string): Promise<void> {
-    setAuthToken(token);
+  static async update(id: number, data: UnidadMedidaCreateOrUpdate): Promise<UnidadMedidaResponse> {
+    const response = await apiClient.put<UnidadMedidaResponse>(`/unidadesmedida/${id}`, data);
+    return response.data;
+  }
+
+  /**
+   * Elimina una unidad de medida.
+   * @param id - El ID de la unidad a eliminar.
+   */
+  static async delete(id: number): Promise<void> {
     await apiClient.delete(`/unidadesmedida/${id}`);
   }
 }

@@ -1,29 +1,36 @@
 import React from 'react';
-import { Modal, Button, ListGroup, Image, Col, Form } from 'react-bootstrap';
+import { Modal, Button, ListGroup, Image, Col, Form, Spinner, Alert } from 'react-bootstrap';
 import { useCart } from '../../context/CartContext';
-import { FileUploadService } from '../../services/fileUploadService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
 
-interface CartModalProps {
-  show: boolean;
-  handleClose: () => void;
-}
+const CartModal: React.FC = () => {
+  const {
+    cart,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    totalPrice,
+    isCartOpen,
+    closeCart,
+    isLoading,
+    error,
+  } = useCart();
 
-const CartModal: React.FC<CartModalProps> = ({ show, handleClose }) => {
-  const { cart, updateQuantity, removeFromCart, clearCart, getCartTotal } = useCart();
   const defaultImage = '/placeholder-food.png';
-  const fileUploadService = new FileUploadService();
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg" centered>
+    <Modal show={isCartOpen} onHide={closeCart} size="lg" centered backdrop="static">
       <Modal.Header closeButton>
         <Modal.Title>Tu Carrito de Compras</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        {cart.length === 0 ? (
-          <p className="text-center text-muted">El carrito está vacío. ¡Añade algunos productos para empezar a comprar!</p>
+        {isLoading && <div className="text-center"><Spinner animation="border" /> <p>Actualizando carrito...</p></div>}
+        {error && <Alert variant="danger">{error}</Alert>}
+
+        {!isLoading && cart.length === 0 ? (
+          <p className="text-center text-muted">El carrito está vacío. ¡Añade algunos productos!</p>
         ) : (
           <ListGroup variant="flush">
             {cart.map((item) => (
@@ -32,7 +39,7 @@ const CartModal: React.FC<CartModalProps> = ({ show, handleClose }) => {
                   <Image
                     src={
                       item.articulo.imagenes && item.articulo.imagenes.length > 0
-                        ? fileUploadService.getImageUrl(item.articulo.imagenes[0].denominacion)
+                        ? item.articulo.imagenes[0].denominacion
                         : defaultImage
                     }
                     thumbnail
@@ -50,12 +57,13 @@ const CartModal: React.FC<CartModalProps> = ({ show, handleClose }) => {
                     min="1"
                     value={item.quantity}
                     onChange={(e) => updateQuantity(item.id, parseInt(e.target.value))}
+                    disabled={isLoading}
                     className="w-75"
                   />
                 </Col>
                 <Col xs={2} className="text-end">
-                  <span className="fw-bold me-3">${(item.articulo.precioVenta * item.quantity).toFixed(2)}</span>
-                  <Button variant="danger" size="sm" onClick={() => removeFromCart(item.id)}>
+                  <span className="fw-bold me-3">${item.subtotal.toFixed(2)}</span>
+                  <Button variant="outline-danger" size="sm" onClick={() => removeFromCart(item.id)} disabled={isLoading}>
                     <FontAwesomeIcon icon={faTrashAlt} />
                   </Button>
                 </Col>
@@ -66,17 +74,17 @@ const CartModal: React.FC<CartModalProps> = ({ show, handleClose }) => {
       </Modal.Body>
       <Modal.Footer className="justify-content-between">
         <div className="total-section">
-          <h5 className="mb-0">Total: <span className="text-success">${getCartTotal().toFixed(2)}</span></h5>
+          <h5 className="mb-0">Total: <span className="text-success">${totalPrice.toFixed(2)}</span></h5>
         </div>
         <div>
-          <Button variant="outline-danger" onClick={clearCart} disabled={cart.length === 0} className="me-2">
+          <Button variant="outline-danger" onClick={clearCart} disabled={cart.length === 0 || isLoading} className="me-2">
             Vaciar Carrito
           </Button>
-          <Button variant="secondary" onClick={handleClose} className="me-2">
+          <Button variant="secondary" onClick={closeCart} disabled={isLoading} className="me-2">
             Seguir Comprando
           </Button>
-          <Link to="/checkout" onClick={handleClose} style={{ textDecoration: 'none' }}>
-            <Button variant="primary" disabled={cart.length === 0}>
+          <Link to="/checkout" onClick={closeCart} style={{ textDecoration: 'none' }}>
+            <Button variant="primary" disabled={cart.length === 0 || isLoading}>
               Finalizar Compra
             </Button>
           </Link>

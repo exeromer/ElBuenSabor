@@ -1,0 +1,46 @@
+// src/components/common/SucursalSelector/SucursalSelector.sass
+
+@import '../../../styles/vars'
+
+.sucursal-selector-container
+  display: flex
+  align-items: center
+  gap: 0.5rem // Espacio entre la etiqueta y el select
+  position: relative // Necesario para el overlay
+
+  .sucursal-selector-label
+    margin-bottom: 0 // Quitar el margen por defecto de bootstrap
+    font-weight: 500
+    color: $color-texto-claro // O el color que prefieras para el header
+    white-space: nowrap // Evita que el texto se parta en dos líneas
+
+  .sucursal-selector-select
+    background-color: rgba(255, 255, 255, 0.2) // Un fondo semi-transparente
+    color: $color-texto-claro // O el color que prefieras
+    border: 1px solid $color-primario
+    border-radius: 20px // Bordes redondeados
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem // Ajuste para que el texto no se pise con la flecha
+    transition: all 0.2s ease-in-out
+
+    &:hover
+      border-color: $color-secundario
+
+    &:focus
+      box-shadow: 0 0 0 0.25rem rgba($color-secundario, 0.5)
+      border-color: $color-secundario
+
+    // Estilo para las opciones del dropdown
+    option
+      color: $color-texto-oscuro // Texto oscuro para que sea legible sobre fondo blanco
+      background-color: white
+
+  // Capa que se muestra cuando el carrito está abierto para deshabilitar visualmente
+  .cart-open-overlay
+    position: absolute
+    top: 0
+    left: 0
+    right: 0
+    bottom: 0
+    background-color: transparent
+    cursor: not-allowed // Cambia el cursor para indicar que no se puede interactuar
+    z-index: 10
