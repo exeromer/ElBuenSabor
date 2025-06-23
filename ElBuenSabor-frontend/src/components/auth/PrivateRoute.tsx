@@ -1,11 +1,13 @@
-// Nueva carpeta/ElBuenSabor-frontend/src/components/auth/PrivateRoute.tsx
 import React, { useEffect, useState } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
 import Loading from './Loading';
 import { Alert, Container, Button } from 'react-bootstrap';
+// FIX: Usamos el servicio de forma estática
 import { UsuarioService } from '../../services/usuarioService';
-import type { Usuario } from '../../types/types'; // Importación de tipo
+// FIX: Usamos el tipo de DTO de respuesta para consistencia
+import type { UsuarioResponse } from '../../types/types';
+import { setAuthToken } from '../../services/apiClient'; // <-- Asegúrate de tener este import
 
 interface PrivateRouteProps {
   component: React.ComponentType;
@@ -20,7 +22,7 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ component: Component, requi
   const [, setUserRole] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const usuarioService = new UsuarioService();
+  //  const usuarioService = new UsuarioService();
 
   useEffect(() => {
     const checkUserRoleAndAccess = async () => {
@@ -43,18 +45,15 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ component: Component, requi
             scope: import.meta.env.VITE_AUTH0_SCOPE,
           },
         });
+        setAuthToken(token);
 
         const auth0Id = user?.sub;
         if (!auth0Id) {
-          setError('No se pudo obtener el ID de Auth0 del usuario. Acceso denegado.');
-          setHasAccess(false);
-          console.error('Auth0 ID no disponible en el objeto user.');
-          navigate('/');
-          return;
+          throw new Error('No se pudo obtener el ID de Auth0 del usuario.');
         }
 
-        const backendUser: Usuario = await usuarioService.getUsuarioByAuth0Id(auth0Id, token);
-        
+        const backendUser: UsuarioResponse = await UsuarioService.getByAuth0Id(auth0Id);
+
         const roleFromBackend = backendUser.rol;
         setUserRole(roleFromBackend);
 
@@ -69,13 +68,13 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ component: Component, requi
             navigate('/');
           }
         } else {
-          setHasAccess(true); // <-- CORRECCIÓN AQUÍ
+          setHasAccess(true);
         }
 
       } catch (err) {
         console.error("Error al verificar el rol del usuario:", err);
         setError('Error al verificar tus permisos. Intenta de nuevo o contacta al soporte.');
-        setHasAccess(false); // <-- CORRECCIÓN AQUÍ
+        setHasAccess(false);
         navigate('/');
       }
     };

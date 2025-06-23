@@ -6,8 +6,8 @@ export class PedidoService {
    * Crea un pedido para el cliente autenticado.
    * @param data - Los datos del pedido.
    */
-  static async create(data: PedidoRequest): Promise<PedidoResponse> {
-    const response = await apiClient.post<PedidoResponse>('/pedidos', data);
+  static async create(clienteId: number,data: PedidoRequest): Promise<PedidoResponse> {
+    const response = await apiClient.post<PedidoResponse>(`/pedidos/cliente/${clienteId}/desde-carrito`, data);
     return response.data;
   }
   

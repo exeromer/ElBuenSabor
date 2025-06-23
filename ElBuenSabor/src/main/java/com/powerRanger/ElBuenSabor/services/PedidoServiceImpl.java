@@ -1,5 +1,7 @@
 package com.powerRanger.ElBuenSabor.services;
 
+import com.mercadopago.resources.merchantorder.MerchantOrder;
+import com.mercadopago.resources.payment.Payment;
 import com.powerRanger.ElBuenSabor.dtos.*;
 import com.powerRanger.ElBuenSabor.entities.*;
 import com.powerRanger.ElBuenSabor.entities.enums.Estado;
@@ -26,12 +28,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import java.util.Set;    // ¡Importar Set!
-import java.util.HashSet; // ¡Importar HashSet!
+import java.util.Set;
+import java.util.HashSet;
 
 import com.powerRanger.ElBuenSabor.dtos.MercadoPagoCreatePreferenceDTO;
 import com.powerRanger.ElBuenSabor.entities.Usuario;
-import com.powerRanger.ElBuenSabor.entities.enums.TipoPromocion; // Importar TipoPromocion desde entities.enums
+import com.powerRanger.ElBuenSabor.entities.enums.TipoPromocion;
 
 @Service
 @Validated
@@ -50,7 +52,7 @@ public class PedidoServiceImpl implements PedidoService {
     @Autowired private LocalidadRepository localidadRepository;
     @Autowired private MercadoPagoService mercadoPagoService;
     @Autowired private StockInsumoSucursalService stockInsumoSucursalService;
-    @Autowired private PromocionService promocionService; // ¡Inyectamos PromocionService!
+    @Autowired private PromocionService promocionService;
     private static final Logger logger = LoggerFactory.getLogger(PedidoServiceImpl.class);
 
     // --- MAPPERS (Como los tenías) ---
@@ -588,27 +590,42 @@ public class PedidoServiceImpl implements PedidoService {
         }
         logger.info("Actualización de Stock completada.");
 
-        Pedido pedidoGuardado = pedidoRepository.save(nuevoPedido);
-        logger.info("Pedido guardado en DB con ID: {}", pedidoGuardado.getId());
+        Pedido pedidoEnProceso = pedidoRepository.save(nuevoPedido);
+        logger.info("Pedido pre-guardado en DB con ID: {}", pedidoEnProceso.getId());
 
-        if (pedidoGuardado.getFormaPago() == FormaPago.MERCADO_PAGO) {
-            logger.info("Forma de pago es MERCADO_PAGO. Intentando crear preferencia...");
+        // FIX: AÑADIR ESTA LÍNEA DE LOG PARA DIAGNÓSTICO
+        logger.info("VERIFICANDO FORMA DE PAGO: La forma de pago para el Pedido #{} es: '{}'", pedidoEnProceso.getId(), pedidoEnProceso.getFormaPago());
+
+        // 2. Si es Mercado Pago, AHORA creamos la preferencia.
+        if (pedidoRequest.getFormaPago() == FormaPago.MERCADO_PAGO) {
+            logger.info("Forma de pago es MERCADO_PAGO. Intentando crear preferencia para Pedido ID: {}", pedidoEnProceso.getId());
             try {
-                String preferenceId = mercadoPagoService.crearPreferenciaPago(pedidoGuardado);
-                pedidoGuardado.setMpPreferenceId(preferenceId);
-                pedidoGuardado = pedidoRepository.save(pedidoGuardado);
-                logger.info("Preferencia de Mercado Pago creada exitosamente. Pedido actualizado en DB con Preference ID: {}", preferenceId);
+                // Llamamos al servicio de MP pasándole el pedido ya guardado (con su ID)
+                String preferenceId = mercadoPagoService.crearPreferenciaPago(pedidoEnProceso);
+
+                // Actualizamos el pedido con el ID de la preferencia
+                pedidoEnProceso.setMpPreferenceId(preferenceId);
+
+                // Volvemos a guardar el pedido, esta vez con el ID de la preferencia.
+                pedidoEnProceso = pedidoRepository.save(pedidoEnProceso);
+
+                logger.info("Preferencia de MP creada. Pedido ID {} actualizado con Preference ID: {}", pedidoEnProceso.getId(), preferenceId);
+
             } catch (Exception e) {
-                logger.error("!! FALLÓ la creación de la preferencia de Mercado Pago para Pedido ID: {}. Causa: {}", pedidoGuardado.getId(), e.getMessage(), e);
+                logger.error("!! FALLÓ la creación de la preferencia de Mercado Pago para Pedido ID: {}. Causa: {}", pedidoEnProceso.getId(), e.getMessage(), e);
+                // Lanzamos una excepción para que la transacción falle y el frontend reciba el error.
                 throw new Exception("No se pudo generar la preferencia de pago. Por favor, intente de nuevo.", e);
             }
         }
 
+        // 3. Vaciamos el carrito del cliente.
         carritoService.vaciarCarrito(cliente);
         logger.info("Carrito vaciado para cliente ID: {}", cliente.getId());
-        logger.info("FIN - crearPedidoDesdeCarrito ejecutado exitosamente para Pedido ID: {}", pedidoGuardado.getId());
 
-        return convertToResponseDto(pedidoGuardado);
+        logger.info("FIN - crearPedidoDesdeCarrito ejecutado exitosamente para Pedido ID: {}", pedidoEnProceso.getId());
+
+        // 4. Devolvemos el DTO del pedido final, que ahora sí contiene el preferenceId si correspondía.
+        return convertToResponseDto(pedidoEnProceso);
     }
 
     // Helper para convertir PromocionResponseDTO a Promocion (Entidad)
@@ -704,6 +721,58 @@ public class PedidoServiceImpl implements PedidoService {
             System.err.println("ERROR: Falló la creación de la preferencia de Mercado Pago para pedido " + pedido.getId() + ": " + e.getMessage());
             throw new Exception("Error al generar preferencia de Mercado Pago: " + e.getMessage(), e);
         }
+    }
+
+    @Override
+    @Transactional
+    public void handleMercadoPagoNotification(Map<String, String> notification) throws Exception {
+        logger.info("PEDIDO_SERVICE: Procesando notificación: {}", notification);
+
+        String topic = notification.get("topic");
+        if (!"payment".equals(topic)) {
+            logger.warn("Notificación recibida con topic no manejado: {}", topic);
+            return;
+        }
+
+        String paymentIdStr = notification.get("id");
+        if (paymentIdStr == null) {
+            throw new Exception("El ID del pago no vino en la notificación de Mercado Pago.");
+        }
+        Long paymentId = Long.parseLong(paymentIdStr);
+
+        // 1. Usamos el nuevo método para obtener los detalles del PAGO
+        Payment payment = mercadoPagoService.getPaymentById(paymentId);
+        String pedidoIdStr = payment.getExternalReference();
+        if (pedidoIdStr == null) {
+            throw new Exception("La notificación de pago de MP (ID: " + paymentId + ") no tiene una referencia externa a nuestro pedido.");
+        }
+        Integer pedidoId = Integer.parseInt(pedidoIdStr);
+
+        // 2. Obtenemos nuestro ID de Pedido desde la referencia externa de la ORDEN DE PAGO de MP
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new Exception("Pedido no encontrado con ID: " + pedidoId));
+
+        // Verificamos para no procesar dos veces
+        if (pedido.getEstado() != Estado.PENDIENTE) {
+            logger.warn("El pedido {} ya fue procesado. Estado actual: {}", pedidoId, pedido.getEstado());
+            return;
+        }
+
+        // Actualizamos nuestro pedido con los datos del PAGO
+        String paymentStatus = payment.getStatus().toString();
+        logger.info("El pago {} para el pedido {} tiene estado: {}", paymentId, pedidoId, paymentStatus);
+
+        if ("approved".equals(paymentStatus)) {
+            pedido.setEstado(Estado.PREPARACION);
+        } else {
+            pedido.setEstado(Estado.RECHAZADO);
+        }
+
+        pedido.setMpPaymentId(paymentId.toString());
+        pedido.setMpPaymentStatus(paymentStatus);
+
+        pedidoRepository.save(pedido);
+        logger.info("PEDIDO_SERVICE: Pedido {} actualizado a {} y guardado en la BD.", pedidoId, pedido.getEstado());
     }
 
     @Override

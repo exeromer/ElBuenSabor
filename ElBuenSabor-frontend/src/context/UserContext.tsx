@@ -1,11 +1,10 @@
-// Nueva carpeta/ElBuenSabor-frontend/src/context/UserContext.tsx
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ClienteUsuarioService } from '../services/clienteUsuarioService';
-import type { Cliente } from '../types/types';
+import type { ClienteResponse } from '../types/types';
 
 interface UserContextType {
-    cliente: Cliente | null;
+    cliente: ClienteResponse | null;
     isLoading: boolean;
 }
 
@@ -13,7 +12,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const { isAuthenticated, user, getAccessTokenSilently, isLoading: authLoading } = useAuth0();
-    const [cliente, setCliente] = useState<Cliente | null>(null);
+    const [cliente, setCliente] = useState<ClienteResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {

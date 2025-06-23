@@ -14,116 +14,60 @@
  * @service `PedidoService`: Servicio para obtener los pedidos de un cliente específico.
  * @service `FileUploadService`: Servicio de utilidad para construir las URLs completas de las imágenes de los artículos.
  */
+
 import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, ListGroup, Spinner, Alert, Button, Image } from 'react-bootstrap';
+import { Container, Row, Col, Card, ListGroup, Spinner, Alert, Button, Image, Badge } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
+import { Link } from 'react-router-dom';
+
+// FIX: Usamos el servicio de forma estática
 import { PedidoService } from '../services/pedidoService';
-import { FileUploadService } from '../services/fileUploadService'; 
-import type { Pedido, Estado } from '../types/types';
+import apiClient from '../services/apiClient';
+
+// FIX: Corregimos los tipos
+import type { PedidoResponse, ArticuloSimpleResponse } from '../types/types';
+import type { Estado } from '../types/enums';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faHistory, // Icono para el título de la página
-  faCheckCircle, // Icono para estado ENTREGADO
-  faTimesCircle, // Icono para estados CANCELADO / RECHAZADO
-  faClock, // Icono para estado PENDIENTE
-  faCog, // Icono para estado PREPARACION (engranaje)
-  faTruck, // Icono para tipo de envío DELIVERY
-  faStore, // Icono para tipo de envío TAKEAWAY
-  faMoneyBillWave, // Icono para forma de pago EFECTIVO
-  faCreditCard, // Icono para forma de pago MERCADO_PAGO
-} from '@fortawesome/free-solid-svg-icons';
-import { Link } from 'react-router-dom'; // Asegúrate de importar useNavigate también
+import { faHistory, faCheckCircle, faTimesCircle, faClock, faCog, faTruck, faStore, faMoneyBillWave, faCreditCard} from '@fortawesome/free-solid-svg-icons';
 
-/**
- * @interface MyOrdersPageProps
- * @description No se requieren propiedades (`props`) para este componente de página,
- * por lo que se define una interfaz vacía para claridad.
- */
-interface MyOrdersPageProps {}
+function articuloTieneImagenes(articulo: ArticuloSimpleResponse): articulo is ArticuloSimpleResponse & { imagenes: { denominacion: string }[] } {
+    return (articulo as any).imagenes !== undefined && Array.isArray((articulo as any).imagenes);
+}
 
-const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
-  /**
-   * @hook useAuth0
-   * @description Hook para acceder al estado de autenticación de Auth0, información del usuario
-   * y función para obtener el token de acceso.
-   */
-  const { isAuthenticated, user, getAccessTokenSilently, isLoading: authLoading } = useAuth0();
-
-  /**
-   * @state pedidos
-   * @description Almacena el array de objetos `Pedido` obtenidos del backend para el cliente autenticado.
-   */
-  const [pedidos, setPedidos] = useState<Pedido[]>([]);
-
-  /**
-   * @state loading
-   * @description Estado booleano para indicar si los pedidos están cargando.
-   */
+const MyOrdersPage: React.FC = () => {
+  const { isAuthenticated, getAccessTokenSilently, isLoading: authLoading } = useAuth0();
+  const [pedidos, setPedidos] = useState<PedidoResponse[]>([]);
   const [loading, setLoading] = useState(true);
-
-  /**
-   * @state error
-   * @description Almacena un mensaje de error si ocurre un problema durante la carga de pedidos.
-   */
   const [error, setError] = useState<string | null>(null);
 
-  // INSTANCIAS DE LOS SERVICIOS
-  const pedidoService = new PedidoService(); // <-- Instancia
-  const fileUploadService = new FileUploadService(); // <-- Instancia
-
-  /**
-   * @hook useEffect
-   * @description Hook principal para la carga de pedidos del cliente.
-   * Se ejecuta al montar el componente y cada vez que el estado de autenticación de Auth0 cambia.
-   * Se encarga de:
-   * 1. Esperar a que Auth0 cargue.
-   * 2. Verificar la autenticación y la disponibilidad del `auth0Id` del usuario.
-   * 3. Obtener el token de acceso.
-   * 4. Llamar al servicio `getPedidosByClienteAuth0Id` para obtener los pedidos.
-   * 5. Manejar los estados de carga y error.
-   */
+  // const fileUploadService = new FileUploadService(); 
   useEffect(() => {
     const fetchMyOrders = async () => {
-      // Esperar a que Auth0 termine de cargar antes de proceder.
-      if (authLoading) {
-        setLoading(true); // Muestra el spinner mientras Auth0 carga
-        return;
-      }
+      if (authLoading) return;
 
-      setLoading(true); // Inicia el spinner de carga
-      setError(null); // Limpia cualquier error anterior
-
-      // Si el usuario no está autenticado o su ID de Auth0 no está disponible, muestra un error.
-      if (!isAuthenticated || !user?.sub) {
-        setError('Debes iniciar sesión para ver tus pedidos. Por favor, inicia sesión para continuar.');
+      if (!isAuthenticated) {
+        setError('Debes iniciar sesión para ver tus pedidos.');
         setLoading(false);
         return;
       }
+      
+      setLoading(true);
+      setError(null);
 
       try {
-        // Obtener el token de acceso de Auth0 para autenticar la petición al backend.
-        const token = await getAccessTokenSilently({
-          authorizationParams: {
-            audience: import.meta.env.VITE_AUTH0_AUDIENCE,
-            scope: import.meta.env.VITE_AUTH0_SCOPE,
-          },
-        });
-        // Llama al servicio para obtener los pedidos del cliente usando su Auth0 ID.
-        // USO DEL MÉTODO DE LA INSTANCIA DEL SERVICIO DE PEDIDOS
-        const fetchedPedidos = await pedidoService.getPedidosByClienteAuth0Id(user.sub, token); // <-- Corrección aquí
+        const fetchedPedidos = await PedidoService.getMisPedidos();
         setPedidos(fetchedPedidos);
       } catch (err) {
         console.error('Error al obtener mis pedidos:', err);
-        // Intenta extraer un mensaje de error más específico de la respuesta del backend.
-        const errorMessage = (err as any).response?.data?.message || (err as any).message || 'Error desconocido al cargar los pedidos.';
-        setError(`No se pudieron cargar tus pedidos: ${errorMessage}.`);
+        setError('No se pudieron cargar tus pedidos.');
       } finally {
-        setLoading(false); // Detiene el spinner de carga
+        setLoading(false);
       }
     };
 
     fetchMyOrders();
-  }, [isAuthenticated, user, authLoading, getAccessTokenSilently]); // Dependencias del efecto
+  }, [isAuthenticated, authLoading, getAccessTokenSilently]);
+
 
   /**
    * @function getEstadoIcon
@@ -143,10 +87,9 @@ const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
       case 'ENTREGADO':
         return <FontAwesomeIcon icon={faCheckCircle} className="text-success" title="Entregado" />;
       case 'CANCELADO':
+        return <FontAwesomeIcon icon={faTimesCircle} className="text-danger" title="Cancelado" />;
       case 'RECHAZADO':
-        return <FontAwesomeIcon icon={faTimesCircle} className="text-danger" title="Cancelado/Rechazado" />;
-      case 'PAGADO': // Añadir este estado si tu backend lo usa (ej. para Mercado Pago)
-        return <FontAwesomeIcon icon={faCreditCard} className="text-success" title="Pagado" />;
+        return <FontAwesomeIcon icon={faTimesCircle} className="text-danger" title="Rechazado" />;
       default:
         return null;
     }
@@ -180,70 +123,59 @@ const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
     );
   }
 
-  return (
+   return (
     <Container className="my-4">
-      {/* Título de la página con icono */}
       <h1 className="text-center mb-4">
         <FontAwesomeIcon icon={faHistory} className="me-2 text-primary" /> Mis Pedidos
       </h1>
 
-      {/* Renderizado condicional: si no hay pedidos o si hay */}
       {pedidos.length === 0 ? (
         <Alert variant="info" className="text-center">
-          No tienes pedidos registrados todavía. ¡Anímate a pedir algo delicioso!
+          No tienes pedidos registrados todavía.
           <div className="mt-3">
-            {/* Enlace para ir a la página de productos */}
-            <Link to="/products" style={{ textDecoration: 'none' }}>
-              <Button variant="primary">Explorar Menú</Button>
-            </Link>
+            <Link to="/products"><Button variant="primary">Explorar Menú</Button></Link>
           </div>
         </Alert>
       ) : (
-        // Cuadrícula responsiva de tarjetas de pedido
-        <Row xs={1} md={1} lg={2} className="g-4"> {/* `g-4` para espacio entre tarjetas */}
+        <Row xs={1} md={1} lg={2} className="g-4">
           {pedidos.map((pedido) => (
-            <Col key={pedido.id}> {/* Asegura que pedido.id existe */}
+            <Col key={pedido.id}>
               <Card className="h-100 shadow-sm">
                 <Card.Header className="d-flex justify-content-between align-items-center">
                   <div>
                     <h5 className="mb-0">Pedido #{pedido.id}</h5>
-                    {/* Fecha y hora estimada de finalización del pedido */}
-                    <small className="text-muted">{pedido.fechaPedido} - {pedido.horaEstimadaFinalizacion}</small>
+                    <small className="text-muted">{new Date(pedido.fechaPedido).toLocaleDateString()} - {pedido.horaEstimadaFinalizacion}</small>
                   </div>
-                  <div>
-                    {/* Badge con el estado del pedido, con colores condicionales */}
-                    <span className={`badge bg-${pedido.estado === 'ENTREGADO' || pedido.estado === 'PAGADO' ? 'success' : pedido.estado === 'CANCELADO' || pedido.estado === 'RECHAZADO' ? 'danger' : 'warning'} me-2`}>
-                      {pedido.estado}
-                    </span>
-                    {/* Icono del estado del pedido */}
+                  <div className="text-end">
+                    <Badge bg={
+                      pedido.estado === 'ENTREGADO' ? 'success' :
+                      pedido.estado === 'CANCELADO' || pedido.estado === 'RECHAZADO' ? 'danger' :
+                      'secondary'
+                    } className="me-2">{pedido.estado}</Badge>
                     {getEstadoIcon(pedido.estado)}
                   </div>
                 </Card.Header>
                 <Card.Body>
-                  {/* Detalles principales del pedido */}
                   <Card.Text>
                     <strong>Total:</strong> <span className="text-success">${pedido.total.toFixed(2)}</span> <br />
-                    <strong>Envío:</strong> {pedido.tipoEnvio === 'DELIVERY' ? <FontAwesomeIcon icon={faTruck} className="me-1" /> : <FontAwesomeIcon icon={faStore} className="me-1" />} {pedido.tipoEnvio} <br />
-                    {/* Muestra el domicilio si es Delivery y existe */}
+                    <strong>Envío:</strong> <FontAwesomeIcon icon={pedido.tipoEnvio === 'DELIVERY' ? faTruck : faStore} className="me-1" /> {pedido.tipoEnvio} <br />
                     {pedido.tipoEnvio === 'DELIVERY' && pedido.domicilio && (
                       <small className="text-muted d-block ms-3">
-                        ({pedido.domicilio.calle} {pedido.domicilio.numero}, {pedido.domicilio.localidad?.denominacion ?? 'N/A'}) {/* <-- Corrección aquí */}
+                        ({pedido.domicilio.calle} {pedido.domicilio.numero}, {pedido.domicilio.localidad?.nombre ?? 'N/A'})
                       </small>
                     )}
-                    <strong>Pago:</strong> {pedido.formaPago === 'EFECTIVO' ? <FontAwesomeIcon icon={faMoneyBillWave} className="me-1" /> : <FontAwesomeIcon icon={faCreditCard} className="me-1" />} {pedido.formaPago} <br />
+                    <strong>Pago:</strong> <FontAwesomeIcon icon={pedido.formaPago === 'EFECTIVO' ? faMoneyBillWave : faCreditCard} className="me-1" /> {pedido.formaPago} <br />
                     <strong>Sucursal:</strong> {pedido.sucursal.nombre}
                   </Card.Text>
                   <hr />
                   <h6>Detalle de los Artículos:</h6>
                   <ListGroup variant="flush">
-                    {/* Mapea los detalles de los artículos del pedido */}
                     {pedido.detalles.map((detalle) => (
-                      <ListGroup.Item key={detalle.id} className="d-flex justify-content-between align-items-center py-1 px-0"> {/* Asegura que detalle.id existe */}
+                      <ListGroup.Item key={detalle.id} className="d-flex justify-content-between align-items-center py-1 px-0">
                         <div className="d-flex align-items-center">
-                          {/* Imagen del artículo si está disponible */}
-                          {detalle.articulo.imagenes && detalle.articulo.imagenes.length > 0 && (
+                           {articuloTieneImagenes(detalle.articulo) && detalle.articulo.imagenes.length > 0 && (
                             <Image
-                              src={fileUploadService.getImageUrl(detalle.articulo.imagenes[0].denominacion ?? '')} // <-- Corrección aquí
+                              src={`${apiClient.defaults.baseURL}/files/download/${detalle.articulo.imagenes[0].denominacion}`}
                               alt={detalle.articulo.denominacion}
                               style={{ width: '30px', height: '30px', objectFit: 'cover' }}
                               className="me-2 rounded"
@@ -255,13 +187,10 @@ const MyOrdersPage: React.FC<MyOrdersPageProps> = () => {
                       </ListGroup.Item>
                     ))}
                   </ListGroup>
-                  {/* Botón para ver la factura si existe una factura asociada */}
-                  {pedido.factura && (
+                  {(pedido as any).factura && (
                     <div className="mt-3 text-end">
-                      <Link to={`/facturas/${pedido.factura.id}`} style={{ textDecoration: 'none' }}>
-                        <Button variant="outline-info" size="sm">
-                          Ver Factura
-                        </Button>
+                      <Link to={`/facturas/${(pedido as any).factura.id}`}>
+                        <Button variant="outline-info" size="sm">Ver Factura</Button>
                       </Link>
                     </div>
                   )}

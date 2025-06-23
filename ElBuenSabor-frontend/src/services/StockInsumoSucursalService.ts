@@ -1,5 +1,5 @@
 import apiClient from '../services/apiClient';
-import type { StockInsumoSucursalRequest, StockInsumoSucursalResponse } from '../types/types';
+import type { StockInsumoSucursalRequest, StockInsumoSucursalResponse,ArticuloManufacturadoResponse } from '../types/types';
 
 export class StockInsumoSucursalService {
   /**
@@ -28,16 +28,56 @@ export class StockInsumoSucursalService {
     return response.data;
   }
 
-  /**
-   * Obtiene el stock de un insumo en una sucursal.
-   * @param insumoId - ID del insumo.
-   * @param sucursalId - ID de la sucursal.
+    /**
+   * Obtiene el stock de un insumo específico en una sucursal.
+   * @param insumoId - El ID del ArticuloInsumo.
+   * @param sucursalId - El ID de la Sucursal.
+   * @returns El objeto de stock o null si no se encuentra.
    */
-  static async getByInsumoAndSucursal(insumoId: number, sucursalId: number): Promise<StockInsumoSucursalResponse> {
-    const response = await apiClient.get<StockInsumoSucursalResponse>(`/stockinsumosucursal/insumo/${insumoId}/sucursal/${sucursalId}`);
-    return response.data;
+  static async getStockByInsumoAndSucursal(insumoId: number, sucursalId: number): Promise<StockInsumoSucursalResponse | null> {
+    try {
+      const response = await apiClient.get<StockInsumoSucursalResponse>(`/stockinsumosucursal/insumo/${insumoId}/sucursal/${sucursalId}`);
+      return response.data;
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        return null;
+      }
+      throw error;
+    }
   }
-  
+
+  /**
+   * Verifica si un Artículo Manufacturado está disponible en una sucursal.
+   * Revisa si hay stock suficiente de TODOS los insumos necesarios.
+   * @param articulo - El objeto ArticuloManufacturadoResponse a verificar.
+   * @param sucursalId - El ID de la sucursal donde se quiere verificar.
+   * @returns `true` si está disponible, `false` si no.
+   */
+  static async checkDisponibilidadManufacturado(articulo: ArticuloManufacturadoResponse, sucursalId: number): Promise<boolean> {
+    if (!articulo.manufacturadoDetalles || articulo.manufacturadoDetalles.length === 0) {
+      return false;
+    }
+    const resultadosStock = await Promise.all(
+      articulo.manufacturadoDetalles.map(async (detalle) => {
+        // Obtenemos el registro de stock para el insumo del detalle.
+        const stockInfo = await this.getStockByInsumoAndSucursal(detalle.articuloInsumo.id, sucursalId);
+
+        // Si no hay registro de stock (stockInfo es null), no hay stock.
+        if (!stockInfo) {
+          return false;
+        }
+
+        // Comparamos el stock actual con la cantidad que requiere la receta.
+        return stockInfo.stockActual >= detalle.cantidad;
+      })
+    );
+
+    // El producto está disponible solo si TODAS las verificaciones de stock devolvieron `true`.
+    // El método .every() comprueba esto por nosotros.
+    return resultadosStock.every(disponible => disponible);
+  }
+
+
   /**
    * Actualiza un registro de stock.
    * @param id - ID del registro a actualizar.

@@ -18,5 +18,6 @@ public interface UsuarioService {
     UsuarioResponseDTO update(Integer id, @Valid UsuarioRequestDTO dto) throws Exception;
 
     void softDelete(Integer id) throws Exception;
-    Usuario findOrCreateUsuario(String auth0Id, String username, String email) throws Exception;
+    Usuario findOrCreateUsuario(String auth0Id, String username, String email, List<String> rolesFromToken) throws Exception;
+
 }

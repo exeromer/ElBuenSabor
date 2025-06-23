@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, type ReactNode, useEffect, useCallback } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useUser } from './UserContext';
-import { CarritoService } from '../services/CarritoService';
+import { CarritoService } from '../services/carritoService';
 import { ArticuloService } from '../services/ArticuloService';
 import type { ArticuloResponse, CarritoResponse } from '../types/types';
 

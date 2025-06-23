@@ -23,6 +23,8 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Autowired
     private UsuarioRepository usuarioRepository;
+    @Autowired
+    private ClienteService clienteService;
 
     private UsuarioResponseDTO convertToResponseDto(Usuario usuario) {
         if (usuario == null) return null;
@@ -146,7 +148,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional
-    public Usuario findOrCreateUsuario(String auth0Id, String username, String email) throws Exception {
+    public Usuario findOrCreateUsuario(String auth0Id, String username, String email, List<String> rolesFromToken) throws Exception {
         if (auth0Id == null || auth0Id.trim().isEmpty()) {
             throw new IllegalArgumentException("Auth0 ID no puede ser nulo o vacío.");
         }
@@ -157,72 +159,69 @@ public class UsuarioServiceImpl implements UsuarioService {
             Usuario usuarioExistente = optionalUsuario.get();
             System.out.println("FIND_OR_CREATE: Usuario encontrado con auth0Id: " + auth0Id + ", username: " + usuarioExistente.getUsername());
 
-            // Opcional: Lógica para actualizar username/email si han cambiado en Auth0
-            // y si tu lógica de negocio lo permite y deseas sincronizarlo.
-            // Por ejemplo:
-            // boolean modificado = false;
-            // if (username != null && !username.isEmpty() && !username.equals(usuarioExistente.getUsername())) {
-            //     // Validar unicidad del nuevo username antes de cambiarlo si es necesario
-            //     if (!usuarioRepository.findByUsername(username).filter(u -> !u.getAuth0Id().equals(auth0Id)).isPresent()) {
-            //         usuarioExistente.setUsername(username);
-            //         modificado = true;
-            //     } else {
-            //        System.out.println("FIND_OR_CREATE: Nuevo username " + username + " ya existe para otro usuario. No se actualiza.");
-            //     }
-            // }
-            // if (modificado) {
-            //     return usuarioRepository.save(usuarioExistente);
-            // }
-            return usuarioExistente;
-        } else {
-            System.out.println("FIND_OR_CREATE: Usuario NO encontrado con auth0Id: " + auth0Id + ". Creando nuevo usuario.");
-
-            String finalUsername = username;
-            // Asegurar que el username no sea nulo y sea único
-            if (finalUsername == null || finalUsername.trim().isEmpty()) {
-                // Generar un username si no se proveyó uno válido (ej. a partir del email o auth0Id)
-                if (email != null && !email.isEmpty() && email.contains("@")) {
-                    finalUsername = email.split("@")[0];
-                } else {
-                    // Remueve caracteres no alfanuméricos de auth0Id para un username base
-                    String baseAuth0Id = auth0Id.replaceAll("[^a-zA-Z0-9]", "");
-                    finalUsername = "user_" + baseAuth0Id.substring(0, Math.min(15, baseAuth0Id.length())); // Limita longitud
+            // Lógica de sincronización de rol
+            if (rolesFromToken != null && !rolesFromToken.isEmpty()) {
+                try {
+                    Rol rolDesdeToken = Rol.valueOf(rolesFromToken.get(0).toUpperCase());
+                    if (usuarioExistente.getRol() != rolDesdeToken) {
+                        System.out.println("FIND_OR_CREATE (Sync): Cambiando rol de " + usuarioExistente.getRol() + " a " + rolDesdeToken);
+                        usuarioExistente.setRol(rolDesdeToken);
+                    }
+                } catch (IllegalArgumentException e) {
+                    System.err.println("FIND_OR_CREATE (Sync): Rol en token '" + rolesFromToken.get(0) + "' no es válido.");
                 }
             }
+            return usuarioExistente;
+        }
+            System.out.println("FIND_OR_CREATE: Usuario NO encontrado con auth0Id: " + auth0Id + ". Creando nuevo usuario.");
 
-            // Verificar unicidad del username y añadir sufijo si es necesario
-            if (usuarioRepository.findByUsername(finalUsername).isPresent()) {
-                String baseUsername = finalUsername;
-                int count = 1;
-                do {
-                    finalUsername = baseUsername + "_" + count++;
-                } while (usuarioRepository.findByUsername(finalUsername).isPresent());
-                System.out.println("FIND_OR_CREATE: Username original '" + baseUsername + "' ya existía. Nuevo username generado: '" + finalUsername + "'");
-            }
+        String finalUsername = username;
+        if (finalUsername == null || finalUsername.trim().isEmpty()) {
+            finalUsername = email != null && email.contains("@") ? email.split("@")[0] : "user_" + auth0Id.replaceAll("[^a-zA-Z0-9]", "");
+        }
+        if (usuarioRepository.findByUsername(finalUsername).isPresent()) {
+            String baseUsername = finalUsername;
+            int count = 1;
+            do {
+                finalUsername = baseUsername + "_" + count++;
+            } while (usuarioRepository.findByUsername(finalUsername).isPresent());
+            System.out.println("FIND_OR_CREATE: Username original '" + baseUsername + "' ya existía. Nuevo username generado: '" + finalUsername + "'");
+        }
 
             Usuario nuevoUsuario = new Usuario();
             nuevoUsuario.setAuth0Id(auth0Id);
             nuevoUsuario.setUsername(finalUsername);
-            nuevoUsuario.setRol(Rol.CLIENTE); // Rol por defecto para nuevos usuarios
+            //nuevoUsuario.setRol(Rol.CLIENTE); // Rol por defecto para nuevos usuarios
             nuevoUsuario.setEstadoActivo(true);
             // nuevoUsuario.setEmail(email); // Si tienes un campo email en tu entidad Usuario y quieres persistirlo
 
             System.out.println("FIND_OR_CREATE: Guardando nuevo usuario: auth0Id=" + auth0Id + ", username=" + finalUsername + ", rol=" + nuevoUsuario.getRol());
+        if (rolesFromToken != null && !rolesFromToken.isEmpty()) {
             try {
-                Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
-                System.out.println("FIND_OR_CREATE: Nuevo usuario guardado con ID de BD: " + usuarioGuardado.getId());
-                return usuarioGuardado;
-            } catch (DataIntegrityViolationException e) {
-                // Esto podría ocurrir si, a pesar de las verificaciones, hay una condición de carrera
-                // al insertar un username/auth0Id que justo se volvió no único.
-                System.err.println("FIND_OR_CREATE_ERROR: DataIntegrityViolationException al guardar nuevo usuario para auth0Id: " + auth0Id + ". ¿Posible duplicado no detectado antes de save?");
-                // Intentar buscar de nuevo por si acaso se creó en otra transacción concurrente
-                return usuarioRepository.findByAuth0Id(auth0Id)
-                        .orElseThrow(() -> new Exception("Error crítico: Falló la creación del usuario y no se encontró después de DataIntegrityViolationException para auth0Id: " + auth0Id, e));
-            } catch (Exception e) {
-                System.err.println("FIND_OR_CREATE_ERROR: Excepción general al guardar nuevo usuario para auth0Id: " + auth0Id);
-                throw new Exception("Error al guardar el nuevo usuario: " + e.getMessage(), e);
+                Rol rolDesdeToken = Rol.valueOf(rolesFromToken.get(0).toUpperCase());
+                nuevoUsuario.setRol(rolDesdeToken);
+                System.out.println("FIND_OR_CREATE (New): Rol asignado desde token: " + rolDesdeToken);
+            } catch (IllegalArgumentException e) {
+                System.err.println("FIND_OR_CREATE (New): Rol '" + rolesFromToken.get(0) + "' en token no válido. Asignando por defecto CLIENTE.");
+                nuevoUsuario.setRol(Rol.CLIENTE);
             }
+        } else {
+            System.out.println("FIND_OR_CREATE (New): No hay rol en token. Asignando por defecto CLIENTE.");
+            nuevoUsuario.setRol(Rol.CLIENTE);
         }
+
+        Usuario usuarioGuardado = usuarioRepository.save(nuevoUsuario);
+        System.out.println("FIND_OR_CREATE: Nuevo usuario guardado con ID: " + usuarioGuardado.getId());
+
+        // Si el rol es CLIENTE, llamamos al ClienteService para que cree la entidad Cliente.
+        // Esto es necesario para que el usuario pueda operar en el sistema.
+        if (usuarioGuardado.getRol() == Rol.CLIENTE) {
+            // En lugar de llamar directamente al repositorio de Cliente, llamamos a su servicio.
+            // Esto asume que tienes un método en ClienteService para crear un cliente a partir de un usuario.
+            // Si no lo tienes, podemos crearlo o usar el repositorio aquí, pero usar el servicio es más limpio.
+            clienteService.findOrCreateClienteByAuth0Id(usuarioGuardado.getAuth0Id(), email);
+        }
+
+        return usuarioGuardado;
     }
 }

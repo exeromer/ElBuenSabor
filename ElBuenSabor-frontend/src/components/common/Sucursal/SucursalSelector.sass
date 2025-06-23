@@ -1,40 +1,35 @@
-// src/components/common/SucursalSelector/SucursalSelector.sass
-
-@import '../../../styles/vars'
 
 .sucursal-selector-container
   display: flex
   align-items: center
-  gap: 0.5rem // Espacio entre la etiqueta y el select
-  position: relative // Necesario para el overlay
+  gap: 0.5rem
+  position: relative
 
   .sucursal-selector-label
-    margin-bottom: 0 // Quitar el margen por defecto de bootstrap
+    margin-bottom: 0
     font-weight: 500
-    color: $color-texto-claro // O el color que prefieras para el header
-    white-space: nowrap // Evita que el texto se parta en dos líneas
+    color: white // Reemplazo de v.$color-texto-claro
+    white-space: nowrap
 
   .sucursal-selector-select
-    background-color: rgba(255, 255, 255, 0.2) // Un fondo semi-transparente
-    color: $color-texto-claro // O el color que prefieras
-    border: 1px solid $color-primario
-    border-radius: 20px // Bordes redondeados
-    padding: 0.375rem 2.25rem 0.375rem 0.75rem // Ajuste para que el texto no se pise con la flecha
+    background-color: rgba(255, 255, 255, 0.2)
+    color: white // Reemplazo de v.$color-texto-claro
+    border: 1px solid #0d6efd // Reemplazo de v.$color-primario (azul de Bootstrap)
+    border-radius: 20px
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem
     transition: all 0.2s ease-in-out
 
     &:hover
-      border-color: $color-secundario
+      border-color: #0dcaf0 // Reemplazo de v.$color-secundario (cyan de Bootstrap)
 
     &:focus
-      box-shadow: 0 0 0 0.25rem rgba($color-secundario, 0.5)
-      border-color: $color-secundario
+      box-shadow: 0 0 0 0.25rem rgba(13, 202, 240, 0.5) // Reemplazo de v.$color-secundario
+      border-color: #0dcaf0 // Reemplazo de v.$color-secundario
 
-    // Estilo para las opciones del dropdown
     option
-      color: $color-texto-oscuro // Texto oscuro para que sea legible sobre fondo blanco
+      color: #212529 // Reemplazo de v.$color-texto-oscuro (negro de Bootstrap)
       background-color: white
 
-  // Capa que se muestra cuando el carrito está abierto para deshabilitar visualmente
   .cart-open-overlay
     position: absolute
     top: 0
@@ -42,5 +37,5 @@
     right: 0
     bottom: 0
     background-color: transparent
-    cursor: not-allowed // Cambia el cursor para indicar que no se puede interactuar
+    cursor: not-allowed
     z-index: 10

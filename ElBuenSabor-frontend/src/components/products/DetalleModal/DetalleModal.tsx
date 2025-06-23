@@ -1,27 +1,57 @@
-/**
- * @file DetalleModal.tsx
- * @description Modal para mostrar el detalle completo de un ArticuloManufacturado.
- * @props `product`: Objeto ArticuloManufacturado con los datos del producto a mostrar.
- * @props `show`: Booleano para controlar la visibilidad del modal.
- * @props `onHide`: Función para cerrar el modal.
- */
 import React from 'react';
-import { Modal, Button, Image, Container, Row, Col } from 'react-bootstrap';
-import type { ArticuloManufacturado } from '../../../types/types';
-import { FileUploadService } from '../../../services/fileUploadService'; 
+import { Modal, Button, Image, Container, Row, Col, Badge } from 'react-bootstrap';
+// FIX 1: Usamos el DTO de respuesta correcto
+import type { ArticuloManufacturadoResponse } from '../../../types/types';
+import { useCart } from '../../../context/CartContext';
+import apiClient from '../../../services/apiClient';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPlus, faMinus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import './DetalleModal.sass'; 
 
 interface DetalleModalProps {
-  product: ArticuloManufacturado;
+  product: ArticuloManufacturadoResponse;
   show: boolean;
   onHide: () => void;
+  // FIX 2: Aceptamos la nueva prop para saber la disponibilidad
+  isDisponible: boolean;
 }
 
-const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide }) => {
-  const defaultImage = '/placeholder-food.png'; // Ruta a tu imagen por defecto
+const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDisponible }) => {
+  // FIX 3: Integramos el contexto del carrito
+  const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
+  
+  const cartItem = cart.find(item => item.articulo.id === product.id);
+  const quantity = cartItem ? cartItem.quantity : 0;
 
-  // INSTANCIA DEL SERVICIO DE SUBIDA DE ARCHIVOS
-  const fileUploadService = new FileUploadService();
+  const defaultImage = '/placeholder-food.png';
+  const imageUrl = product.imagenes && product.imagenes.length > 0
+    ? `${apiClient.defaults.baseURL}/files/download/${product.imagenes[0].denominacion}`
+    : defaultImage;
+
+  // --- Funciones para manejar el carrito (idénticas a las de ProductCard) ---
+  const handleAddToCart = () => {
+    if (!isDisponible || !product.id) return;
+    addToCart(product, 1);
+  };
+
+  const handleIncreaseQuantity = () => {
+    if (!isDisponible || !cartItem) return;
+    updateQuantity(cartItem.id, quantity + 1);
+  };
+
+  const handleDecreaseQuantity = () => {
+    if (!isDisponible || !cartItem) return;
+    if (quantity === 1) {
+      removeFromCart(cartItem.id);
+    } else {
+      updateQuantity(cartItem.id, quantity - 1);
+    }
+  };
+
+  const handleRemoveFromCart = () => {
+    if (!cartItem) return;
+    removeFromCart(cartItem.id);
+  };
 
   return (
     <Modal show={show} onHide={onHide} size="lg" centered className="detalle-modal">
@@ -32,46 +62,49 @@ const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide }) =>
         <Container fluid>
           <Row>
             <Col md={6} className="text-center mb-3 mb-md-0">
-              <Image
-                src={
-                  product.imagenes && product.imagenes.length > 0
-                    // USO DEL MÉTODO DE LA INSTANCIA Y SEGURIDAD PARA 'denominacion'
-                    ? fileUploadService.getImageUrl(product.imagenes[0].denominacion ?? '') // <-- CORRECCIÓN AQUÍ
-                    : defaultImage
-                }
-                alt={`Imagen de ${product.denominacion}`}
-                fluid
-                className="detalle-modal-image"
-              />
+              <Image src={imageUrl} alt={`Imagen de ${product.denominacion}`} fluid className="detalle-modal-image" />
             </Col>
             <Col md={6}>
               <h5 className="detalle-modal-section-title">Descripción:</h5>
               <p className="detalle-modal-description">{product.descripcion}</p>
-
+              
               <h5 className="detalle-modal-section-title">Precio:</h5>
               <p className="detalle-modal-price">${product.precioVenta.toFixed(2)}</p>
 
               <h5 className="detalle-modal-section-title">Tiempo Estimado de Cocina:</h5>
               <p className="detalle-modal-time">{product.tiempoEstimadoMinutos} minutos</p>
 
-              {/* Nueva sección para "Preparación" */}
               <h5 className="detalle-modal-section-title">Preparación:</h5>
               <p className="detalle-modal-preparacion">{product.preparacion}</p>
-
-              {/* Si ArticuloManufacturadoDetalle te da info de ingredientes que quieres mostrar
-                  tendrías que iterar sobre `product.manufacturadoDetalles`
-                  y buscar los nombres de los ArticuloInsumo, quizás requiriendo
-                  una llamada adicional o que ya vengan pre-cargados en la prop `product`.
-                  Por ahora, me apego a los campos directos de ArticuloManufacturado.
-              */}
             </Col>
           </Row>
         </Container>
       </Modal.Body>
       <Modal.Footer className="detalle-modal-footer">
-        <Button variant="secondary" onClick={onHide} className="detalle-modal-close-button">
-          Cerrar
-        </Button>
+        {/* FIX 3 (cont.): Añadimos los botones del carrito en el footer */}
+        <div className="me-auto">
+          {!isDisponible && <Badge bg="danger">No disponible</Badge>}
+        </div>
+
+        {quantity === 0 ? (
+          <Button variant="success" onClick={handleAddToCart} disabled={!isDisponible}>
+            Agregar al Carrito
+          </Button>
+        ) : (
+          <div className="d-flex align-items-center">
+             <Button variant="outline-danger" onClick={handleRemoveFromCart} disabled={!isDisponible}>
+                <FontAwesomeIcon icon={faTrash} />
+             </Button>
+            <Button variant="outline-secondary" onClick={handleDecreaseQuantity} className="ms-2" disabled={!isDisponible}>
+              <FontAwesomeIcon icon={faMinus} />
+            </Button>
+            <span className="mx-2 quantity-display">{quantity}</span>
+            <Button variant="outline-primary" onClick={handleIncreaseQuantity} disabled={!isDisponible}>
+              <FontAwesomeIcon icon={faPlus} />
+            </Button>
+          </div>
+        )}
+        <Button variant="secondary" onClick={onHide}>Cerrar</Button>
       </Modal.Footer>
     </Modal>
   );

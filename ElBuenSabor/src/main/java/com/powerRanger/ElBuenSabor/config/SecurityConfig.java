@@ -23,6 +23,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 
@@ -51,6 +52,11 @@ public class SecurityConfig {
                                 // =================================================================================
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Pre-flight requests de CORS
                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll() // Swagger
+                                .requestMatchers(
+                                        "/api/mercado-pago/notificaciones",
+                                        "/payment/**", // Permite /payment/success, /payment/failure, etc.
+                                        "/favicon.ico"
+                                ).permitAll()
                                 .requestMatchers("/ws/**").permitAll() // Websockets
 
                                 // Endpoints públicos de la API
@@ -149,22 +155,28 @@ public class SecurityConfig {
                 username = "user_" + auth0Id.replaceAll("[^a-zA-Z0-9]", "").substring(0, Math.min(10, auth0Id.length()));
             }
 
-            Collection<GrantedAuthority> authorities = new HashSet<>();
-            try {
-                System.out.println("JWT_CONVERTER: Llamando a findOrCreateUsuario con auth0Id: " + auth0Id + ", username: " + username + ", email: " + email);
-                Usuario usuario = usuarioService.findOrCreateUsuario(auth0Id, username, email);
+            final String rolesClaim = "https://api.elbuensabor.com/roles";
+            List<String> rolesFromToken = jwt.getClaimAsStringList(rolesClaim);
+            System.out.println("JWT_CONVERTER: Roles leídos desde el token: " + rolesFromToken);
 
-                if (usuario != null && usuario.getRol() != null && Boolean.TRUE.equals(usuario.getEstadoActivo())) {
-                    authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name()));
-                    System.out.println("JWT_CONVERTER: Usuario '" + (usuario.getUsername() != null ? usuario.getUsername() : auth0Id) + "' autenticado con rol: " + usuario.getRol().name());
-                } else if (usuario != null && !Boolean.TRUE.equals(usuario.getEstadoActivo())) {
-                    System.out.println("JWT_CONVERTER: Intento de login de usuario inactivo/dado de baja: " + (usuario.getUsername() != null ? usuario.getUsername() : auth0Id));
-                } else {
-                    System.out.println("JWT_CONVERTER: No se pudo encontrar/crear usuario, o no tiene rol/estado activo para auth0Id: " + auth0Id + ". Usuario devuelto por servicio: " + usuario);
-                }
+            // --- LLAMADA AL SERVICIO CON LA INFORMACIÓN COMPLETA ---
+            // Pasamos los roles del token al servicio para que él decida.
+            Usuario usuario = null;
+            try {
+                usuario = usuarioService.findOrCreateUsuario(auth0Id, username, email, rolesFromToken);
             } catch (Exception e) {
-                System.err.println("JWT_CONVERTER_ERROR: Error en findOrCreateUsuario para auth0Id '" + auth0Id + "': " + e.getMessage());
-                e.printStackTrace();
+                System.err.println("JWT_CONVERTER_ERROR: Excepción al buscar/crear usuario para auth0Id '" + auth0Id + "': " + e.getMessage());
+                return Collections.emptyList();
+            }
+
+            Collection<GrantedAuthority> authorities = new HashSet<>();
+            if (usuario != null && Boolean.TRUE.equals(usuario.getEstadoActivo())) {
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + usuario.getRol().name()));
+                System.out.println("JWT_CONVERTER: Usuario '" + (usuario.getUsername() != null ? usuario.getUsername() : auth0Id) + "' autenticado con rol final: " + usuario.getRol().name());
+            } else if (usuario != null) {
+                System.out.println("JWT_CONVERTER: Intento de login de usuario inactivo/dado de baja: " + (usuario.getUsername() != null ? usuario.getUsername() : auth0Id));
+            } else {
+                System.err.println("JWT_CONVERTER_ERROR: El servicio de usuario devolvió null para auth0Id: " + auth0Id);
             }
             return authorities;
         });

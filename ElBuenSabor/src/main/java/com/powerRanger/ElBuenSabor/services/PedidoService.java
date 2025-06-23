@@ -7,6 +7,8 @@ import com.powerRanger.ElBuenSabor.entities.Cliente; // Importar la entidad Clie
 import com.powerRanger.ElBuenSabor.entities.enums.Estado;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Map;
+
 import com.powerRanger.ElBuenSabor.dtos.MercadoPagoCreatePreferenceDTO; // Importar el nuevo DTO
 
 
@@ -27,4 +29,6 @@ public interface PedidoService {
 
     PedidoResponseDTO updateEstado(Integer id, Estado nuevoEstado) throws Exception;
     void softDelete(Integer id) throws Exception;
+    void handleMercadoPagoNotification(Map<String, String> notification) throws Exception;
+
 }

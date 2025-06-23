@@ -241,7 +241,7 @@ export interface PedidoEstadoRequest {
 export interface PedidoRequest {
   horaEstimadaFinalizacion: string; // "HH:mm" o "HH:mm:ss"
   sucursalId: number;
-  domicilioId: number;
+  domicilioId?: number;
   tipoEnvio: TipoEnvio;
   formaPago: FormaPago;
   clienteId: number;

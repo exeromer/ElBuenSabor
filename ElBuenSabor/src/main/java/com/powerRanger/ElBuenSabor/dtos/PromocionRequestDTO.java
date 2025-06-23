@@ -79,7 +79,6 @@ public class PromocionRequestDTO {
     public Double getPrecioPromocional() { return precioPromocional; }
     public void setPrecioPromocional(Double precioPromocional) { this.precioPromocional = precioPromocional; }
 
-    // ¡NUEVOS GETTERS Y SETTERS!
     public TipoPromocion getTipoPromocion() { return tipoPromocion; }
     public void setTipoPromocion(TipoPromocion tipoPromocion) { this.tipoPromocion = tipoPromocion; }
     public Double getPorcentajeDescuento() { return porcentajeDescuento; }
