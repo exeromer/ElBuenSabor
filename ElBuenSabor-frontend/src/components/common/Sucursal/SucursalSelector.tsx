@@ -7,12 +7,27 @@ import './SucursalSelector.sass';
 const SucursalSelector: React.FC = () => {
   // Obtenemos todo lo que necesitamos de nuestros contextos
   const { sucursales, selectedSucursal, selectSucursal, loading } = useSucursal();
-  const { isCartOpen } = useCart();
+  const { clearCart, isCartOpen } = useCart(); // <-- FIX: Obtenemos clearCart
 
   // El manejador para el evento onChange del select
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const sucursalId = Number(event.target.value);
-    selectSucursal(sucursalId);
+
+        if (selectedSucursal && sucursalId !== selectedSucursal.id) {
+        const userConfirmation = window.confirm(
+            "Al cambiar de sucursal, tu carrito de compras se vaciará. ¿Deseas continuar?"
+        );
+
+        if (userConfirmation) {
+            selectSucursal(sucursalId);
+            clearCart(); // Limpiamos el carrito desde el componente que dispara la acción
+        } else {
+            // Si el usuario cancela, reseteamos el valor del select al anterior
+            event.target.value = String(selectedSucursal.id);
+        }
+    } else if (!selectedSucursal) {
+        selectSucursal(sucursalId);
+    }
   };
 
   return (

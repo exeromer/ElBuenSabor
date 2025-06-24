@@ -1,4 +1,3 @@
-// Nueva carpeta/ElBuenSabor-frontend/src/main.tsx
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -6,7 +5,7 @@ import App from './App.tsx';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './styles/main.sass';
 
-import { BrowserRouter as Router } from 'react-router-dom'; 
+import { BrowserRouter as Router } from 'react-router-dom';
 import { Auth0Provider } from '@auth0/auth0-react';
 import { UserProvider } from './context/UserContext.tsx';
 import { CartProvider } from './context/CartContext.tsx';
@@ -36,11 +35,11 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       >
         <Router>
           <UserProvider>
-            <CartProvider>
-              <SucursalProvider> 
+            <SucursalProvider>
+              <CartProvider>
                 <App />
-              </SucursalProvider>
-            </CartProvider>
+              </CartProvider>
+            </SucursalProvider>
           </UserProvider>
         </Router>
       </Auth0Provider>

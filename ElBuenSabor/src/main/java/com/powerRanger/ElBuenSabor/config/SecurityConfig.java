@@ -51,7 +51,12 @@ public class SecurityConfig {
                                 // 1. ENDPOINTS PÚBLICOS - Accesibles por CUALQUIERA (autenticado o no)
                                 // =================================================================================
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Pre-flight requests de CORS
-                                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll() // Swagger
+                                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
+                                .requestMatchers(
+                                        HttpMethod.GET,
+                                        "/api/sucursales", // Permite el GET a la lista de sucursales
+                                        "/api/sucursales/**" // Opcional: si quieres que el detalle también sea público
+                                ).permitAll()
                                 .requestMatchers(
                                         "/api/mercado-pago/notificaciones",
                                         "/payment/**", // Permite /payment/success, /payment/failure, etc.
@@ -69,6 +74,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/articulos/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/articulosinsumo/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/articulosmanufacturados/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/promociones/**").permitAll()
 
                                 // =================================================================================
                                 // 2. ENDPOINTS PARA USUARIOS AUTENTICADOS - Requieren login, sin importar el rol
@@ -112,6 +118,9 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.PUT,"/api/facturas/anular/{id}").hasAnyAuthority("ROLE_ADMIN","ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.POST,"/api/facturas/generar-desde-pedido").hasAnyAuthority("ROLE_ADMIN","ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.POST, "/api/files/upload").hasAnyAuthority( "ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.POST, "/api/promociones/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.PUT, "/api/promociones/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.DELETE, "/api/promociones/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
 
                                 // ---- CUALQUIER USUARIO LOGUEADO PUEDE VER SU FACTURA ----
                                 .requestMatchers(HttpMethod.GET,"/api/facturas/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")

@@ -14,7 +14,7 @@ import { PedidoService } from '../services/pedidoService';
 
 // Tipos y Enums
 import type { TipoEnvio, FormaPago } from '../types/enums';
-import type { CrearPedidoRequest, ArticuloManufacturadoResponse, PedidoResponse, PedidoRequest } from '../types/types';
+import type { ArticuloManufacturadoResponse, PedidoResponse, PedidoRequest } from '../types/types';
 
 // Iconos
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -30,7 +30,7 @@ const CheckoutPage: React.FC = () => {
   // --- CONTEXTOS ---
   const { getAccessTokenSilently, isLoading: authLoading } = useAuth0();
   const { cliente, isLoading: userLoading } = useUser();
-  const { cart, totalPrice, clearCart } = useCart();
+  const { cart, subtotal, descuento, totalFinal, clearCart, aplicarDescuentosAdicionales } = useCart();
   const { selectedSucursal, loading: sucursalLoading } = useSucursal();
   const navigate = useNavigate();
 
@@ -42,18 +42,21 @@ const CheckoutPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
-  const [calculatedDiscount, setCalculatedDiscount] = useState<number>(0);
-  const [finalTotal, setFinalTotal] = useState<number>(0);
 
   const defaultImage = '/placeholder-food.png';
 
   // --- EFECTOS ---
-
   useEffect(() => {
     if (cliente && cliente.domicilios.length > 0 && selectedDomicilioId === '') {
       setSelectedDomicilioId(cliente.domicilios[0].id);
     }
   }, [cliente]);
+
+  useEffect(() => {
+    // Le pedimos al contexto que recalcule los totales con las opciones actuales
+    aplicarDescuentosAdicionales(tipoEnvio, formaPago);
+  }, [tipoEnvio, formaPago, aplicarDescuentosAdicionales]);
+
 
   /** useEffect(() => {
     let discount = 0;
@@ -80,6 +83,14 @@ const CheckoutPage: React.FC = () => {
       }
     }
   }, [preferenceId]);
+
+    useEffect(() => {
+    // Si no hay mensaje de éxito (es decir, no acabamos de completar un pedido)
+    // y el carrito está vacío, redirigimos al menú.
+    if (cart.length === 0 && !successMessage) {
+      navigate('/products');
+    }
+  }, [cart, successMessage, navigate]);
 
   // --- MANEJADORES ---
 
@@ -113,13 +124,6 @@ const CheckoutPage: React.FC = () => {
     const tiempoAdicional = tipoEnvio === 'DELIVERY' ? 10 : 0;
     const estimatedTime = new Date(new Date().getTime() + (maxTiempoEstimado + tiempoAdicional) * 60000);
     const horaEstimadaFinalizacion = estimatedTime.toTimeString().split(' ')[0];
-
-    let finalDomicilioId: number;
-    if (tipoEnvio === 'DELIVERY') {
-      finalDomicilioId = domicilioSeleccionado!.id;
-    } else { // TAKE_AWAY
-      finalDomicilioId = selectedSucursal.domicilio.id;
-    }
 
     const pedidoData: PedidoRequest = {
       clienteId: cliente.id,
@@ -181,12 +185,11 @@ const CheckoutPage: React.FC = () => {
     return <Container className="my-5"><Alert variant="warning">Por favor, selecciona una sucursal para continuar.</Alert></Container>;
   }
 
-  if (cart.length === 0 && !successMessage) {
+  /** if (cart.length === 0 && !successMessage) {
     navigate('/products');
     return null;
-  }
+  } */
 
-  // En CheckoutPage.tsx, reemplaza tu return completo por este:
 
   return (
     <Container className="my-4">
@@ -195,7 +198,7 @@ const CheckoutPage: React.FC = () => {
       <Row>
         <Col md={6}>
           <Card className="mb-4 shadow-sm">
-            <Card.Header as="h5">Productos en tu Carrito</Card.Header>
+            <Card.Header as="h5">Resumen Del Pedido</Card.Header>
             <ListGroup variant="flush">
               {cart.length === 0 ? (
                 <ListGroup.Item className="text-center text-muted">El carrito está vacío.</ListGroup.Item>
@@ -219,17 +222,28 @@ const CheckoutPage: React.FC = () => {
               )}
             </ListGroup>
             <Card.Footer className="bg-light">
-              <div className="d-flex justify-content-between align-items-center">
-                <h5 className="mb-0">Total del Carrito:</h5>
-                <h5 className="mb-0"><span className="text-success">${totalPrice.toFixed(2)}</span></h5>
+              <div className="d-flex justify-content-between">
+                <h5 className="mb-0">Subtotal:</h5>
+                {/* Usamos el subtotal bruto del contexto */}
+                <h5 className="mb-0"><span className="text-dark">${subtotal.toFixed(2)}</span></h5>
               </div>
-              <Form.Text className="text-muted">
-                El total final con todos los descuentos se verá reflejado en el próximo paso.
-              </Form.Text>
+
+              {/* Usamos el descuento total del contexto */}
+              {descuento > 0 && (
+                <div className="d-flex justify-content-between text-danger">
+                  <h5 className="mb-0">Descuentos:</h5>
+                  <h5 className="mb-0">-${descuento.toFixed(2)}</h5>
+                </div>
+              )}
+              <hr />
+              <div className="d-flex justify-content-between align-items-center mt-2">
+                <h5 className="mb-0">Total a Pagar:</h5>
+                {/* Usamos el total final del contexto */}
+                <h5 className="mb-0"><span className="text-success">${totalFinal.toFixed(2)}</span></h5>
+              </div>
             </Card.Footer>
           </Card>
         </Col>
-
         <Col md={6}>
           <Card className="shadow-sm">
             <Card.Header as="h5">Detalles de Entrega y Pago</Card.Header>
@@ -247,7 +261,6 @@ const CheckoutPage: React.FC = () => {
                   La sucursal se selecciona desde el menú principal.
                 </Form.Text>
               </Form.Group>
-
               <Form.Group className="mb-3">
                 <Form.Label>Tipo de Envío:</Form.Label>
                 <div>
@@ -272,7 +285,6 @@ const CheckoutPage: React.FC = () => {
                   )}
                 </Form.Group>
               )}
-
               <Form.Group className="mb-3">
                 <Form.Label>Forma de Pago:</Form.Label>
                 <div>

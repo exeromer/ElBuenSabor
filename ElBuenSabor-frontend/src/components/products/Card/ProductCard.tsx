@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Button, Badge, Spinner } from 'react-bootstrap';
-import type { ArticuloManufacturadoResponse } from '../../../types/types'; 
+import type { ArticuloManufacturadoResponse } from '../../../types/types';
 import { useCart } from '../../../context/CartContext';
 import { useUser } from '../../../context/UserContext';
+import { useAuth0 } from '@auth0/auth0-react'; // <-- 1. Importamos el hook de Auth0
+import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { useSucursal } from '../../../context/SucursalContext';
 import { StockInsumoSucursalService } from '../../../services/StockInsumoSucursalService';
 import apiClient from '../../../services/apiClient'; // Importamos apiClient para la URL de la imagen
@@ -16,9 +18,10 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const { isAuthenticated } = useAuth0();
   const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
   const { selectedSucursal } = useSucursal();
-  const { cliente } = useUser(); 
+  const { cliente } = useUser();
 
   const [isDisponible, setIsDisponible] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -80,6 +83,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const handleShowDetailModal = () => setShowDetailModal(true);
   const handleCloseDetailModal = () => setShowDetailModal(false);
 
+  const BotonAgregar = () => (
+    <Button
+      variant="success"
+      onClick={handleAddToCart}
+      className="product-card-add-button"
+      disabled={!isDisponible || isLoading || !isAuthenticated} // Se deshabilita si no está autenticado
+    >
+      {isLoading ? <Spinner as="span" animation="border" size="sm" /> : 'Agregar'}
+    </Button>
+  );
+
   return (
     <Card className={`h-100 shadow-sm product-card ${!isDisponible || !product.estadoActivo ? 'unavailable' : ''}`}>
       <Card.Img variant="top" src={imageUrl} alt={`Imagen de ${product.denominacion}`} className="product-card-img" />
@@ -94,16 +108,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <div className="mt-auto product-card-bottom-section">
           <Card.Text className="product-card-price-display">${product.precioVenta.toFixed(2)}</Card.Text>
           {isLoading ? (
-             <Badge bg="secondary" className="my-2">Verificando...</Badge>
+            <Badge bg="secondary" className="my-2">Verificando...</Badge>
           ) : !isDisponible ? (
             <Badge bg="danger" className="my-2">No disponible</Badge>
           ) : null}
 
           <div className="product-card-buttons-group">
             {quantity === 0 ? (
-              <Button variant="success" onClick={handleAddToCart} className="product-card-add-button" disabled={!isDisponible || isLoading}>
-                {isLoading ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" /> : 'Agregar'}
-              </Button>
+              // Renderizamos el botón dentro de un Tooltip si no está autenticado
+              !isAuthenticated ? (
+                <OverlayTrigger
+                  placement="top"
+                  overlay={<Tooltip>Inicia sesión para agregar productos</Tooltip>}
+                >
+                  <span className="d-inline-block">
+                    <BotonAgregar />
+                  </span>
+                </OverlayTrigger>
+              ) : (
+                <BotonAgregar />
+              )
             ) : (
               <div className="product-card-controls-wrapper d-flex align-items-center justify-content-center">
                 <Button variant="outline-danger" onClick={handleRemoveFromCart} className="product-card-control-button product-card-remove-all" disabled={!isDisponible || isLoading}>

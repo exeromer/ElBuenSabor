@@ -4,14 +4,19 @@ import { useCart } from '../../context/CartContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
+// FIX: Importamos apiClient para las URLs de las imágenes
+import apiClient from '../../services/apiClient';
 
 const CartModal: React.FC = () => {
+  // FIX: Obtenemos los nuevos valores de desglose de precios del contexto
   const {
     cart,
     updateQuantity,
     removeFromCart,
     clearCart,
-    totalPrice,
+    subtotal,
+    descuento,
+    totalFinal,
     isCartOpen,
     closeCart,
     isLoading,
@@ -37,9 +42,10 @@ const CartModal: React.FC = () => {
               <ListGroup.Item key={item.id} className="d-flex align-items-center py-3">
                 <Col xs={2} className="d-flex justify-content-center">
                   <Image
+                    // FIX: Construimos la URL de la imagen correctamente
                     src={
                       item.articulo.imagenes && item.articulo.imagenes.length > 0
-                        ? item.articulo.imagenes[0].denominacion
+                        ? `${apiClient.defaults.baseURL}/files/download/${item.articulo.imagenes[0].denominacion}`
                         : defaultImage
                     }
                     thumbnail
@@ -72,11 +78,26 @@ const CartModal: React.FC = () => {
           </ListGroup>
         )}
       </Modal.Body>
-      <Modal.Footer className="justify-content-between">
-        <div className="total-section">
-          <h5 className="mb-0">Total: <span className="text-success">${totalPrice.toFixed(2)}</span></h5>
+      <Modal.Footer className="d-block text-end">
+        {/* FIX: Mostramos el desglose de precios completo */}
+        <div className="total-section mb-3">
+          <p className="mb-1 d-flex justify-content-between">
+            <span>Subtotal:</span>
+            <span>${subtotal.toFixed(2)}</span>
+          </p>
+          {descuento > 0 && (
+            <p className="mb-1 d-flex justify-content-between text-danger">
+              <span>Descuentos:</span>
+              <span>-${descuento.toFixed(2)}</span>
+            </p>
+          )}
+          <hr className="my-1" />
+          <h5 className="mb-0 d-flex justify-content-between">
+            <span>Total:</span>
+            <span className="text-success">${totalFinal.toFixed(2)}</span>
+          </h5>
         </div>
-        <div>
+        <div className="actions-section">
           <Button variant="outline-danger" onClick={clearCart} disabled={cart.length === 0 || isLoading} className="me-2">
             Vaciar Carrito
           </Button>

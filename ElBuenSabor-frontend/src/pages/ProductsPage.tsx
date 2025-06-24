@@ -5,7 +5,6 @@ import { useSucursal } from '../context/SucursalContext';
 
 // FIX: Usamos los servicios con sus métodos estáticos
 import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService';
-import { CategoriaService } from '../services/categoriaService';
 
 // FIX: Corregimos los tipos para que coincidan con los DTOs de respuesta
 import type { ArticuloManufacturadoResponse, CategoriaResponse } from '../types/types';
