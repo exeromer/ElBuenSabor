@@ -46,4 +46,11 @@ export class SucursalService {
     const response = await apiClient.delete<{ mensaje: string }>(`/sucursales/${id}`);
     return response.data;
   }
+  static async asociarCategoria(sucursalId: number, categoriaId: number): Promise<void> {
+    await apiClient.post(`/sucursales/${sucursalId}/categorias/${categoriaId}`);
+  }
+  static async desasociarCategoria(sucursalId: number, categoriaId: number): Promise<void> {
+    await apiClient.delete(`/sucursales/${sucursalId}/categorias/${categoriaId}`);
+  }
+
 }

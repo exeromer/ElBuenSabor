@@ -14,4 +14,7 @@ public interface SucursalService {
     SucursalResponseDTO create(@Valid SucursalRequestDTO dto) throws Exception;
     SucursalResponseDTO update(Integer id, @Valid SucursalRequestDTO dto) throws Exception;
     void softDelete(Integer id) throws Exception;
+    SucursalResponseDTO addCategoria(Integer sucursalId, Integer categoriaId) throws Exception;
+
+    SucursalResponseDTO removeCategoria(Integer sucursalId, Integer categoriaId) throws Exception;
 }

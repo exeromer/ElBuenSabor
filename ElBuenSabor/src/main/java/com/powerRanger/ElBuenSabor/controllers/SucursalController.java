@@ -84,6 +84,31 @@ public class SucursalController {
             return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
     }
+    @PostMapping("/{sucursalId}/categorias/{categoriaId}")
+    public ResponseEntity<?> addCategoriaASucursal(@PathVariable Integer sucursalId, @PathVariable Integer categoriaId) {
+        try {
+            SucursalResponseDTO sucursalActualizada = sucursalService.addCategoria(sucursalId, categoriaId);
+            return ResponseEntity.ok(sucursalActualizada);
+        } catch (Exception e) {
+            if (e.getMessage().contains("no encontrada")) {
+                return handleGenericException(e, HttpStatus.NOT_FOUND);
+            }
+            return handleGenericException(e, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @DeleteMapping("/{sucursalId}/categorias/{categoriaId}")
+    public ResponseEntity<?> removeCategoriaDeSucursal(@PathVariable Integer sucursalId, @PathVariable Integer categoriaId) {
+        try {
+            SucursalResponseDTO sucursalActualizada = sucursalService.removeCategoria(sucursalId, categoriaId);
+            return ResponseEntity.ok(sucursalActualizada);
+        } catch (Exception e) {
+            if (e.getMessage().contains("no encontrada")) {
+                return handleGenericException(e, HttpStatus.NOT_FOUND);
+            }
+            return handleGenericException(e, HttpStatus.BAD_REQUEST);
+        }
+    }
 
     // Métodos helper para manejo de errores
     private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {

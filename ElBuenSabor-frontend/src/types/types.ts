@@ -80,7 +80,10 @@ export interface CategoriaResponse {
   denominacion: string;
   estadoActivo: boolean;
 }
-
+export interface CategoriaRequest {
+  denominacion: string;
+  estadoActivo: boolean;
+}
 export interface ClienteRanking {
   clienteId: number;
   nombreCompleto: string;

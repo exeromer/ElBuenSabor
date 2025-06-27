@@ -1,8 +1,6 @@
-import React, { createContext, useState, useEffect, useContext, type ReactNode } from 'react';
+import React, { createContext, useState, useEffect, useContext, type ReactNode, useCallback } from 'react';
 import type { SucursalResponse } from '../types/types';
 import { SucursalService } from '../services/sucursalService';
-import { useAuth0 } from '@auth0/auth0-react';
-import { setAuthToken } from '../services/apiClient';
 
 
 // 1. Definición del tipo para el contexto
@@ -11,6 +9,7 @@ interface SucursalContextType {
   selectedSucursal: SucursalResponse | null; // CAMBIO: Usamos SucursalResponse
   selectSucursal: (sucursalId: number) => void;
   loading: boolean;
+  reloadSucursales: () => void;
 }
 
 // 2. Creación del Contexto
@@ -22,35 +21,38 @@ interface SucursalProviderProps {
 }
 
 export const SucursalProvider: React.FC<SucursalProviderProps> = ({ children }) => {
-  
+
   const [sucursales, setSucursales] = useState<SucursalResponse[]>([]);
   const [selectedSucursal, setSelectedSucursal] = useState<SucursalResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    const fetchSucursales = async () => {
-      try {
-        const data = await SucursalService.getAll();
-        setSucursales(data);
-        if (data.length > 0) {
-          setSelectedSucursal(data[0]);
-        }
-      } catch (error) {
-        console.error("Error al obtener las sucursales:", error);
-      } finally {
-        setLoading(false);
+    const fetchSucursales = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await SucursalService.getAll();
+      setSucursales(data);
+      // Mantenemos la lógica de selección, pero con cuidado
+      if (data.length > 0) {
+        // Si ya hay una sucursal seleccionada, la mantenemos, si no, seleccionamos la primera
+        setSelectedSucursal(prev => data.find(s => s.id === prev?.id) || data[0]);
       }
-    };
-
-    fetchSucursales();
+    } catch (error) {
+      console.error("Error al obtener las sucursales:", error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSucursales();
+  }, [fetchSucursales]);
 
   // Función para cambiar la sucursal seleccionada
   const selectSucursal = (sucursalId: number) => {
     const nuevaSucursal = sucursales.find(s => s.id === sucursalId);
 
     // Verificamos si la sucursal existe y es diferente a la actual
-        if (nuevaSucursal) {
+    if (nuevaSucursal) {
       setSelectedSucursal(nuevaSucursal);
     }
   };
@@ -59,7 +61,8 @@ export const SucursalProvider: React.FC<SucursalProviderProps> = ({ children }) 
     sucursales,
     selectedSucursal,
     selectSucursal,
-    loading
+    loading,
+    reloadSucursales: fetchSucursales
   };
 
   return (

@@ -236,4 +236,33 @@ public class SucursalServiceImpl implements SucursalService {
         sucursal.setFechaBaja(LocalDate.now());
         sucursalRepository.save(sucursal);
     }
+    @Override
+    @Transactional
+    public SucursalResponseDTO addCategoria(Integer sucursalId, Integer categoriaId) throws Exception {
+        Sucursal sucursal = sucursalRepository.findById(sucursalId)
+                .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + sucursalId));
+        Categoria categoria = categoriaRepository.findById(categoriaId)
+                .orElseThrow(() -> new Exception("Categoría no encontrada con ID: " + categoriaId));
+
+        //Verificamos si la categoría ya está asociada a la sucursal
+        boolean yaAsociada = sucursal.getCategorias().stream().anyMatch(cat -> cat.getId().equals(categoriaId));
+        if (yaAsociada) {
+            throw new Exception("La categoría '" + categoria.getDenominacion() + "' ya está asociada a la sucursal '" + sucursal.getNombre() + "'.");
+        }
+        sucursal.getCategorias().add(categoria);
+        sucursalRepository.save(sucursal);
+        return convertToDto(sucursal);
+    }
+
+    // FIX: Implementación del método para desasociar una categoría
+    @Override
+    @Transactional
+    public SucursalResponseDTO removeCategoria(Integer sucursalId, Integer categoriaId) throws Exception {
+        Sucursal sucursal = sucursalRepository.findById(sucursalId)
+                .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + sucursalId));
+        sucursal.getCategorias().removeIf(categoria -> categoria.getId().equals(categoriaId));
+        sucursalRepository.save(sucursal);
+        return convertToDto(sucursal);
+    }
+
 }

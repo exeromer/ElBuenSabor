@@ -6,8 +6,9 @@
 
 import React from 'react';
 import { Modal, Button, Row, Col, Image, ListGroup, Badge } from 'react-bootstrap';
-import type { ArticuloManufacturado, ArticuloManufacturadoDetalle } from '../../types/types'; 
+import type { ArticuloManufacturadoResponse, ArticuloManufacturadoDetalleResponse } from '../../types/types';
 import { FileUploadService } from '../../services/fileUploadService';
+import apiClient from '../../services/apiClient';
 
 /**
  * @interface ArticuloManufacturadoDetailModalProps
@@ -19,16 +20,14 @@ import { FileUploadService } from '../../services/fileUploadService';
 interface ArticuloManufacturadoDetailModalProps {
   show: boolean;
   handleClose: () => void;
-  articulo: ArticuloManufacturado | null;
+  articulo: ArticuloManufacturadoResponse | null;
 }
 
-const fileUploadService = new FileUploadService(); // Instanciamos el servicio
-
 const ArticuloManufacturadoDetailModal: React.FC<ArticuloManufacturadoDetailModalProps> = ({ show, handleClose, articulo }) => {
-  const defaultImage = '/placeholder-food.png'; // Asegúrate que esta ruta sea accesible desde `public/`
+  const defaultImage = '/placeholder-food.png';
 
   if (!articulo) {
-    return null; // O un spinner/mensaje si prefieres mientras carga o si es null inesperadamente
+    return null;
   }
   return (
     <Modal show={show} onHide={handleClose} size="lg" centered>
@@ -40,16 +39,15 @@ const ArticuloManufacturadoDetailModal: React.FC<ArticuloManufacturadoDetailModa
           {/* Columna para Imagen Principal y Detalles Básicos */}
           <Col md={5}>
             <Image
-              src={
+                          src={
                 articulo.imagenes && articulo.imagenes.length > 0
-                  ? fileUploadService.getImageUrl(articulo.imagenes[0].denominacion) // Usamos la instancia del servicio
+                  ? articulo.imagenes[0].denominacion
                   : defaultImage
               }
               alt={`Imagen de ${articulo.denominacion}`}
               fluid
               rounded
               className="mb-3 shadow-sm"
-              style={{ maxHeight: '300px', objectFit: 'cover', width: '100%' }}
             />
             <h5><strong>ID:</strong> {articulo.id}</h5>
             <p><strong>Precio Venta:</strong> <Badge bg="success">${articulo.precioVenta.toFixed(2)}</Badge></p>
@@ -58,7 +56,6 @@ const ArticuloManufacturadoDetailModal: React.FC<ArticuloManufacturadoDetailModa
             <p><strong>Tiempo Estimado:</strong> {articulo.tiempoEstimadoMinutos} minutos</p>
             <p><strong>Estado:</strong> {articulo.estadoActivo ? <Badge bg="primary">Activo</Badge> : <Badge bg="secondary">Inactivo</Badge>}</p>
           </Col>
-
           {/* Columna para Descripción, Preparación e Insumos */}
           <Col md={7}>
             <h4>Descripción:</h4>
@@ -70,33 +67,12 @@ const ArticuloManufacturadoDetailModal: React.FC<ArticuloManufacturadoDetailModa
             <h4>Ingredientes (Insumos):</h4>
             {articulo.manufacturadoDetalles && articulo.manufacturadoDetalles.length > 0 ? (
               <ListGroup variant="flush">
-                {articulo.manufacturadoDetalles.map((detalle: ArticuloManufacturadoDetalle, index: number) => (
-                  <ListGroup.Item key={detalle.id || index} className="d-flex justify-content-between align-items-start">
-                    <div>
-                      {/* Asumimos que 'detalle.articuloInsumo' tiene al menos 'id' y necesitamos obtener su denominación.
-                          En un escenario ideal, 'ArticuloManufacturado' vendría con los nombres de los insumos
-                          o tendrías que buscarlos si solo tienes IDs.
-                          
-                          Revisando tu `types.ts`, `ArticuloManufacturadoDetalle` tiene:
-                          articuloInsumo: { id: number };
-                          Esto significa que solo tienes el ID. Para mostrar el nombre, necesitarías
-                          cargar la lista de todos los ArticuloInsumo en la página padre (ManageProductsPage)
-                          y pasarla a este modal, o hacer que el `ArticuloManufacturado` que llega aquí
-                          ya tenga el nombre del insumo.
-
-                          Dado que este modal es solo de VISTA, la opción más simple es que el objeto `articulo`
-                          que llega como prop ya tenga los nombres de los insumos en sus `manufacturadoDetalles`.
-                          Si tu `getArticuloManufacturadoById` del servicio ya devuelve esto, perfecto.
-                          Si no, tendrías que enriquecerlo.
-
-                          Para el ejemplo, asumiré que `detalle.articuloInsumo` puede no tener `denominacion` directamente si es solo ID.
-                          En `ArticuloManufacturadoResponseDTO.java`, el `ArticuloManufacturadoDetalleResponseDTO` tiene `ArticuloSimpleResponseDTO articuloInsumo;`
-                          y `ArticuloSimpleResponseDTO` sí tiene `denominacion`. Así que debería funcionar.
-                      */}
-                      <strong>{(detalle.articuloInsumo as any)?.denominacion || `Insumo ID: ${detalle.articuloInsumo.id}`}</strong>
-                    </div>
+                {/* FIX: Se usa la estructura del DTO de respuesta, que sí contiene toda la info */}
+                {articulo.manufacturadoDetalles.map((detalle: ArticuloManufacturadoDetalleResponse) => (
+                  <ListGroup.Item key={detalle.id} className="d-flex justify-content-between align-items-center">
+                    <span>{detalle.articuloInsumo.denominacion}</span>
                     <Badge bg="info" pill>
-                      {detalle.cantidad} {(detalle.articuloInsumo as any)?.unidadMedida?.denominacion || ''}
+                      {detalle.cantidad}
                     </Badge>
                   </ListGroup.Item>
                 ))}
@@ -106,7 +82,6 @@ const ArticuloManufacturadoDetailModal: React.FC<ArticuloManufacturadoDetailModa
             )}
           </Col>
         </Row>
-
         {/* Si tienes más imágenes, podrías mostrarlas aquí en una galería simple */}
         {articulo.imagenes && articulo.imagenes.length > 1 && (
           <>
@@ -115,7 +90,18 @@ const ArticuloManufacturadoDetailModal: React.FC<ArticuloManufacturadoDetailModa
             <Row xs={2} md={4} className="g-3">
               {articulo.imagenes.slice(1).map(img => (
                 <Col key={img.id}>
-                  <Image src={fileUploadService.getImageUrl(img.denominacion)} alt="Imagen adicional" thumbnail fluid /> {/* Usamos la instancia del servicio */}
+                  <Image
+                    src={
+                      articulo.imagenes && articulo.imagenes.length > 0
+                        ? `${apiClient.defaults.baseURL}/files/view/${articulo.imagenes[0].denominacion}`
+                        : defaultImage
+                    }
+                    alt={`Imagen de ${articulo.denominacion}`}
+                    fluid
+                    rounded
+                    className="mb-3 shadow-sm"
+                    style={{ maxHeight: '300px', objectFit: 'cover', width: '100%' }}
+                  />
                 </Col>
               ))}
             </Row>

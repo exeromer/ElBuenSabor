@@ -1,5 +1,5 @@
 import apiClient from '../services/apiClient';
-import type { CategoriaResponse } from '../types/types';
+import type { CategoriaResponse, CategoriaRequest } from '../types/types';
 
 // La entidad Categoria para POST/PUT, según el controller
 type CategoriaCreateOrUpdate = {
@@ -50,7 +50,7 @@ export class CategoriaService {
    * NOTA: El backend espera una entidad, no un DTO.
    * @param data - Los datos de la categoría a crear.
    */
-  static async create(data: CategoriaCreateOrUpdate): Promise<CategoriaResponse> {
+  static async create(data: CategoriaRequest): Promise<CategoriaResponse> {
     const response = await apiClient.post<CategoriaResponse>('/categorias', data);
     return response.data;
   }
@@ -61,7 +61,7 @@ export class CategoriaService {
    * @param id - El ID de la categoría a actualizar.
    * @param data - Los nuevos datos.
    */
-  static async update(id: number, data: CategoriaCreateOrUpdate): Promise<CategoriaResponse> {
+  static async update(id: number, data: CategoriaRequest): Promise<CategoriaResponse> {
     const response = await apiClient.put<CategoriaResponse>(`/categorias/${id}`, data);
     return response.data;
   }

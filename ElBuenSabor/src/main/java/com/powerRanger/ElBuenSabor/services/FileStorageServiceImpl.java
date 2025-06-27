@@ -121,15 +121,30 @@ public class FileStorageServiceImpl implements FileStorageService {
     @Override
     public void delete(String filename) throws Exception {
         try {
-            Path file = load(filename);
-            // La rootLocation ya está normalizada
-            if (Files.exists(file) && file.normalize().startsWith(this.rootLocation)) {
-                Files.deleteIfExists(file);
-            } else {
-                System.err.println("Intento de borrado de archivo fuera del directorio de uploads: " + filename + " (Ruta resuelta: " + file.normalize().toAbsolutePath() + ", Raíz: "+ this.rootLocation + ")");
-                throw new Exception("No se pudo borrar el archivo: " + filename + ". Ruta inválida o fuera de alcance.");
+            // Construimos la ruta completa al archivo que se quiere borrar
+            Path fileToDelete = this.rootLocation.resolve(filename).normalize();
+
+            // --- VALIDACIÓN DE SEGURIDAD MEJORADA ---
+            // 1. Verificamos que el archivo realmente existe.
+            if (Files.notExists(fileToDelete)) {
+                System.out.println("WARN: Se intentó borrar un archivo que no existe: " + filename);
+                return; // Salimos silenciosamente, el resultado es el mismo (el archivo no está).
             }
+
+            // 2. La validación clave: nos aseguramos de que la ruta normalizada del archivo
+            //    comience con la ruta normalizada del directorio raíz de uploads.
+            //    Esto previene ataques de "Directory Traversal" (../../) de forma segura.
+            if (!fileToDelete.toAbsolutePath().startsWith(this.rootLocation.toAbsolutePath())) {
+                System.err.println("Intento de borrado de archivo fuera del directorio de uploads: " + filename);
+                throw new Exception("Acceso denegado: no se puede borrar un archivo fuera del directorio raíz.");
+            }
+
+            // Si todas las validaciones pasan, borramos el archivo.
+            Files.delete(fileToDelete);
+            System.out.println("Archivo físico '" + filename + "' eliminado del disco exitosamente.");
+
         } catch (IOException e) {
+            // Capturamos cualquier error de entrada/salida y lo relanzamos como una excepción genérica.
             throw new Exception("No se pudo borrar el archivo: " + filename, e);
         }
     }

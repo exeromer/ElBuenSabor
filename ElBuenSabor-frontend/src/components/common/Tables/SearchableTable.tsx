@@ -5,17 +5,15 @@ import type { SortConfig } from '../../../hooks/useSearchableData';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faPlus } from '@fortawesome/free-solid-svg-icons';
 
-import type { EntityWithId } from '../../../types/types';
-
 
 export interface ColumnDefinition<T> {
-  key: keyof T;
+  key: (keyof T) | string;
   header: string;
   renderCell: (item: T) => ReactNode;
   sortable?: boolean;
 }
 
-interface SearchableTableProps<T extends EntityWithId> {
+interface SearchableTableProps<T extends { id: number | string }> {
   items: T[];
   searchTerm: string;
   setSearchTerm: (term: string) => void;
@@ -31,7 +29,7 @@ interface SearchableTableProps<T extends EntityWithId> {
   onCreate?: () => void;
 }
 
-export function SearchableTable<T extends EntityWithId>({
+export function SearchableTable<T extends { id: number | string }>({
   items,
   searchTerm,
   setSearchTerm,
@@ -68,7 +66,7 @@ export function SearchableTable<T extends EntityWithId>({
         />
         {onCreate && createButtonText && (
           <Button variant="success" onClick={onCreate}>
-            {<FontAwesomeIcon icon={faPlus} className="me-2" /> }
+            {<FontAwesomeIcon icon={faPlus} className="me-2" />}
             {createButtonText}
           </Button>
         )}
@@ -83,7 +81,7 @@ export function SearchableTable<T extends EntityWithId>({
         </Alert>
       )}
 
-    {!isLoading && !error && items.length > 0 && (
+      {!isLoading && !error && items.length > 0 && (
         <>
           <Table striped bordered hover responsive className="text-center align-middle">
             <thead>
@@ -91,13 +89,12 @@ export function SearchableTable<T extends EntityWithId>({
                 {columns.map(col => (
                   <th
                     key={col.key as string}
-                    // CORRECCIÓN CLAVE AQUÍ: Eliminamos la llave extra al final
-                    onClick={() => col.sortable ? requestSort(col.key) : undefined} 
+                    onClick={() => col.sortable ? requestSort(col.key as keyof T) : undefined}
                     style={col.sortable ? { cursor: 'pointer' } : {}}
                   >
                     {col.header}
                     {col.sortable && (
-                      <FontAwesomeIcon icon={getSortIcon(col.key)} className="ms-2" />
+                      <FontAwesomeIcon icon={getSortIcon(col.key as keyof T)} className="ms-2" />
                     )}
                   </th>
                 ))}
