@@ -1,4 +1,4 @@
-import apiClient from '../services/apiClient';
+import apiClient from './apiClient';
 import type { UsuarioRequest, UsuarioResponse } from '../types/types';
 
 export class UsuarioService {

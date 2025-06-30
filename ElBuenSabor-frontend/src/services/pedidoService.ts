@@ -1,4 +1,4 @@
-import apiClient from '../services/apiClient';
+import apiClient from './apiClient';
 import type { PedidoRequest, PedidoResponse, CrearPedidoRequest, PedidoEstadoRequest } from '../types/types';
 import type { Estado } from '../types/enums';
 export class PedidoService {

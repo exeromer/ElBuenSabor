@@ -7,7 +7,7 @@
 import React from 'react';
 import { Modal, Button, Row, Col, Image, ListGroup, Badge } from 'react-bootstrap';
 import type { ArticuloManufacturadoResponse, ArticuloManufacturadoDetalleResponse } from '../../types/types';
-import { FileUploadService } from '../../services/fileUploadService';
+import { FileUploadService } from '../../services/FileUploadService';
 import apiClient from '../../services/apiClient';
 
 /**

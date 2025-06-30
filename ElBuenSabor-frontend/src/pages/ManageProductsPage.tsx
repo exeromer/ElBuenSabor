@@ -24,7 +24,7 @@ import { Container, Tabs, Tab, Button, Badge, Card, Form, Row, Col } from 'react
 
 // Servicios
 import { ArticuloInsumoService } from '../services/articuloInsumoService';
-import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService';
+import { ArticuloManufacturadoService } from '../services/ArticuloManufacturadoService';
 import { StockInsumoSucursalService } from '../services/StockInsumoSucursalService';
 import { CategoriaService } from '../services/categoriaService';
 import { SucursalService } from '../services/sucursalService';

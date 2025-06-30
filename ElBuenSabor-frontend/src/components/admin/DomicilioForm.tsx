@@ -16,8 +16,8 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner, Row, Col } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
-import { DomicilioService } from '../../services/domicilioService';
-import { UbicacionService } from '../../services/ubicacionService';
+import { DomicilioService } from '../../services/DomicilioService';
+import { UbicacionService } from '../../services/UbicacionService';
 import type { Domicilio, DomicilioRequestDTO, Pais, Provincia, Localidad } from '../../types/types';
 
 // Instanciamos los servicios

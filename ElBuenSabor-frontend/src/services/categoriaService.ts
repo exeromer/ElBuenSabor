@@ -1,13 +1,13 @@
-import apiClient from '../services/apiClient';
+import apiClient from './apiClient';
 import type { CategoriaResponse, CategoriaRequest } from '../types/types';
 
-// La entidad Categoria para POST/PUT, según el controller
+/** La entidad Categoria para POST/PUT, según el controller
 type CategoriaCreateOrUpdate = {
   id?: number;
   denominacion: string;
   articulos?: object[];
   estadoActivo?: boolean;
-};
+}; */
 
 export class CategoriaService {
   /**

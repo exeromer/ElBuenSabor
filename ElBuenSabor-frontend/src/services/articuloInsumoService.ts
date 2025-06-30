@@ -1,4 +1,4 @@
-import apiClient from '../services/apiClient';
+import apiClient from './apiClient';
 import type { ArticuloInsumoRequest, ArticuloInsumoResponse } from '../types/types';
 
 export class ArticuloInsumoService {
