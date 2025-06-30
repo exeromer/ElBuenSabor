@@ -32,6 +32,7 @@ public class DataInitializer implements CommandLineRunner {
     @Autowired private PromocionRepository promocionRepository;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private ClienteRepository clienteRepository;
+    @Autowired private EmpleadoRepository empleadoRepository; // Inyectar EmpleadoRepository
     @Autowired private PedidoRepository pedidoRepository;
     @Autowired private FacturaRepository facturaRepository;
     @Autowired private StockInsumoSucursalRepository stockInsumoSucursalRepository;
@@ -59,7 +60,6 @@ public class DataInitializer implements CommandLineRunner {
         // --- Datos Geográficos ---
         System.out.println("Cargando Datos Geográficos...");
         Pais argentina = new Pais(); argentina.setNombre("Argentina"); paisRepository.save(argentina);
-        // ... (otros países y provincias)
         Provincia mendoza = new Provincia(); mendoza.setNombre("Mendoza"); mendoza.setPais(argentina); provinciaRepository.save(mendoza);
         Provincia cordoba = new Provincia(); cordoba.setNombre("Córdoba"); cordoba.setPais(argentina); provinciaRepository.save(cordoba);
         Localidad ciudadMendoza = new Localidad(); ciudadMendoza.setNombre("Ciudad de Mendoza"); ciudadMendoza.setProvincia(mendoza); localidadRepository.save(ciudadMendoza);
@@ -102,7 +102,6 @@ public class DataInitializer implements CommandLineRunner {
         suc2E1.setEmpresa(empresa1); suc2E1.setDomicilio(domSuc2E1); suc2E1.addCategoria(catPizzas); suc2E1.setEstadoActivo(true);
         sucursalRepository.save(suc2E1);
 
-        // Es importante obtener todas las sucursales DESPUÉS de guardarlas
         List<Sucursal> todasLasSucursales = sucursalRepository.findAll();
 
 
@@ -215,58 +214,52 @@ public class DataInitializer implements CommandLineRunner {
         // --- Promociones ---
         System.out.println("Cargando Promociones...");
 
-        // Promoción: 2x1 Pizza Muzzarella en Sucursal 1 (Colón)
         Promocion promo2x1Muzza = new Promocion();
         promo2x1Muzza.setDenominacion("2x1 Pizza Muzzarella");
-        promo2x1Muzza.setFechaDesde(LocalDate.of(2025, 6, 1)); // Fecha pasada para prueba
-        promo2x1Muzza.setFechaHasta(LocalDate.of(2025, 7, 31)); // Fecha futura para prueba
+        promo2x1Muzza.setFechaDesde(LocalDate.of(2025, 6, 1));
+        promo2x1Muzza.setFechaHasta(LocalDate.of(2025, 7, 31));
         promo2x1Muzza.setHoraDesde(LocalTime.of(19, 0));
         promo2x1Muzza.setHoraHasta(LocalTime.of(23, 0));
         promo2x1Muzza.setDescripcionDescuento("Llevate 2 pizzas muzzarella al precio de 1");
-        promo2x1Muzza.setPrecioPromocional(pizzaMargaritaInstance.getPrecioVenta()); // Precio de 1 pizza
-        promo2x1Muzza.setTipoPromocion(TipoPromocion.CANTIDAD); // Tipo de promoción
-        promo2x1Muzza.setPorcentajeDescuento(0.0); // No aplica porcentaje
-        promo2x1Muzza.setEstadoActivo(true); // Activa por administrador
+        promo2x1Muzza.setPrecioPromocional(pizzaMargaritaInstance.getPrecioVenta());
+        promo2x1Muzza.setTipoPromocion(TipoPromocion.CANTIDAD);
+        promo2x1Muzza.setPorcentajeDescuento(0.0);
+        promo2x1Muzza.setEstadoActivo(true);
 
         PromocionDetalle pd1Promo2x1 = new PromocionDetalle();
         pd1Promo2x1.setArticulo(pizzaMargaritaInstance);
-        pd1Promo2x1.setCantidad(2); // Se necesitan 2 para la promoción, se paga 1
+        pd1Promo2x1.setCantidad(2);
         promo2x1Muzza.addDetallePromocion(pd1Promo2x1);
 
-        // Asociar a sucursales
         Set<Sucursal> sucursalesPromo2x1 = new HashSet<>();
-        sucursalesPromo2x1.add(suc1E1); // Solo en Sucursal Colón
-        promo2x1Muzza.setSucursales(sucursalesPromo2x1); // Establecer la colección de sucursales
+        sucursalesPromo2x1.add(suc1E1);
+        promo2x1Muzza.setSucursales(sucursalesPromo2x1);
 
-        promocionRepository.save(promo2x1Muzza); // Guardar la promoción
-        // Asegurar bidireccionalidad para Sucursal
+        promocionRepository.save(promo2x1Muzza);
         for (Sucursal sucursal : sucursalesPromo2x1) {
-            sucursal.addPromocion(promo2x1Muzza); // Añadir la promoción a la sucursal
-            sucursalRepository.save(sucursal); // Guardar la sucursal para persistir la relación
+            sucursal.addPromocion(promo2x1Muzza);
+            sucursalRepository.save(sucursal);
         }
 
-
-        // Promoción: 10% de descuento en Hamburguesas en Sucursal 2 (Guaymallén)
         Promocion promo10PctHamb = new Promocion();
         promo10PctHamb.setDenominacion("10% OFF Hamburguesas");
         promo10PctHamb.setFechaDesde(LocalDate.of(2025, 6, 1));
         promo10PctHamb.setFechaHasta(LocalDate.of(2025, 7, 31));
         promo10PctHamb.setHoraDesde(LocalTime.of(12, 0));
-        promo10PctHamb.setHoraHasta(LocalTime.of(15, 0)); // Horario de almuerzo
+        promo10PctHamb.setHoraHasta(LocalTime.of(15, 0));
         promo10PctHamb.setDescripcionDescuento("10% de descuento en todas las hamburguesas");
-        promo10PctHamb.setPrecioPromocional(null); // No aplica precio promocional
-        promo10PctHamb.setTipoPromocion(TipoPromocion.PORCENTAJE); // Tipo de promoción
-        promo10PctHamb.setPorcentajeDescuento(10.0); // 10% de descuento
+        promo10PctHamb.setPrecioPromocional(null);
+        promo10PctHamb.setTipoPromocion(TipoPromocion.PORCENTAJE);
+        promo10PctHamb.setPorcentajeDescuento(10.0);
         promo10PctHamb.setEstadoActivo(true);
 
         PromocionDetalle pd1Promo10Pct = new PromocionDetalle();
         pd1Promo10Pct.setArticulo(hamburguesaClasica);
-        pd1Promo10Pct.setCantidad(1); // Aplica por unidad
+        pd1Promo10Pct.setCantidad(1);
         promo10PctHamb.addDetallePromocion(pd1Promo10Pct);
 
-        // Asociar a sucursales
         Set<Sucursal> sucursalesPromo10Pct = new HashSet<>();
-        sucursalesPromo10Pct.add(suc2E1); // Solo en Sucursal Guaymallén
+        sucursalesPromo10Pct.add(suc2E1);
         promo10PctHamb.setSucursales(sucursalesPromo10Pct);
 
         promocionRepository.save(promo10PctHamb);
@@ -275,12 +268,36 @@ public class DataInitializer implements CommandLineRunner {
             sucursalRepository.save(sucursal);
         }
 
-        // --- Usuarios y Clientes ---
-        System.out.println("Cargando Usuarios y Clientes...");
+        // --- Usuarios, Clientes y EMPLEADOS ---
+        System.out.println("Cargando Usuarios, Clientes y Empleados...");
+
+        // Cliente
         Usuario user1 = new Usuario("auth0|cliente1", "clienteAna", Rol.CLIENTE); usuarioRepository.save(user1);
         Cliente cliente1 = new Cliente(); cliente1.setNombre("Ana"); cliente1.setApellido("Garcia"); cliente1.setEmail("ana.g@example.com"); cliente1.setTelefono("2610001111"); cliente1.setEstadoActivo(true); cliente1.setUsuario(user1);
         Domicilio domCli1 = new Domicilio(); domCli1.setCalle("Calle Sol"); domCli1.setNumero(111); domCli1.setCp("M5500SOL"); domCli1.setLocalidad(ciudadMendoza); domicilioRepository.save(domCli1);
         cliente1.addDomicilio(domCli1); clienteRepository.save(cliente1);
+
+        // Empleados (cada uno con su usuario)
+        Usuario userCajero = new Usuario("auth0|cajero1", "cajeroPedro", Rol.EMPLEADO); usuarioRepository.save(userCajero);
+        Empleado cajeroPedro = new Empleado();
+        cajeroPedro.setNombre("Pedro"); cajeroPedro.setApellido("Martínez"); cajeroPedro.setTelefono("2610002222");
+        cajeroPedro.setRolEmpleado(RolEmpleado.CAJERO); cajeroPedro.setUsuario(userCajero); cajeroPedro.setEstadoActivo(true);
+        empleadoRepository.save(cajeroPedro);
+
+        Usuario userCocina = new Usuario("auth0|cocina1", "cocinaLaura", Rol.EMPLEADO); usuarioRepository.save(userCocina);
+        Empleado cocinaLaura = new Empleado();
+        cocinaLaura.setNombre("Laura"); cocinaLaura.setApellido("Fernández"); cocinaLaura.setTelefono("2610003333");
+        cocinaLaura.setRolEmpleado(RolEmpleado.COCINA); cocinaLaura.setUsuario(userCocina); cocinaLaura.setEstadoActivo(true);
+        empleadoRepository.save(cocinaLaura);
+
+        Usuario userDelivery = new Usuario("auth0|delivery1", "deliveryJuan", Rol.EMPLEADO); usuarioRepository.save(userDelivery);
+        Empleado deliveryJuan = new Empleado();
+        deliveryJuan.setNombre("Juan"); deliveryJuan.setApellido("Pérez"); deliveryJuan.setTelefono("2610004444");
+        deliveryJuan.setRolEmpleado(RolEmpleado.DELIVERY); deliveryJuan.setUsuario(userDelivery); deliveryJuan.setEstadoActivo(true);
+        empleadoRepository.save(deliveryJuan);
+
+        Usuario userAdmin = new Usuario("auth0|admin1", "adminRoot", Rol.ADMIN); usuarioRepository.save(userAdmin);
+
 
         // --- Pedidos y Facturas de ejemplo ---
         System.out.println("Cargando Pedido y Factura de ejemplo...");

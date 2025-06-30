@@ -8,8 +8,12 @@ import com.powerRanger.ElBuenSabor.entities.enums.Estado;
 import com.powerRanger.ElBuenSabor.entities.enums.FormaPago;
 import com.powerRanger.ElBuenSabor.entities.enums.Rol;
 import com.powerRanger.ElBuenSabor.entities.enums.TipoEnvio;
+import com.powerRanger.ElBuenSabor.entities.enums.RolEmpleado; // Importar RolEmpleado
 import com.powerRanger.ElBuenSabor.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication; // Para obtener información de autenticación
+import org.springframework.security.core.context.SecurityContextHolder; // Para obtener información de autenticación
+import org.springframework.security.oauth2.jwt.Jwt; // Para obtener el JWT
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
@@ -17,9 +21,10 @@ import org.springframework.validation.annotation.Validated;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.file.AccessDeniedException; // Importar para manejar denegación de acceso
 import java.time.LocalDate;
 import java.time.LocalTime;
-import java.time.LocalDateTime; // Importar LocalDateTime
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -53,6 +58,7 @@ public class PedidoServiceImpl implements PedidoService {
     @Autowired private MercadoPagoService mercadoPagoService;
     @Autowired private StockInsumoSucursalService stockInsumoSucursalService;
     @Autowired private PromocionService promocionService;
+    @Autowired private EmpleadoService empleadoService; // Inyectar EmpleadoService
     private static final Logger logger = LoggerFactory.getLogger(PedidoServiceImpl.class);
 
     // --- MAPPERS (Como los tenías) ---
@@ -613,7 +619,7 @@ public class PedidoServiceImpl implements PedidoService {
 
             } catch (Exception e) {
                 logger.error("!! FALLÓ la creación de la preferencia de Mercado Pago para Pedido ID: {}. Causa: {}", pedidoEnProceso.getId(), e.getMessage(), e);
-                // Lanzamos una excepción para que la transacción falle y el frontend reciba el error.
+                // Lanzamos una excepción para que la transacción 실패 y el frontend reciba el error.
                 throw new Exception("No se pudo generar la preferencia de pago. Por favor, intente de nuevo.", e);
             }
         }
@@ -629,7 +635,6 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     // Helper para convertir PromocionResponseDTO a Promocion (Entidad)
-    // Se ha ajustado para manejar los detalles de la promoción y el artículo asociado.
     private Promocion mapPromocionResponseToEntity(PromocionResponseDTO dto) {
         if (dto == null) return null;
         Promocion promocion = new Promocion();
@@ -651,15 +656,11 @@ public class PedidoServiceImpl implements PedidoService {
                 PromocionDetalle detalle = new PromocionDetalle();
                 detalle.setId(detalleDto.getId());
                 detalle.setCantidad(detalleDto.getCantidad());
-                // Mapear el Artículo si existe
                 if (detalleDto.getArticulo() != null) {
-                    Articulo articulo = new Articulo(); // Crear una instancia de Articulo
+                    Articulo articulo = new Articulo();
                     articulo.setId(detalleDto.getArticulo().getId());
                     articulo.setDenominacion(detalleDto.getArticulo().getDenominacion());
                     articulo.setPrecioVenta(detalleDto.getArticulo().getPrecioVenta());
-                    // Asegúrate de que si Articulo es una clase abstracta, esto sea un ArticuloManufacturado o ArticuloInsumo
-                    // Para este mapeo simple, si solo necesitas el ID, esto podría ser suficiente.
-                    // Si necesitas el objeto completo con herencia, deberías buscarlo en el repositorio.
                     detalle.setArticulo(articulo);
                 }
                 detalles.add(detalle);
@@ -667,7 +668,7 @@ public class PedidoServiceImpl implements PedidoService {
             promocion.setDetallesPromocion(detalles);
         }
 
-        // Mapear sucursales si existen en el DTO (aunque para DetallePedido no se usa directamente)
+        // Mapear sucursales si existen en el DTO
         if (dto.getSucursales() != null) {
             Set<Sucursal> sucursales = new HashSet<>();
             for (SucursalSimpleResponseDTO sucursalDto : dto.getSucursales()) {
@@ -740,7 +741,6 @@ public class PedidoServiceImpl implements PedidoService {
         }
         Long paymentId = Long.parseLong(paymentIdStr);
 
-        // 1. Usamos el nuevo método para obtener los detalles del PAGO
         Payment payment = mercadoPagoService.getPaymentById(paymentId);
         String pedidoIdStr = payment.getExternalReference();
         if (pedidoIdStr == null) {
@@ -748,22 +748,23 @@ public class PedidoServiceImpl implements PedidoService {
         }
         Integer pedidoId = Integer.parseInt(pedidoIdStr);
 
-        // 2. Obtenemos nuestro ID de Pedido desde la referencia externa de la ORDEN DE PAGO de MP
         Pedido pedido = pedidoRepository.findById(pedidoId)
                 .orElseThrow(() -> new Exception("Pedido no encontrado con ID: " + pedidoId));
 
-        // Verificamos para no procesar dos veces
         if (pedido.getEstado() != Estado.PENDIENTE) {
             logger.warn("El pedido {} ya fue procesado. Estado actual: {}", pedidoId, pedido.getEstado());
             return;
         }
 
-        // Actualizamos nuestro pedido con los datos del PAGO
         String paymentStatus = payment.getStatus().toString();
         logger.info("El pago {} para el pedido {} tiene estado: {}", paymentId, pedidoId, paymentStatus);
 
         if ("approved".equals(paymentStatus)) {
             pedido.setEstado(Estado.PREPARACION);
+            // Si el pago es en EFECTIVO y aprobado por webhook (no es el caso normal, pero por si acaso)
+            if (pedido.getFormaPago() == FormaPago.EFECTIVO) {
+                logger.warn("Pedido {} pagado en EFECTIVO fue aprobado via webhook. Esto no deberia ocurrir.", pedidoId);
+            }
         } else {
             pedido.setEstado(Estado.RECHAZADO);
         }
@@ -779,6 +780,8 @@ public class PedidoServiceImpl implements PedidoService {
     @Transactional
     public PedidoResponseDTO updateEstado(Integer id, Estado nuevoEstado) throws Exception {
         Pedido pedidoExistente = pedidoRepository.findById(id).orElseThrow(() -> new Exception("Pedido no encontrado con ID: " + id));
+
+        // Validación de coherencia de estado (ya implementada por el compañero)
         if (pedidoExistente.getEstado() == Estado.ENTREGADO) {
             if (nuevoEstado == Estado.CANCELADO) throw new Exception("No se puede cancelar un pedido que ya fue entregado.");
             if (nuevoEstado != Estado.ENTREGADO) throw new Exception("Un pedido entregado no puede cambiar a estado: " + nuevoEstado);
@@ -792,10 +795,115 @@ public class PedidoServiceImpl implements PedidoService {
         if (pedidoExistente.getEstado() == Estado.PENDIENTE && (nuevoEstado == Estado.ENTREGADO )) {
             throw new Exception("Un pedido pendiente debe pasar por preparación/listo antes de ser entregado.");
         }
+
+        // Validación adicional: no pasar a ENTREGADO si no está pagado
+        if (nuevoEstado == Estado.ENTREGADO) {
+            if (pedidoExistente.getFormaPago() == FormaPago.MERCADO_PAGO &&
+                    (pedidoExistente.getMpPaymentStatus() == null || !pedidoExistente.getMpPaymentStatus().equals("approved"))) {
+                throw new Exception("El pedido con ID " + id + " no puede ser ENTREGADO porque el pago con Mercado Pago no ha sido aprobado.");
+            }
+            // Para EFECTIVO, se asume que el cajero verifica el pago antes de marcarlo como ENTREGADO
+            // Por lo tanto, no se requiere una verificación de mpPaymentStatus aquí para EFECTIVO.
+        }
+
         pedidoExistente.setEstado(nuevoEstado);
         Pedido pedidoActualizado = pedidoRepository.save(pedidoExistente);
         return convertToResponseDto(pedidoActualizado);
     }
+
+    @Override
+    @Transactional
+    public PedidoResponseDTO updateEstadoParaEmpleado(Integer pedidoId, Estado nuevoEstado, Integer sucursalId, String auth0Id) throws Exception {
+        // 1. Verificar si el usuario autenticado es un empleado y está asociado a la sucursal
+        Usuario usuario = usuarioRepository.findByAuth0Id(auth0Id)
+                .orElseThrow(() -> new AccessDeniedException("Usuario no encontrado."));
+        EmpleadoResponseDTO empleado = empleadoService.getByUsuarioId(usuario.getId());
+
+        if (empleado == null) {
+            throw new AccessDeniedException("El usuario no está registrado como empleado.");
+        }
+
+        // Si el empleado no es ADMIN, verificar que la sucursal del pedido coincida con la del empleado (si aplica)
+        // Por ahora, asumimos que todos los empleados de una empresa pueden ver todos los pedidos de sus sucursales.
+        // Si quieres restringir por sucursal específica del empleado, necesitarías un campo 'sucursal' en Empleado.
+        // Por la descripción del problema, no se especifica que el empleado esté atado a una única sucursal,
+        // pero sí que el cajero ve "todos los pedidos de la sucursal" (implica que opera en una sucursal dada).
+        // Si la relación Empleado-Sucursal fuera ManyToMany o OneToOne, habría que validarlo aquí.
+        // Para simplificar, asumiremos que se le pasa la sucursalId y se valida que el pedido le pertenezca.
+
+        Pedido pedido = pedidoRepository.findByIdAndSucursalId(pedidoId, sucursalId)
+                .orElseThrow(() -> new Exception("Pedido " + pedidoId + " no encontrado en la sucursal " + sucursalId + "."));
+
+        // Validaciones de rol para los estados
+        if (empleado.getRolEmpleado() == RolEmpleado.CAJERO) {
+            if (nuevoEstado != Estado.ENTREGADO && nuevoEstado != Estado.RECHAZADO && nuevoEstado != Estado.CANCELADO) {
+                throw new AccessDeniedException("Cajero solo puede cambiar estado a ENTREGADO, RECHAZADO o CANCELADO.");
+            }
+            // Validaciones específicas para cajero al cambiar a ENTREGADO
+            if (nuevoEstado == Estado.ENTREGADO && pedido.getFormaPago() == FormaPago.MERCADO_PAGO &&
+                    (pedido.getMpPaymentStatus() == null || !pedido.getMpPaymentStatus().equals("approved"))) {
+                throw new Exception("El pedido " + pedidoId + " no puede ser ENTREGADO porque el pago con Mercado Pago no ha sido aprobado.");
+            }
+        } else if (empleado.getRolEmpleado() == RolEmpleado.COCINA) {
+            if (nuevoEstado != Estado.PREPARACION && nuevoEstado != Estado.EN_CAMINO && nuevoEstado != Estado.RECHAZADO) {
+                // Cocina solo puede cambiar entre PREPARACION, EN_CAMINO o RECHAZADO (si cambia EN_CAMINO -> LISTO/EN_CAMINO es un error de estado)
+                throw new AccessDeniedException("Cocina solo puede cambiar estado a EN_CAMINO o RECHAZADO.");
+            }
+            // Asegurarse de que solo se cambia de PREPARACION
+            if (pedido.getEstado() != Estado.PREPARACION && nuevoEstado != Estado.RECHAZADO) {
+                throw new AccessDeniedException("El pedido " + pedidoId + " no está en estado PREPARACION para ser actualizado por cocina (estado actual: " + pedido.getEstado() + ").");
+            }
+        } else if (empleado.getRolEmpleado() == RolEmpleado.DELIVERY) {
+            if (nuevoEstado != Estado.ENTREGADO && nuevoEstado != Estado.RECHAZADO) { // Delivery solo puede poner en ENTREGADO o RECHAZADO (si por ejemplo, el cliente no está)
+                throw new AccessDeniedException("Delivery solo puede cambiar estado a ENTREGADO o RECHAZADO.");
+            }
+            // Asegurarse de que solo se cambia de EN_CAMINO
+            if (pedido.getEstado() != Estado.EN_CAMINO) {
+                throw new AccessDeniedException("El pedido " + pedidoId + " no está en estado EN_CAMINO para ser actualizado por delivery (estado actual: " + pedido.getEstado() + ").");
+            }
+        } else { // Otros roles o si RolEmpleado no coincide
+            throw new AccessDeniedException("Su rol de empleado (" + empleado.getRolEmpleado() + ") no tiene permisos para actualizar el estado de pedidos.");
+        }
+
+        // Llamar al método de actualización de estado general para aplicar el cambio y validaciones comunes
+        return updateEstado(pedidoId, nuevoEstado);
+    }
+
+    @Override
+    @Transactional
+    public PedidoResponseDTO addTiempoCocina(Integer pedidoId, Integer minutosToAdd, Integer sucursalId) throws Exception {
+        // Validar si el usuario autenticado tiene el rol de Cocina
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+            throw new AccessDeniedException("Autenticación requerida.");
+        }
+        Jwt jwt = (Jwt) authentication.getPrincipal();
+        String auth0Id = jwt.getSubject();
+        Usuario usuario = usuarioRepository.findByAuth0Id(auth0Id)
+                .orElseThrow(() -> new AccessDeniedException("Usuario no encontrado."));
+        EmpleadoResponseDTO empleado = empleadoService.getByUsuarioId(usuario.getId());
+
+        if (empleado == null || empleado.getRolEmpleado() != RolEmpleado.COCINA) {
+            throw new AccessDeniedException("Solo el personal de cocina puede añadir tiempo estimado.");
+        }
+
+        Pedido pedido = pedidoRepository.findByIdAndSucursalId(pedidoId, sucursalId)
+                .orElseThrow(() -> new Exception("Pedido " + pedidoId + " no encontrado en la sucursal " + sucursalId + "."));
+
+        if (pedido.getEstado() != Estado.PENDIENTE && pedido.getEstado() != Estado.PREPARACION) {
+            throw new Exception("Solo se puede añadir tiempo a pedidos PENDIENTES o EN PREPARACIÓN.");
+        }
+
+        if (minutosToAdd <= 0) {
+            throw new Exception("Los minutos a añadir deben ser un valor positivo.");
+        }
+
+        LocalTime nuevaHora = pedido.getHoraEstimadaFinalizacion().plusMinutes(minutosToAdd);
+        pedido.setHoraEstimadaFinalizacion(nuevaHora);
+        Pedido pedidoActualizado = pedidoRepository.save(pedido);
+        return convertToResponseDto(pedidoActualizado);
+    }
+
 
     @Override
     @Transactional
@@ -867,5 +975,64 @@ public class PedidoServiceImpl implements PedidoService {
             }
         }
         logger.info("Restitución de stock completada para Pedido ID: {}", pedido.getId());
+    }
+
+    // --- MÉTODOS PARA ROLES (Implementación) ---
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PedidoResponseDTO> getPedidosParaCajero(Integer sucursalId, Estado estado, Integer pedidoId, LocalDate fechaDesde, LocalDate fechaHasta) throws Exception {
+        // Validación básica de sucursalId
+        sucursalRepository.findById(sucursalId)
+                .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + sucursalId));
+
+        List<Pedido> pedidos = pedidoRepository.findPedidosForCashier(sucursalId, estado, pedidoId, fechaDesde, fechaHasta);
+        return pedidos.stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PedidoResponseDTO> getPedidosParaCocina(Integer sucursalId) throws Exception {
+        sucursalRepository.findById(sucursalId)
+                .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + sucursalId));
+
+        List<Pedido> pedidos = pedidoRepository.findPedidosForKitchen(sucursalId);
+
+        // Para la cocina, necesitamos los detalles de la receta de los artículos manufacturados
+        return pedidos.stream().map(pedido -> {
+            PedidoResponseDTO dto = convertToResponseDto(pedido);
+            dto.getDetalles().forEach(detalle -> {
+                // Si el artículo es manufacturado, forzar la carga de sus detalles de receta
+                // y mapearlos si es necesario (el convertToResponseDto ya lo hace si están cargados)
+                if (detalle.getArticulo().getId() != null) {
+                    try {
+                        Articulo articuloEntidad = articuloRepository.findById(detalle.getArticulo().getId()).orElse(null);
+                        if (articuloEntidad instanceof ArticuloManufacturado) {
+                            ArticuloManufacturado manufacturado = (ArticuloManufacturado) articuloEntidad;
+                            // Forzar carga de los detalles de manufactura si son LAZY
+                            manufacturado.getManufacturadoDetalles().size();
+                            // El convertToResponseDto ya debería haber mapeado esto, pero si no, aquí se puede hacer una carga más profunda.
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error al cargar detalles de artículo para cocina: {}", e.getMessage());
+                    }
+                }
+            });
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PedidoResponseDTO> getPedidosParaDelivery(Integer sucursalId) throws Exception {
+        sucursalRepository.findById(sucursalId)
+                .orElseThrow(() -> new Exception("Sucursal no encontrada con ID: " + sucursalId));
+
+        List<Pedido> pedidos = pedidoRepository.findPedidosForDelivery(sucursalId);
+        return pedidos.stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
     }
 }

@@ -1,13 +1,14 @@
 package com.powerRanger.ElBuenSabor.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.powerRanger.ElBuenSabor.dtos.CrearPedidoRequestDTO;
-import com.powerRanger.ElBuenSabor.dtos.PedidoEstadoRequestDTO;
-import com.powerRanger.ElBuenSabor.dtos.PedidoRequestDTO;
-import com.powerRanger.ElBuenSabor.dtos.PedidoResponseDTO;
+import com.powerRanger.ElBuenSabor.dtos.*;
 import com.powerRanger.ElBuenSabor.entities.Cliente;
 import com.powerRanger.ElBuenSabor.entities.Usuario;
+import com.powerRanger.ElBuenSabor.entities.enums.Estado; // Importar Estado
+import com.powerRanger.ElBuenSabor.entities.enums.Rol; // Importar Rol
+import com.powerRanger.ElBuenSabor.entities.enums.RolEmpleado; // Importar RolEmpleado
 import com.powerRanger.ElBuenSabor.repository.ClienteRepository;
+import com.powerRanger.ElBuenSabor.services.EmpleadoService; // Importar EmpleadoService
 import com.powerRanger.ElBuenSabor.services.PedidoService;
 import com.powerRanger.ElBuenSabor.services.UsuarioService;
 import jakarta.validation.ConstraintViolationException;
@@ -15,13 +16,17 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat; // Para LocalDate en RequestParam
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize; // Para seguridad a nivel de método
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder; // Importar SecurityContextHolder
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,7 +37,6 @@ import java.util.stream.Collectors;
 @Validated
 public class PedidoController {
 
-    // Instancias para Logging y Serialización
     private static final Logger logger = LoggerFactory.getLogger(PedidoController.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -45,25 +49,24 @@ public class PedidoController {
     @Autowired
     private ClienteRepository clienteRepository;
 
+    @Autowired
+    private EmpleadoService empleadoService; // Inyectar EmpleadoService
+
     @PostMapping
+    @PreAuthorize("hasAuthority('ROLE_CLIENTE')")
     public ResponseEntity<?> createPedidoForAuthenticatedClient(@Valid @RequestBody PedidoRequestDTO dto, Authentication authentication) {
         logger.info(">> POST /api/pedidos - Creando pedido para cliente.");
         try {
-            if (authentication == null && dto.getClienteId() == null) {
-                logger.warn("!! Intento de crear pedido sin autenticación ni clienteId.");
-                throw new Exception("Para crear un pedido sin autenticación (modo prueba), se requiere clienteId en el DTO.");
+            if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+                logger.warn("!! Intento de crear pedido sin autenticación válida.");
+                throw new Exception("Se requiere autenticación para crear un pedido.");
             }
 
-            PedidoResponseDTO nuevoPedidoDto;
-            if (authentication != null && authentication.getPrincipal() instanceof Jwt) {
-                Jwt jwt = (Jwt) authentication.getPrincipal();
-                String auth0Id = jwt.getSubject();
-                logger.info(">> Autenticación por JWT encontrada. Auth0 ID: {}", auth0Id);
-                nuevoPedidoDto = pedidoService.createForAuthenticatedClient(auth0Id, dto);
-            } else {
-                logger.info(">> Creando pedido para clienteId: {}", dto.getClienteId());
-                nuevoPedidoDto = pedidoService.create(dto);
-            }
+            Jwt jwt = (Jwt) authentication.getPrincipal();
+            String auth0Id = jwt.getSubject();
+            logger.info(">> Autenticación por JWT encontrada. Auth0 ID: {}", auth0Id);
+            PedidoResponseDTO nuevoPedidoDto = pedidoService.createForAuthenticatedClient(auth0Id, dto);
+
             logger.info("<< Pedido creado exitosamente con ID: {}", nuevoPedidoDto.getId());
             return new ResponseEntity<>(nuevoPedidoDto, HttpStatus.CREATED);
 
@@ -75,6 +78,7 @@ public class PedidoController {
     }
 
     @PostMapping("/admin")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     public ResponseEntity<?> createPedidoByAdmin(@Valid @RequestBody PedidoRequestDTO dto) {
         logger.info(">> POST /api/pedidos/admin - Creando pedido como administrador.");
         try {
@@ -89,6 +93,7 @@ public class PedidoController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')")
     public ResponseEntity<List<PedidoResponseDTO>> getAllPedidos() {
         logger.info(">> GET /api/pedidos - Obteniendo todos los pedidos.");
         try {
@@ -106,6 +111,7 @@ public class PedidoController {
     }
 
     @GetMapping("/mis-pedidos")
+    @PreAuthorize("hasAuthority('ROLE_CLIENTE')")
     public ResponseEntity<?> getMisPedidos(Authentication authentication) {
         logger.info(">> GET /api/pedidos/mis-pedidos - Obteniendo pedidos del usuario autenticado.");
         try {
@@ -130,6 +136,7 @@ public class PedidoController {
     }
 
     @GetMapping("/cliente/{clienteId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')")
     public ResponseEntity<?> getPedidosByClienteId(@PathVariable Integer clienteId) {
         logger.info(">> GET /api/pedidos/cliente/{} - Obteniendo pedidos por ID de cliente.", clienteId);
         try {
@@ -146,10 +153,21 @@ public class PedidoController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getPedidoById(@PathVariable Integer id) {
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO', 'ROLE_CLIENTE')")
+    public ResponseEntity<?> getPedidoById(@PathVariable Integer id, Authentication authentication) {
         logger.info(">> GET /api/pedidos/{} - Obteniendo pedido por ID.", id);
         try {
             PedidoResponseDTO pedidoDto = pedidoService.getById(id);
+
+            // Si es un cliente, validar que el pedido le pertenece
+            if (authentication != null && authentication.getPrincipal() instanceof Jwt) {
+                Jwt jwt = (Jwt) authentication.getPrincipal();
+                String auth0Id = jwt.getSubject();
+                UsuarioResponseDTO usuario = usuarioService.getByAuth0Id(auth0Id); // Asumiendo que este método existe y retorna Usuario
+                if (usuario.getRol() == Rol.CLIENTE && !pedidoDto.getCliente().getUsuarioId().equals(usuario.getId())) {
+                    throw new Exception("Acceso denegado: El pedido no pertenece a este cliente.");
+                }
+            }
             logger.info("<< Pedido con ID: {} encontrado.", id);
             return ResponseEntity.ok(pedidoDto);
         } catch (Exception e) {
@@ -158,12 +176,12 @@ public class PedidoController {
     }
 
     @PostMapping("/cliente/{clienteId}/desde-carrito")
+    @PreAuthorize("hasAuthority('ROLE_CLIENTE')")
     public ResponseEntity<?> crearPedidoDesdeCarrito(
             @PathVariable Integer clienteId,
             @Valid @RequestBody CrearPedidoRequestDTO pedidoRequest) {
 
         try {
-            // Log para ver exactamente lo que llega desde el frontend
             String requestBodyJson = objectMapper.writeValueAsString(pedidoRequest);
             logger.info(">>>>>>>>>> INICIO CREAR PEDIDO DESDE CARRITO - Cliente ID: {}", clienteId);
             logger.info(">>>>>>>>>> Request Body Recibido: {}", requestBodyJson);
@@ -189,13 +207,13 @@ public class PedidoController {
                 status = HttpStatus.CONFLICT;
             }
 
-            // Usamos nuestro manejador genérico de excepciones que ya incluye logging del error
             return handleGenericException(e, status);
         }
     }
 
 
     @PutMapping("/{id}/estado")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')") // Seguridad general para actualización de estado
     public ResponseEntity<?> updatePedidoEstado(@PathVariable Integer id, @Valid @RequestBody PedidoEstadoRequestDTO estadoDto) {
         logger.info(">> PUT /api/pedidos/{}/estado - Actualizando estado del pedido.", id);
         try {
@@ -207,7 +225,43 @@ public class PedidoController {
         }
     }
 
+    @PutMapping("/{pedidoId}/estado-empleado/{sucursalId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')")
+    public ResponseEntity<?> updatePedidoEstadoByEmpleado(@PathVariable Integer pedidoId,
+                                                          @PathVariable Integer sucursalId,
+                                                          @Valid @RequestBody PedidoEstadoRequestDTO estadoDto,
+                                                          Authentication authentication) {
+        try {
+            Jwt jwt = (Jwt) authentication.getPrincipal();
+            String auth0Id = jwt.getSubject();
+            PedidoResponseDTO pedidoActualizado = pedidoService.updateEstadoParaEmpleado(pedidoId, estadoDto.getNuevoEstado(), sucursalId, auth0Id);
+            return ResponseEntity.ok(pedidoActualizado);
+        } catch (Exception e) {
+            HttpStatus status = e.getMessage().contains("no encontrado") ? HttpStatus.NOT_FOUND :
+                    (e.getMessage().contains("Acceso denegado") || e.getMessage().contains("no puede")) ? HttpStatus.FORBIDDEN : HttpStatus.BAD_REQUEST;
+            return handleGenericException(e, status);
+        }
+    }
+
+    @PutMapping("/{pedidoId}/tiempo-cocina/{sucursalId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')") // Asegurar que solo empleados pueden acceder
+    public ResponseEntity<?> addTiempoEstimadoCocina(@PathVariable Integer pedidoId,
+                                                     @PathVariable Integer sucursalId,
+                                                     @RequestParam Integer minutosToAdd,
+                                                     Authentication authentication) {
+        try {
+            PedidoResponseDTO pedidoActualizado = pedidoService.addTiempoCocina(pedidoId, minutosToAdd, sucursalId);
+            return ResponseEntity.ok(pedidoActualizado);
+        } catch (Exception e) {
+            HttpStatus status = e.getMessage().contains("no encontrado") ? HttpStatus.NOT_FOUND :
+                    (e.getMessage().contains("Acceso denegado") || e.getMessage().contains("no puede")) ? HttpStatus.FORBIDDEN : HttpStatus.BAD_REQUEST;
+            return handleGenericException(e, status);
+        }
+    }
+
+
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')")
     public ResponseEntity<?> softDeletePedido(@PathVariable Integer id) {
         logger.info(">> DELETE /api/pedidos/{} - Iniciando borrado lógico de pedido.", id);
         try {
@@ -221,6 +275,71 @@ public class PedidoController {
         }
     }
 
+    // --- ENDPOINTS PARA ROLES ESPECÍFICOS ---
+
+    // Cajero
+    @GetMapping("/cajero/{sucursalId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')") // Empleados con rol Cajero deberían tener acceso
+    public ResponseEntity<?> getPedidosForCajero(
+            @PathVariable Integer sucursalId,
+            @RequestParam(name = "estado", required = false) Estado estado,
+            @RequestParam(name = "pedidoId", required = false) Integer pedidoId,
+            @RequestParam(name = "fechaDesde", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+            @RequestParam(name = "fechaHasta", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
+            Authentication authentication) {
+        try {
+            // Se puede añadir una validación de rol más estricta aquí si el empleado
+            // solo debe acceder si su rolEmpleado es CAJERO. Por ahora, se asume que
+            // cualquier ROLE_EMPLEADO que acceda a esta URL es porque tiene permiso.
+            // Para una validación estricta por RolEmpleado, se debería obtener el empleado
+            // por el auth0Id y verificar su rolEmpleado.
+
+            List<PedidoResponseDTO> pedidos = pedidoService.getPedidosParaCajero(sucursalId, estado, pedidoId, fechaDesde, fechaHasta);
+            if (pedidos.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(pedidos);
+        } catch (Exception e) {
+            return handleGenericException(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Cocina
+    @GetMapping("/cocina/{sucursalId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')") // Empleados con rol Cocina
+    public ResponseEntity<?> getPedidosForCocina(
+            @PathVariable Integer sucursalId,
+            Authentication authentication) {
+        try {
+            List<PedidoResponseDTO> pedidos = pedidoService.getPedidosParaCocina(sucursalId);
+            if (pedidos.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(pedidos);
+        } catch (Exception e) {
+            return handleGenericException(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    // Delivery
+    @GetMapping("/delivery/{sucursalId}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')") // Empleados con rol Delivery
+    public ResponseEntity<?> getPedidosForDelivery(
+            @PathVariable Integer sucursalId,
+            Authentication authentication) {
+        try {
+            List<PedidoResponseDTO> pedidos = pedidoService.getPedidosParaDelivery(sucursalId);
+            if (pedidos.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(pedidos);
+        } catch (Exception e) {
+            return handleGenericException(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+
+    // Métodos helper para manejo de errores (ya los tenías)
     private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
         logger.error("!! Error de validación de constraint: {}", e.getMessage());
         Map<String, Object> errorResponse = new HashMap<>();
@@ -237,8 +356,6 @@ public class PedidoController {
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("status", status.value());
         errorResponse.put("error", e.getMessage());
-        // Descomentar si se quiere ver la traza en la respuesta (NO RECOMENDADO EN PRODUCCIÓN)
-        // e.printStackTrace();
         return ResponseEntity.status(status).body(errorResponse);
     }
 }

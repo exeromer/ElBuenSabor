@@ -122,6 +122,17 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.PUT, "/api/promociones/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.DELETE, "/api/promociones/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
 
+                                // Nuevos endpoints de pedidos para roles específicos de empleado
+                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/{pedidoId}/estado-empleado/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.PUT, "/api/pedidos/{pedidoId}/tiempo-cocina/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.GET, "/api/pedidos/cajero/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.GET, "/api/pedidos/cocina/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.GET, "/api/pedidos/delivery/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+
+                                // Endpoints de Empleado (solo para ADMIN)
+                                .requestMatchers("/api/empleados/**").hasAuthority("ROLE_ADMIN")
+
+
                                 // ---- CUALQUIER USUARIO LOGUEADO PUEDE VER SU FACTURA ----
                                 .requestMatchers(HttpMethod.GET,"/api/facturas/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
 
@@ -168,8 +179,6 @@ public class SecurityConfig {
             List<String> rolesFromToken = jwt.getClaimAsStringList(rolesClaim);
             System.out.println("JWT_CONVERTER: Roles leídos desde el token: " + rolesFromToken);
 
-            // --- LLAMADA AL SERVICIO CON LA INFORMACIÓN COMPLETA ---
-            // Pasamos los roles del token al servicio para que él decida.
             Usuario usuario = null;
             try {
                 usuario = usuarioService.findOrCreateUsuario(auth0Id, username, email, rolesFromToken);
