@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner, Row, Col, Image } from 'react-bootstrap';
-import { CategoriaService } from '../../services/categoriaService';
 import { ArticuloInsumoService } from '../../services/articuloInsumoService';
 import { UnidadMedidaService } from '../../services/unidadMedidaService';
 import { FileUploadService } from '../../services/fileUploadService';
@@ -9,7 +8,7 @@ import { StockInsumoSucursalService } from '../../services/StockInsumoSucursalSe
 
 import { useSucursal } from '../../context/SucursalContext';
 
-import type { ArticuloInsumoRequest, CategoriaResponse, UnidadMedidaResponse, ArticuloInsumoResponse, ImagenResponse, StockInsumoSucursalRequest } from '../../types/types';
+import type { ArticuloInsumoRequest, UnidadMedidaResponse, ArticuloInsumoResponse, ImagenResponse, StockInsumoSucursalRequest } from '../../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import apiClient from '../../services/apiClient';

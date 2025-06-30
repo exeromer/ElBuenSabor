@@ -18,8 +18,8 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Card, Button, Table, Spinner, Alert, Tabs, Tab, Dropdown, DropdownButton } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
-import { ClienteUsuarioService } from '../services/clienteUsuarioService';
-import type { Usuario, Cliente, Rol, UsuarioRequestDTO, ClienteRequestDTO } from '../types/types';
+import { ClienteUsuarioService } from '../services/ClienteUsuarioService';
+import type { Usuario, Cliente, Rol, UsuarioRequest, ClienteRequest} from '../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faUserShield, faAddressBook, faBriefcase, faToggleOn, faToggleOff, faCheckCircle, faBan } from '@fortawesome/free-solid-svg-icons';
 import UserForm from '../components/admin/UserForm';
@@ -97,7 +97,7 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
       }
 
       const newStatus = !estadoActual;
-      const updatedData: UsuarioRequestDTO = {
+      const updatedData: UsuarioRequest = {
         auth0Id: userToUpdate.auth0Id,
         username: userToUpdate.username,
         rol: userToUpdate.rol,
@@ -130,7 +130,7 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
         alert("Usuario no encontrado para actualizar rol.");
         return;
       }
-      const updatedData: UsuarioRequestDTO = {
+      const updatedData: UsuarioRequest = {
         auth0Id: userToUpdate.auth0Id,
         username: userToUpdate.username,
         rol: newRole,
@@ -173,7 +173,7 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
       }
 
       const newStatus = !estadoActual;
-      const updatedData: ClienteRequestDTO = {
+      const updatedData: ClienteRequest = {
         nombre: clientToUpdate.nombre,
         apellido: clientToUpdate.apellido,
         telefono: clientToUpdate.telefono,

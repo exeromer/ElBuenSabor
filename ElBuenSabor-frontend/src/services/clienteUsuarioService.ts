@@ -7,7 +7,7 @@
  */
 
 import apiClient, { setAuthToken } from './apiClient';
-import type { Cliente, ClienteRequestDTO, Usuario, UsuarioRequestDTO } from '../types/types';
+import type { Cliente, ClienteRequest, Usuario, UsuarioRequest } from '../types/types';
 
 // Definimos la clase ClienteUsuarioService
 export class ClienteUsuarioService {
@@ -62,7 +62,7 @@ export class ClienteUsuarioService {
      * @param {string} token - El token JWT para la autenticación.
      * @returns {Promise<Usuario>} Una promesa que resuelve con el usuario creado.
      */
-    async createUsuario(data: UsuarioRequestDTO, token: string): Promise<Usuario> {
+    async createUsuario(data: UsuarioRequest, token: string): Promise<Usuario> {
         setAuthToken(token);
         const response = await apiClient.post<Usuario>('/usuarios', data);
         return response.data;
@@ -76,7 +76,7 @@ export class ClienteUsuarioService {
      * @param {string} token - El token JWT para la autenticación.
      * @returns {Promise<Usuario>} Una promesa que resuelve con el usuario actualizado.
      */
-    async updateUsuario(id: number, data: UsuarioRequestDTO, token: string): Promise<Usuario> {
+    async updateUsuario(id: number, data: UsuarioRequest, token: string): Promise<Usuario> {
         setAuthToken(token);
         const response = await apiClient.put<Usuario>(`/usuarios/${id}`, data);
         return response.data;
@@ -126,7 +126,7 @@ export class ClienteUsuarioService {
      * @param {string} token - El token JWT para la autenticación.
      * @returns {Promise<Cliente>} Una promesa que resuelve con el cliente creado.
      */
-    async createCliente(data: ClienteRequestDTO, token: string): Promise<Cliente> {
+    async createCliente(data: ClienteRequest, token: string): Promise<Cliente> {
         setAuthToken(token);
         const response = await apiClient.post<Cliente>('/clientes', data);
         return response.data;
@@ -140,7 +140,7 @@ export class ClienteUsuarioService {
      * @param {string} token - El token JWT para la autenticación.
      * @returns {Promise<Cliente>} Una promesa que resuelve con el cliente actualizado.
      */
-    async updateCliente(id: number, data: ClienteRequestDTO, token: string): Promise<Cliente> {
+    async updateCliente(id: number, data: ClienteRequest, token: string): Promise<Cliente> {
         setAuthToken(token);
         const response = await apiClient.put<Cliente>(`/clientes/${id}`, data);
         return response.data;

@@ -1,4 +1,4 @@
-import apiClient from '../services/apiClient';
+import apiClient from './apiClient';
 import type { ImagenResponse } from '../types/types';
 
 // La respuesta de subida es un objeto complejo

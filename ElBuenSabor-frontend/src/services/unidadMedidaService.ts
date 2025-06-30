@@ -1,4 +1,4 @@
-import apiClient from '../services/apiClient';
+import apiClient from './apiClient';
 import type { UnidadMedidaResponse } from '../types/types';
 
 type UnidadMedidaCreateOrUpdate = {

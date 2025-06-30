@@ -21,7 +21,7 @@ import { useAuth0 } from '@auth0/auth0-react';
 import { Link } from 'react-router-dom';
 
 // FIX: Usamos el servicio de forma estática
-import { PedidoService } from '../services/pedidoService';
+import { PedidoService } from '../services/PedidoService';
 import apiClient from '../services/apiClient';
 
 // FIX: Corregimos los tipos

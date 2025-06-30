@@ -10,7 +10,7 @@ import { useSucursal } from '../context/SucursalContext';
 
 // Servicios
 import apiClient, { setAuthToken } from '../services/apiClient';
-import { PedidoService } from '../services/pedidoService';
+import { PedidoService } from '../services/PedidoService';
 
 // Tipos y Enums
 import type { TipoEnvio, FormaPago } from '../types/enums';

@@ -15,7 +15,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
-import { ClienteUsuarioService } from '../../services/clienteUsuarioService'; // Importamos la clase de servicio
+import { ClienteUsuarioService } from '../../services/ClienteUsuarioService'; // Importamos la clase de servicio
 import type { Usuario, UsuarioRequestDTO, Rol } from '../../types/types'; // Importamos Rol desde types/types.ts
 
 // Instanciamos el servicio
