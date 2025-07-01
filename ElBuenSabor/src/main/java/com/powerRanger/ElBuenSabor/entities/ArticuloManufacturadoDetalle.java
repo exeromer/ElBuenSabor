@@ -8,10 +8,13 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ArticuloManufacturadoDetalle {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -11,10 +11,13 @@ import java.util.ArrayList; // Para inicializar la lista de clientes
 import java.util.List;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Domicilio {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

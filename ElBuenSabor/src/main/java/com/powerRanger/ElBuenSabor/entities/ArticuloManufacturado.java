@@ -8,8 +8,10 @@ import jakarta.validation.constraints.Size;
 import java.util.ArrayList;
 import java.util.List;
 // com.fasterxml.jackson.annotation.JsonIdentityInfo se hereda de Articulo
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 @Entity
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class ArticuloManufacturado extends Articulo {
 
     @Column(length = 1000)

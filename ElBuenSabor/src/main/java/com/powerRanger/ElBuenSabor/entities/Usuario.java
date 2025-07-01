@@ -11,6 +11,8 @@ import jakarta.validation.constraints.Pattern; // Para auth0Id si tiene un forma
 import java.time.LocalDate;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @Table(name = "usuario", uniqueConstraints = { // Asegurar unicidad
         @UniqueConstraint(columnNames = "auth0Id"),
@@ -19,6 +21,7 @@ import java.util.Objects;
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Usuario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

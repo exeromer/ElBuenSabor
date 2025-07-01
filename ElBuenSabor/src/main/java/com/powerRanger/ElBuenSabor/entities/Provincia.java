@@ -5,10 +5,13 @@ import com.fasterxml.jackson.annotation.ObjectIdGenerators; // Importa esta
 import jakarta.persistence.*;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Provincia {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

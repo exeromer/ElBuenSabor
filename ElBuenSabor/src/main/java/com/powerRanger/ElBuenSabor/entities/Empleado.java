@@ -11,11 +11,14 @@ import jakarta.validation.constraints.Size;
 import java.time.LocalDate;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @Table(name = "empleado")
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Empleado {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

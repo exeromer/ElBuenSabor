@@ -20,10 +20,13 @@ import java.util.HashSet;
 
 import com.powerRanger.ElBuenSabor.entities.enums.TipoPromocion;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 @Entity
 @JsonIdentityInfo(
         generator = ObjectIdGenerators.PropertyGenerator.class,
         property = "id")
+@JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Promocion {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
