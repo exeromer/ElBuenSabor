@@ -14,6 +14,7 @@ public enum Estado {
     PREPARACION,
     EN_CAMINO,
     ENTREGADO,
+    LISTO,
     RECHAZADO,
     CANCELADO
 }
