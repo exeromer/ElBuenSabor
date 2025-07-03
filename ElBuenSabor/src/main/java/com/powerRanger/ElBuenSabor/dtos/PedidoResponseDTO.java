@@ -26,13 +26,10 @@ public class PedidoResponseDTO {
 
     private SucursalResponseDTO sucursal;    // DTO
     private DomicilioResponseDTO domicilio;  // DTO
-    private ClienteResponseDTO cliente;     // DTO (el completo que ya tienes)
-
+    private ClienteResponseDTO cliente;     // DTO
     private String mpPreferenceId;
-
-    // Ya estaba incluido, se mantiene.
     private Double descuentoAplicado;
-
+    private FacturaResponseDTO factura;
 
     private List<DetallePedidoResponseDTO> detalles = new ArrayList<>();
 
@@ -67,7 +64,8 @@ public class PedidoResponseDTO {
     public void setDetalles(List<DetallePedidoResponseDTO> detalles) { this.detalles = detalles; }
     public String getMpPreferenceId() {return mpPreferenceId;}
     public void setMpPreferenceId(String mpPreferenceId) {this.mpPreferenceId = mpPreferenceId;}
-
     public Double getDescuentoAplicado() { return descuentoAplicado; }
     public void setDescuentoAplicado(Double descuentoAplicado) { this.descuentoAplicado = descuentoAplicado; }
+    public FacturaResponseDTO getFactura() {return factura;}
+    public void setFactura(FacturaResponseDTO factura) {this.factura = factura;}
 }

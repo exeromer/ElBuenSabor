@@ -25,25 +25,35 @@ public class MercadoPagoController {
     private PedidoRepository pedidoRepository;
 
     // Este endpoint recibirá las notificaciones de Mercado Pago
-   @PostMapping(value = "/notificaciones")
-    public ResponseEntity<String> recibirNotificacion(@RequestBody Map<String, Object> notificacion) {
-    System.out.println("====================================================================");
-    System.out.println("MERCADOPAGO_NOTIFICATION: Notificación JSON recibida:");
-    System.out.println(notificacion);
-    System.out.println("====================================================================");
+    @PostMapping(value = "/notificaciones") // Ya no necesita 'consumes' si usamos @RequestParam
+    public ResponseEntity<String> recibirNotificacion(@RequestParam Map<String, String> notificacion) {
+        System.out.println("====================================================================");
+        System.out.println("MERCADOPAGO_NOTIFICATION: Notificación recibida (Query Params):");
+        System.out.println(notificacion);
+        System.out.println("====================================================================");
 
-    try {
-        // Simplemente pasamos el mapa completo al servicio.
-        // El servicio se encargará de extraer la información necesaria.
-        pedidoService.handleMercadoPagoNotification(notificacion);
-        return ResponseEntity.ok("Notificacion recibida y procesada.");
+        // Extraemos el topic y el ID del recurso de la notificación
+        String topic = notificacion.get("topic");
+        // FIX: El parámetro es 'id', no 'resource'
+        String resourceId = notificacion.get("id");
 
-    } catch (Exception e) {
-        System.err.println("MERCADOPAGO_ERROR: Error al procesar la notificación en el controlador: " + e.getMessage());
-        e.printStackTrace(); // Es útil ver el error completo en la consola del backend
-        return ResponseEntity.status(500).body("Error procesando la notificación: " + e.getMessage());
+        // FIX: El topic de prueba es 'payment', no 'merchant_order'
+        if ("payment".equals(topic) && resourceId != null) {
+            try {
+                // Aquí el servicio debería procesar el ID del PAGO, no de la orden.
+                // Esto puede requerir un ajuste en tu lógica de servicio.
+                // Por ahora, lo dejamos para que puedas probar la recepción.
+                System.out.println("Procesando topic 'payment' para el ID de recurso: " + resourceId);
+                pedidoService.handleMercadoPagoNotification(notificacion);
+
+            } catch (Exception e) {
+                System.err.println("MERCADOPAGO_ERROR: Error al procesar la notificación: " + e.getMessage());
+                return ResponseEntity.status(500).body("Error procesando la notificación.");
+            }
+        }
+
+        return ResponseEntity.ok("Notificacion recibida.");
     }
-}
 
     @PostMapping("/crear-preferencia-test/{pedidoId}")
     public ResponseEntity<?> crearPreferenciaTest(@PathVariable Integer pedidoId) {

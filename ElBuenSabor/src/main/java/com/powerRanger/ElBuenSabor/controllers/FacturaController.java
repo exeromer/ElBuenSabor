@@ -7,6 +7,7 @@ import com.powerRanger.ElBuenSabor.services.FacturaService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
@@ -76,7 +77,8 @@ public class FacturaController {
         }
     }
 
-    @PutMapping("/anular/{id}")
+    @PostMapping("/anular/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')")
     public ResponseEntity<?> anularFactura(@PathVariable Integer id) {
         try {
             FacturaResponseDTO facturaAnuladaDto = facturaService.anularFactura(id);
@@ -87,6 +89,7 @@ public class FacturaController {
             return buildErrorResponse(e.getMessage(), status);
         }
     }
+
 
     private ResponseEntity<Map<String, Object>> buildErrorResponse(String message, HttpStatus status) {
         Map<String, Object> errorResponse = new HashMap<>();

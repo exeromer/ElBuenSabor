@@ -5,10 +5,12 @@ import com.powerRanger.ElBuenSabor.dtos.*;
 import com.powerRanger.ElBuenSabor.entities.Cliente;
 import com.powerRanger.ElBuenSabor.entities.Usuario;
 import com.powerRanger.ElBuenSabor.entities.enums.Estado; // Importar Estado
+import com.powerRanger.ElBuenSabor.entities.enums.FormaPago;
 import com.powerRanger.ElBuenSabor.entities.enums.Rol; // Importar Rol
 import com.powerRanger.ElBuenSabor.entities.enums.RolEmpleado; // Importar RolEmpleado
 import com.powerRanger.ElBuenSabor.repository.ClienteRepository;
 import com.powerRanger.ElBuenSabor.services.EmpleadoService; // Importar EmpleadoService
+import com.powerRanger.ElBuenSabor.services.FacturaService;
 import com.powerRanger.ElBuenSabor.services.PedidoService;
 import com.powerRanger.ElBuenSabor.services.UsuarioService;
 import jakarta.validation.ConstraintViolationException;
@@ -51,6 +53,9 @@ public class PedidoController {
 
     @Autowired
     private EmpleadoService empleadoService; // Inyectar EmpleadoService
+
+    @Autowired
+    private FacturaService facturaService;
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_CLIENTE')")
@@ -303,8 +308,46 @@ public class PedidoController {
             return handleGenericException(e, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+    @PostMapping("/{pedidoId}/confirmar-pago-efectivo")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')")
+    public ResponseEntity<?> confirmarPagoEfectivo(
+            @PathVariable Integer pedidoId,
+            Authentication authentication) {
 
-    // Cocina
+        logger.info(">> POST /api/pedidos/{}/confirmar-pago-efectivo", pedidoId);
+
+        try {
+            Jwt jwt = (Jwt) authentication.getPrincipal();
+            String auth0Id = jwt.getSubject();
+
+            // 1. Obtener el pedido para validar
+            PedidoResponseDTO pedido = pedidoService.getById(pedidoId);
+
+            // 2. Validaciones
+            if (pedido.getFormaPago() != FormaPago.EFECTIVO) {
+                return handleGenericException(new Exception("El método de pago de este pedido no es EFECTIVO."), HttpStatus.BAD_REQUEST);
+            }
+            if (pedido.getEstado() != Estado.LISTO) {
+                return handleGenericException(new Exception("El pedido debe estar en estado LISTO para ser pagado y entregado."), HttpStatus.BAD_REQUEST);
+            }
+
+            // 3. Cambiar el estado a ENTREGADO (esto disparará la facturación)
+            PedidoResponseDTO pedidoEntregado = pedidoService.updateEstadoParaEmpleado(
+                    pedidoId,
+                    Estado.ENTREGADO,
+                    pedido.getSucursal().getId(),
+                    auth0Id
+            );
+
+            logger.info("<< Pedido ID: {} marcado como ENTREGADO y facturado (pago en efectivo).", pedidoId);
+            return ResponseEntity.ok(pedidoEntregado);
+
+        } catch (Exception e) {
+            return handleGenericException(e, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+        // Cocina
     @GetMapping("/cocina/{sucursalId}")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_EMPLEADO')") // Empleados con rol Cocina
     public ResponseEntity<?> getPedidosForCocina(

@@ -32,7 +32,7 @@ public interface PedidoService {
 
 
     void softDelete(Integer id) throws Exception;
-    void handleMercadoPagoNotification(Map<String, Object> notification) throws Exception;
+    void handleMercadoPagoNotification(Map<String, String> notification) throws Exception;
 
     // --- Nuevos métodos para los roles ---
 
@@ -43,6 +43,4 @@ public interface PedidoService {
     List<PedidoResponseDTO> getPedidosParaCocina(Integer sucursalId) throws Exception;
 
     List<PedidoResponseDTO> getPedidosParaDelivery(Integer sucursalId) throws Exception;
-
-    
 }

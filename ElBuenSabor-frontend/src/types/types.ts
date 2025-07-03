@@ -198,6 +198,8 @@ export interface FacturaResponse {
   mpPreferenceId?: string;
   mpPaymentType?: string;
   totalVenta: number;
+  subtotal?: number;
+  totalDescuentos?: number;
   formaPago: FormaPago;
   estadoFactura: EstadoFactura;
   fechaAnulacion?: string; // LocalDate -> string
@@ -268,6 +270,7 @@ export interface PedidoResponse {
   mpPreferenceId?: string;
   descuentoAplicado?: number;
   detalles: DetallePedidoResponse[];
+  factura?: FacturaResponse;
 }
 
 export interface PedidoSimpleResponse {

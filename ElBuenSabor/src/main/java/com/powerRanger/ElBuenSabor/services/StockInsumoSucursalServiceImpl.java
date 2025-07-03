@@ -13,6 +13,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +29,8 @@ public class StockInsumoSucursalServiceImpl implements StockInsumoSucursalServic
     @Autowired private StockInsumoSucursalRepository stockInsumoSucursalRepository;
     @Autowired private ArticuloInsumoRepository articuloInsumoRepository;
     @Autowired private SucursalRepository sucursalRepository;
+
+    private static final Logger logger = LoggerFactory.getLogger(StockInsumoSucursalServiceImpl.class);
 
     private StockInsumoSucursalResponseDTO convertToResponseDto(StockInsumoSucursal stock) {
         if (stock == null) return null;
@@ -145,15 +151,25 @@ public class StockInsumoSucursalServiceImpl implements StockInsumoSucursalServic
     @Override
     @Transactional
     public void addStock(Integer insumoId, Integer sucursalId, Double cantidad) throws Exception {
-        StockInsumoSucursal stock = stockInsumoSucursalRepository.findByArticuloInsumoAndSucursal(
-                articuloInsumoRepository.findById(insumoId).orElseThrow(() -> new Exception("Insumo no encontrado para añadir stock")),
-                sucursalRepository.findById(sucursalId).orElseThrow(() -> new Exception("Sucursal no encontrada para añadir stock"))
-        ).orElseThrow(() -> new Exception("Stock de insumo " + insumoId + " en sucursal " + sucursalId + " no encontrado."));
+        if (cantidad <= 0) {
+            logger.warn("Se intentó añadir una cantidad no positiva ({}) de stock para el insumo ID {}", cantidad, insumoId);
+            return;
+        }
+
+        ArticuloInsumo insumo = articuloInsumoRepository.findById(insumoId)
+                .orElseThrow(() -> new Exception("Insumo no encontrado para añadir stock con ID: " + insumoId));
+        Sucursal sucursal = sucursalRepository.findById(sucursalId)
+                .orElseThrow(() -> new Exception("Sucursal no encontrada para añadir stock con ID: " + sucursalId));
+
+        StockInsumoSucursal stock = stockInsumoSucursalRepository.findByArticuloInsumoAndSucursal(insumo, sucursal)
+                .orElseThrow(() -> new Exception("Registro de stock para insumo " + insumoId + " en sucursal " + sucursalId + " no encontrado."));
 
         if (stock.getStockActual() == null) {
             stock.setStockActual(0.0);
         }
         stock.setStockActual(stock.getStockActual() + cantidad);
         stockInsumoSucursalRepository.save(stock);
+        logger.info("Stock para Insumo ID {} en Sucursal ID {} incrementado en {}. Nuevo stock: {}", insumoId, sucursalId, cantidad, stock.getStockActual());
     }
+
 }

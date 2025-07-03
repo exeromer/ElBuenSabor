@@ -16,22 +16,23 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, ListGroup, Spinner, Alert, Button, Image, Badge } from 'react-bootstrap';
+import { Container, Row, Col, Card, ListGroup, Spinner, Alert, Button, Image, Badge, Modal } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Link } from 'react-router-dom';
 
-// FIX: Usamos el servicio de forma estática
 import { PedidoService } from '../services/PedidoService';
 import apiClient from '../services/apiClient';
+import { FacturaService } from '../services/FacturaService';
 
 // FIX: Corregimos los tipos
-import type { PedidoResponse, ArticuloSimpleResponse } from '../types/types';
+import type { PedidoResponse, ArticuloSimpleResponse, FacturaResponse } from '../types/types';
 import type { Estado } from '../types/enums';
+import FacturaDetailModal from '../components/facturas/FacturaDetailModal';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHistory, faCheckCircle, faTimesCircle, faClock, faCog, faTruck, faStore, faMoneyBillWave, faCreditCard} from '@fortawesome/free-solid-svg-icons';
+import { faHistory, faCheckCircle, faTimesCircle, faClock, faCog, faTruck, faStore, faMoneyBillWave, faCreditCard } from '@fortawesome/free-solid-svg-icons';
 
 function articuloTieneImagenes(articulo: ArticuloSimpleResponse): articulo is ArticuloSimpleResponse & { imagenes: { denominacion: string }[] } {
-    return (articulo as any).imagenes !== undefined && Array.isArray((articulo as any).imagenes);
+  return (articulo as any).imagenes !== undefined && Array.isArray((articulo as any).imagenes);
 }
 
 const MyOrdersPage: React.FC = () => {
@@ -40,20 +41,21 @@ const MyOrdersPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [showFacturaModal, setShowFacturaModal] = useState(false);
+  const [selectedFactura, setSelectedFactura] = useState<FacturaResponse | null>(null);
+  const [loadingFactura, setLoadingFactura] = useState(false);
+
   // const fileUploadService = new FileUploadService(); 
   useEffect(() => {
     const fetchMyOrders = async () => {
       if (authLoading) return;
-
       if (!isAuthenticated) {
         setError('Debes iniciar sesión para ver tus pedidos.');
         setLoading(false);
         return;
       }
-      
       setLoading(true);
       setError(null);
-
       try {
         const fetchedPedidos = await PedidoService.getMisPedidos();
         setPedidos(fetchedPedidos);
@@ -68,6 +70,26 @@ const MyOrdersPage: React.FC = () => {
     fetchMyOrders();
   }, [isAuthenticated, authLoading, getAccessTokenSilently]);
 
+  /**
+   * @function handleShowFactura
+   * @description Función que maneja la visualización de la factura asociada a un pedido.
+   * @param {number} facturaId - El ID de la factura a visualizar.
+   * @returns {Promise<void>} Una promesa que se resuelve cuando se completa la visualización de la factura.
+   */
+  const handleShowFactura = async (facturaId: number) => {
+    setLoadingFactura(true);
+    setShowFacturaModal(true);
+    try {
+      // Usamos el servicio para obtener los detalles completos de la factura
+      const facturaCompleta = await FacturaService.findByIdIncludingAnuladas(facturaId);
+      setSelectedFactura(facturaCompleta);
+    } catch (error) {
+      console.error("Error al cargar detalle de la factura:", error);
+      // Opcional: mostrar un toast o alerta de error
+    } finally {
+      setLoadingFactura(false);
+    }
+  };
 
   /**
    * @function getEstadoIcon
@@ -76,13 +98,13 @@ const MyOrdersPage: React.FC = () => {
    * @param {Estado} estado - El estado del pedido.
    * @returns {JSX.Element | null} Un elemento `FontAwesomeIcon` con su color correspondiente, o `null` si no hay un icono definido.
    */
-  const getEstadoIcon = (estado: Estado) => { // Cambiado EstadoPedido a Estado.
+  const getEstadoIcon = (estado: Estado) => {
     switch (estado) {
       case 'PENDIENTE':
         return <FontAwesomeIcon icon={faClock} className="text-warning" title="Pendiente" />;
       case 'PREPARACION':
         return <FontAwesomeIcon icon={faCog} className="text-info" title="En Preparación" />;
-      case 'EN_CAMINO': // Añadir este estado si tu backend lo usa
+      case 'EN_CAMINO':
         return <FontAwesomeIcon icon={faTruck} className="text-primary" title="En Camino" />;
       case 'ENTREGADO':
         return <FontAwesomeIcon icon={faCheckCircle} className="text-success" title="Entregado" />;
@@ -90,6 +112,8 @@ const MyOrdersPage: React.FC = () => {
         return <FontAwesomeIcon icon={faTimesCircle} className="text-danger" title="Cancelado" />;
       case 'RECHAZADO':
         return <FontAwesomeIcon icon={faTimesCircle} className="text-danger" title="Rechazado" />;
+      case 'LISTO':
+        return <FontAwesomeIcon icon={faCheckCircle} className="text-success" title="Listo" />;
       default:
         return null;
     }
@@ -123,7 +147,8 @@ const MyOrdersPage: React.FC = () => {
     );
   }
 
-   return (
+  return (
+    <>
     <Container className="my-4">
       <h1 className="text-center mb-4">
         <FontAwesomeIcon icon={faHistory} className="me-2 text-primary" /> Mis Pedidos
@@ -149,8 +174,8 @@ const MyOrdersPage: React.FC = () => {
                   <div className="text-end">
                     <Badge bg={
                       pedido.estado === 'ENTREGADO' ? 'success' :
-                      pedido.estado === 'CANCELADO' || pedido.estado === 'RECHAZADO' ? 'danger' :
-                      'secondary'
+                        pedido.estado === 'CANCELADO' || pedido.estado === 'RECHAZADO' ? 'danger' :
+                          'secondary'
                     } className="me-2">{pedido.estado}</Badge>
                     {getEstadoIcon(pedido.estado)}
                   </div>
@@ -173,7 +198,7 @@ const MyOrdersPage: React.FC = () => {
                     {pedido.detalles.map((detalle) => (
                       <ListGroup.Item key={detalle.id} className="d-flex justify-content-between align-items-center py-1 px-0">
                         <div className="d-flex align-items-center">
-                           {articuloTieneImagenes(detalle.articulo) && detalle.articulo.imagenes.length > 0 && (
+                          {articuloTieneImagenes(detalle.articulo) && detalle.articulo.imagenes.length > 0 && (
                             <Image
                               src={`${apiClient.defaults.baseURL}/files/download/${detalle.articulo.imagenes[0].denominacion}`}
                               alt={detalle.articulo.denominacion}
@@ -187,11 +212,15 @@ const MyOrdersPage: React.FC = () => {
                       </ListGroup.Item>
                     ))}
                   </ListGroup>
-                  {(pedido as any).factura && (
-                    <div className="mt-3 text-end">
-                      <Link to={`/facturas/${(pedido as any).factura.id}`}>
-                        <Button variant="outline-info" size="sm">Ver Factura</Button>
-                      </Link>
+                  {pedido.factura && (
+                      <div className="mt-3 text-end">
+                        <Button
+                          variant="outline-info"
+                          size="sm"
+                          onClick={() => handleShowFactura(pedido.factura!.id)} // El "!" asegura que el id existe si la factura existe
+                        >
+                        Ver Factura
+                      </Button>
                     </div>
                   )}
                 </Card.Body>
@@ -201,7 +230,25 @@ const MyOrdersPage: React.FC = () => {
         </Row>
       )}
     </Container>
+
+  <FacturaDetailModal
+    show={showFacturaModal}
+    onHide={() => setShowFacturaModal(false)}
+    factura={loadingFactura ? null : selectedFactura}
+  />
+  {
+    showFacturaModal && loadingFactura && (
+      <Modal show={true} centered backdrop="static">
+        <Modal.Body className="text-center">
+          <Spinner animation="border" />
+          <p className="mt-3">Cargando factura...</p>
+        </Modal.Body>
+      </Modal>
+    )
+  }
+  </>
   );
 };
+
 
 export default MyOrdersPage;

@@ -60,6 +60,7 @@ public class PedidoServiceImpl implements PedidoService {
     @Autowired private PromocionService promocionService;
     @Autowired private EmpleadoService empleadoService; // Inyectar EmpleadoService
     @Autowired private SimpMessagingTemplate messagingTemplate;
+    @Autowired private FacturaService facturaService; // Inyectar FacturaService
     private static final Logger logger = LoggerFactory.getLogger(PedidoServiceImpl.class);
 
     // --- MAPPERS (Como los tenías) ---
@@ -191,6 +192,10 @@ public class PedidoServiceImpl implements PedidoService {
                     .map(this::convertDetallePedidoToDto)
                     .collect(Collectors.toList()));
         }
+        if (pedido.getFactura() != null) {
+            dto.setFactura(convertFacturaToDto(pedido.getFactura()));
+        }
+
         return dto;
     }
 
@@ -745,69 +750,69 @@ public class PedidoServiceImpl implements PedidoService {
     }
 
     @Override
-@Transactional
-public void handleMercadoPagoNotification(Map<String, Object> notification) throws Exception {
-    logger.info("PEDIDO_SERVICE: Procesando notificación JSON: {}", notification);
+    @Transactional
+    public void handleMercadoPagoNotification(Map<String, String> notification) throws Exception {
+        logger.info("PEDIDO_SERVICE: Procesando notificación: {}", notification);
 
-    String topic = (String) notification.get("type");
-    if (!"payment".equals(topic)) {
-        logger.warn("Notificación recibida con topic no manejado: {}", topic);
-        return;
-    }
-
-    @SuppressWarnings("unchecked")
-    Map<String, Object> data = (Map<String, Object>) notification.get("data");
-    if (data == null || data.get("id") == null) {
-        throw new Exception("El objeto 'data' o el ID del pago no vinieron en la notificación de Mercado Pago.");
-    }
-
-    String paymentIdStr = String.valueOf(data.get("id"));
-    Long paymentId = Long.parseLong(paymentIdStr);
-
-    Payment payment = mercadoPagoService.getPaymentById(paymentId);
-    String pedidoIdStr = payment.getExternalReference();
-    if (pedidoIdStr == null) {
-        throw new Exception("La notificación de pago de MP (ID: " + paymentId + ") no tiene una referencia externa a nuestro pedido.");
-    }
-    Integer pedidoId = Integer.parseInt(pedidoIdStr);
-
-    Pedido pedido = pedidoRepository.findById(pedidoId)
-            .orElseThrow(() -> new Exception("Pedido no encontrado con ID: " + pedidoId));
-
-    if (pedido.getEstado() != Estado.PENDIENTE) {
-        logger.warn("El pedido {} ya fue procesado. Estado actual: {}", pedidoId, pedido.getEstado());
-        return;
-    }
-
-    String paymentStatus = payment.getStatus().toString();
-    logger.info("El pago {} para el pedido {} tiene estado: {}", paymentId, pedidoId, paymentStatus);
-
-    Estado oldStatus = pedido.getEstado();
-
-    if ("approved".equals(paymentStatus)) {
-        pedido.setEstado(Estado.PREPARACION);
-    } else {
-        pedido.setEstado(Estado.RECHAZADO);
-    }
-
-    pedido.setMpPaymentId(paymentId.toString());
-    pedido.setMpPaymentStatus(paymentStatus);
-
-    Pedido pedidoActualizado = pedidoRepository.save(pedido);
-    logger.info("PEDIDO_SERVICE: Pedido {} actualizado a {} y guardado en la BD.", pedidoId, pedido.getEstado());
-
-    // ... Lógica de notificación por WebSocket (sin cambios) ...
-    if (oldStatus != pedidoActualizado.getEstado()) {
-        PedidoResponseDTO pedidoResponseDTO = convertToResponseDto(pedidoActualizado);
-        if (pedidoResponseDTO.getCliente() != null && pedidoResponseDTO.getCliente().getId() != null) {
-            messagingTemplate.convertAndSend("/topic/pedidos/cliente/" + pedidoResponseDTO.getCliente().getId(), pedidoResponseDTO);
+        String topic = notification.get("topic");
+        if (!"payment".equals(topic)) {
+            logger.warn("Notificación recibida con topic no manejado: {}", topic);
+            return;
         }
-        if (pedidoActualizado.getSucursal() != null) {
-            messagingTemplate.convertAndSend("/topic/pedidos/sucursal/" + pedidoActualizado.getSucursal().getId() + "/cajero", pedidoResponseDTO);
-            messagingTemplate.convertAndSend("/topic/pedidos/sucursal/" + pedidoActualizado.getSucursal().getId() + "/cocina", pedidoResponseDTO);
+
+        String paymentIdStr = notification.get("id");
+        if (paymentIdStr == null) {
+            throw new Exception("El ID del pago no vino en la notificación de Mercado Pago.");
+        }
+        Long paymentId = Long.parseLong(paymentIdStr);
+
+        Payment payment = mercadoPagoService.getPaymentById(paymentId);
+        String pedidoIdStr = payment.getExternalReference();
+        if (pedidoIdStr == null) {
+            throw new Exception("La notificación de pago de MP (ID: " + paymentId + ") no tiene una referencia externa a nuestro pedido.");
+        }
+        Integer pedidoId = Integer.parseInt(pedidoIdStr);
+
+        Pedido pedido = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new Exception("Pedido no encontrado con ID: " + pedidoId));
+
+        if (pedido.getEstado() != Estado.PENDIENTE) {
+            logger.warn("El pedido {} ya fue procesado. Estado actual: {}", pedidoId, pedido.getEstado());
+            return;
+        }
+
+        String paymentStatus = payment.getStatus().toString();
+        logger.info("El pago {} para el pedido {} tiene estado: {}", paymentId, pedidoId, paymentStatus);
+
+        Estado oldStatus = pedido.getEstado(); // Guardar estado antiguo
+
+        if ("approved".equals(paymentStatus)) {
+            pedido.setEstado(Estado.PREPARACION);
+            // Si el pago es en EFECTIVO y aprobado por webhook (no es el caso normal, pero por si acaso)
+            if (pedido.getFormaPago() == FormaPago.EFECTIVO) {
+                logger.warn("Pedido {} pagado en EFECTIVO fue aprobado via webhook. Esto no deberia ocurrir.", pedidoId);
+            }
+        } else {
+            pedido.setEstado(Estado.RECHAZADO);
+        }
+
+        pedido.setMpPaymentId(paymentId.toString());
+        pedido.setMpPaymentStatus(paymentStatus);
+
+        Pedido pedidoActualizado = pedidoRepository.save(pedido);
+        logger.info("PEDIDO_SERVICE: Pedido {} actualizado a {} y guardado en la BD.", pedidoId, pedido.getEstado());
+        // Notificar por WebSocket al cliente y a los roles relevantes si el estado cambió
+        if (oldStatus != pedidoActualizado.getEstado()) {
+            PedidoResponseDTO pedidoResponseDTO = convertToResponseDto(pedidoActualizado);
+            if (pedidoResponseDTO.getCliente() != null && pedidoResponseDTO.getCliente().getId() != null) {
+                messagingTemplate.convertAndSend("/topic/pedidos/cliente/" + pedidoResponseDTO.getCliente().getId(), pedidoResponseDTO);
+            }
+            if (pedidoActualizado.getSucursal() != null) {
+                messagingTemplate.convertAndSend("/topic/pedidos/sucursal/" + pedidoActualizado.getSucursal().getId() + "/cajero", pedidoResponseDTO);
+                messagingTemplate.convertAndSend("/topic/pedidos/sucursal/" + pedidoActualizado.getSucursal().getId() + "/cocina", pedidoResponseDTO);
+            }
         }
     }
-}
 
     @Override
     @Transactional
@@ -921,24 +926,49 @@ public void handleMercadoPagoNotification(Map<String, Object> notification) thro
 
         // 4. SI LAS VALIDACIONES PASAN, SE ACTUALIZA EL ESTADO
         // Se llama al método genérico que guarda en la BD
-        PedidoResponseDTO pedidoActualizadoDTO = updateEstado(pedidoId, nuevoEstado);
+        pedido.setEstado(nuevoEstado);
+        Pedido pedidoActualizado = pedidoRepository.save(pedido);
+
+        if (nuevoEstado == Estado.ENTREGADO) {
+            try {
+                logger.info("Disparando generación de factura para Pedido ID: {}", pedidoId);
+                FacturaCreateRequestDTO facturaRequest = new FacturaCreateRequestDTO();
+                facturaRequest.setPedidoId(pedidoId);
+
+                // Si es pago con Mercado Pago, poblamos el DTO con los detalles del pago
+                if (pedidoActualizado.getFormaPago() == FormaPago.MERCADO_PAGO) {
+                    if (pedidoActualizado.getMpPaymentId() != null) {
+                        facturaRequest.setMpPaymentId(Long.parseLong(pedidoActualizado.getMpPaymentId()));
+                    }
+                    facturaRequest.setMpPaymentType(pedidoActualizado.getMpPaymentStatus()); // El status (approved) es útil como tipo de pago
+                    facturaRequest.setMpPreferenceId(pedidoActualizado.getMpPreferenceId());
+                    // otros campos de MP que puedas necesitar...
+                }
+
+                facturaService.generarFacturaParaPedido(facturaRequest);
+                logger.info("Factura generada exitosamente para Pedido ID: {}", pedidoId);
+
+            } catch (Exception e) {
+                // Es importante registrar el error, pero no relanzar la excepción para no revertir
+                // la actualización del estado del pedido. El pedido ya fue entregado.
+                logger.error("Error al generar la factura automática para el pedido ID {}: {}. El pedido fue entregado, pero la factura debe generarse manualmente.", pedidoId, e.getMessage());
+            }
+        }
+
+        Pedido pedidoFinal = pedidoRepository.findById(pedidoId)
+                .orElseThrow(() -> new Exception("Error al recargar el pedido después de la actualización."));
+        PedidoResponseDTO pedidoActualizadoDTO = convertToResponseDto(pedidoFinal);
 
         // 5. NOTIFICACIÓN POR WEBSOCKET (La lógica de Franco integrada aquí)
         // Se notifica DESPUÉS de que el cambio se ha guardado exitosamente en la base de datos.
         if (pedidoActualizadoDTO.getSucursal() != null) {
             String sId = pedidoActualizadoDTO.getSucursal().getId().toString();
-
-            // LOG AÑADIDO ANTES DE ENVIAR
             logger.info("WEBSOCKET DEBUG: Intentando enviar notificación para Pedido ID {} a sucursal {}", pedidoId, sId);
-
             messagingTemplate.convertAndSend("/topic/pedidos/sucursal/" + sId + "/cajero", pedidoActualizadoDTO);
             messagingTemplate.convertAndSend("/topic/pedidos/sucursal/" + sId + "/cocina", pedidoActualizadoDTO);
             messagingTemplate.convertAndSend("/topic/pedidos/sucursal/" + sId + "/delivery", pedidoActualizadoDTO);
-
-            // LOG AÑADIDO DESPUÉS DE ENVIAR
             logger.info("WEBSOCKET DEBUG: Notificaciones enviadas exitosamente.");
         }
-
         return pedidoActualizadoDTO;
     }
 
@@ -1132,4 +1162,15 @@ public void handleMercadoPagoNotification(Map<String, Object> notification) thro
                 .map(this::convertToResponseDto)
                 .collect(Collectors.toList());
     }
+    private FacturaResponseDTO convertFacturaToDto(Factura factura) {
+        if (factura == null) return null;
+        FacturaResponseDTO dto = new FacturaResponseDTO();
+        dto.setId(factura.getId());
+        dto.setFechaFacturacion(factura.getFechaFacturacion());
+        dto.setTotalVenta(factura.getTotalVenta());
+        dto.setEstadoFactura(factura.getEstadoFactura());
+        // Puedes añadir más campos si los necesitas en la respuesta del pedido
+        return dto;
+    }
+
 }
