@@ -397,6 +397,7 @@ export interface UsuarioRequest {
 
 export interface UsuarioResponse {
   id: number;
+  auth0Id: string;
   username: string;
   rol: Rol;
   estadoActivo: boolean;

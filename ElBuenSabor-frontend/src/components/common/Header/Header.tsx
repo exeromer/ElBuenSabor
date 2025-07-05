@@ -16,19 +16,12 @@ import SucursalSelector from '../Sucursal/SucursalSelector';
 import CartModal from '../../cart/CartModal';
 import './Header.sass'
 
-interface HeaderProps { }
+interface HeaderProps {}
 
 const Header: React.FC<HeaderProps> = () => {
   const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
-
-  // El hook `useCart` ahora se usa para el contador y para abrir el modal
-  const { totalItems, openCart, isCartOpen } = useCart();
-
-  // <-- 3. USAMOS EL HOOK DE SUCURSAL -->
-  // Obtenemos la lista de sucursales para decidir si mostramos el selector
+  const { totalItems, openCart } = useCart();
   const { sucursales } = useSucursal();
-
-  // El rol del usuario se sigue determinando igual
   const getUserRole = (): string | undefined => {
     if (user?.email?.endsWith('@admin.com')) return 'ADMIN';
     if (user?.email?.endsWith('@empleado.com')) return 'EMPLEADO';
@@ -63,9 +56,9 @@ const Header: React.FC<HeaderProps> = () => {
           </Nav>
 
           <div className="d-flex justify-content-center flex-grow-1">
-             {sucursales.length > 1 && <SucursalSelector />}
+            {sucursales.length > 1 && <SucursalSelector />}
           </div>
-         
+
           <Nav>
             <Nav.Link onClick={openCart} style={{ cursor: 'pointer' }}>
               <FontAwesomeIcon className="h" icon={faShoppingCart} />
@@ -76,7 +69,7 @@ const Header: React.FC<HeaderProps> = () => {
               )}
             </Nav.Link>
             {!isAuthenticated ? (
-              <Button variant='primary' className='boton-iniciar-sesion' onClick={() => loginWithRedirect()}>
+              <Button variant="secondary" onClick={() => loginWithRedirect()}>
                 <FontAwesomeIcon icon={faSignInAlt} className="me-1" /> Iniciar Sesión
               </Button>
             ) : (
@@ -84,7 +77,7 @@ const Header: React.FC<HeaderProps> = () => {
                 <Nav.Link as={Link} to="/profile">
                   <FontAwesomeIcon icon={faUser} className="me-1" /> {user?.name || user?.nickname || 'Perfil'}
                 </Nav.Link>
-                <Button className='boton-cerrar-sesion' onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>
+                <Button variant="secondary" onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>
                   <FontAwesomeIcon icon={faSignOutAlt} className="me-1" /> Cerrar Sesión
                 </Button>
               </>

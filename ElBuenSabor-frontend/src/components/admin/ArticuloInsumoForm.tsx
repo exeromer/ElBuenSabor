@@ -4,15 +4,12 @@ import { ArticuloInsumoService } from '../../services/articuloInsumoService';
 import { UnidadMedidaService } from '../../services/unidadMedidaService';
 import { FileUploadService } from '../../services/fileUploadService';
 import { ImagenService } from '../../services/imagenService';
-import { StockInsumoSucursalService } from '../../services/StockInsumoSucursalService'; // <-- 2. Importamos el servicio de Stock
-
+import { StockInsumoSucursalService } from '../../services/StockInsumoSucursalService';
 import { useSucursal } from '../../context/SucursalContext';
-
 import type { ArticuloInsumoRequest, UnidadMedidaResponse, ArticuloInsumoResponse, ImagenResponse, StockInsumoSucursalRequest } from '../../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 import apiClient from '../../services/apiClient';
-
 
 interface ArticuloInsumoFormProps {
   show: boolean;

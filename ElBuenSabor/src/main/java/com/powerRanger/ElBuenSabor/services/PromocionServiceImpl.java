@@ -339,4 +339,16 @@ public class PromocionServiceImpl implements PromocionService {
                 })
                 .collect(Collectors.toList());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PromocionResponseDTO> findBySucursalId(Long sucursalId) {
+        // Llamamos al método del repositorio que crearemos en el siguiente paso
+        List<Promocion> promociones = promocionRepository.findBySucursales_IdAndEstadoActivoTrue(sucursalId);
+
+        // Convertimos la lista de entidades a una lista de DTOs para la respuesta
+        return promociones.stream()
+                .map(this::convertToResponseDto)
+                .collect(Collectors.toList());
+    }
 }

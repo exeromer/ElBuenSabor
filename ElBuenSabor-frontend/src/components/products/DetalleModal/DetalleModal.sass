@@ -1,14 +1,13 @@
 @use "../../../styles/vars" as *
 
-.detalle-modal
+.detalle-modal  
   .modal-content
-    border-radius: $br2 * 2 
-    box-shadow: 0 5px 15px $bg-transparent-dark
+    border-radius: $br2
+    box-shadow: $shadow
 
   .detalle-modal-header
-    background-color: $color-clay
-    color: $color-ivory 
-    border-bottom: 1px solid $color-clay
+    background-color: $color-mist
+    color: $color-clay
     padding: $p2
 
     .detalle-modal-title
@@ -18,29 +17,26 @@
       text-shadow: 1px 1px 2px rgba(0,0,0,0.2)
 
     .btn-close 
-      color: $color-ivory !important 
       filter: invert(1) grayscale(1) brightness(2)
       opacity: 0.8
       &:hover
         opacity: 1
 
   .detalle-modal-body
-    background-color: $color-mist 
+    background-color: $color-clay 
     color: $color-grey
     padding: $p2 * 1.5
 
     .detalle-modal-image
       border-radius: $br2 
-      border: 1px solid $color-stone 
       max-height: 350px 
       width: 100% 
       object-fit: cover 
-      box-shadow: $shadow 
 
     .detalle-modal-section-title
       font-family: $f-f-uno
       font-size: $f-s-2
-      color: $color-clay
+      color: $color-grey
       margin-top: $m3
       margin-bottom: $m2
       font-weight: 600
@@ -58,26 +54,39 @@
       font-family: $f-f-uno
       font-size: $f-s-3
       font-weight: bold
-      color: $color-clay
+      color: $color-grey
       margin-bottom: $m3
 
 
   .detalle-modal-footer
-    background-color: $color-stone
-    border-top: 1px solid $color-stone
+    background-color: $color-mist
     padding: $p2
-    justify-content: flex-end
+    border: none
 
-    .detalle-modal-close-button
-      background-color: $color-grey
-      border-color: $color-grey
-      color: $color-ivory
+    .detalle-modal-add-button
+      background-color: $color-stone
+      border: none
+      color: $color-clay
       padding: $p1 $p2
-      border-radius: $br1
+      border-radius: $br2
 
       &:hover
-        background-color: $color-grey
+        background-color: $color-clay
         border-color: $color-grey
+        color: $color-grey
+
+    .detalle-modal-close-button
+      background-color: $color-stone
+      border-color: $color-grey
+      border: none
+      color: $color-clay
+      padding: $p1 $p2
+      border-radius: $br2
+
+      &:hover
+        background-color: $color-clay
+        border-color: $color-grey
+        color: $color-grey
 
 @media (max-width: $breakpoint-md)
   .detalle-modal

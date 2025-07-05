@@ -1,23 +1,23 @@
 // UserForm.tsx
 /**
  * @file UserForm.tsx
- * @description Componente de formulario modal para la creación y edición de Usuarios.
- * Permite a los administradores gestionar la información básica de un usuario, como su
+ * @description Componente de formulario modal para la creación y edición de UsuarioResponses.
+ * Permite a los administradores gestionar la información básica de un usuarioResUsuarioResponse, como su
  * `auth0Id`, `username`, `rol` y `estadoActivo`.
- * Este formulario es utilizado en el panel de administración para la gestión de usuarios.
+ * Este formulario es utilizado en el panel de administración para la gestión de usuarioResUsuarioResponses.
  *
  * @hook `useState`: Gestiona el estado del formulario (`formData`), el estado de envío (`submitting`),
  * y cualquier mensaje de error (`error`).
  * @hook `useEffect`: Se encarga de precargar el formulario para edición o resetearlo para creación
- * cuando el modal se muestra o cambia el usuario a editar.
+ * cuando el modal se muestra o cambia el usuarioResUsuarioResponse a editar.
  * @hook `useAuth0`: Obtiene el token de autenticación para las operaciones protegidas del API.
  */
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
-import { ClienteUsuarioService } from '../../services/ClienteUsuarioService'; // Importamos la clase de servicio
-import type { Usuario, UsuarioRequestDTO, Rol } from '../../types/types'; // Importamos Rol desde types/types.ts
-
+import { ClienteUsuarioService } from '../../services/ClienteUsuarioService';
+import type { UsuarioResponse, UsuarioRequest } from '../../types/types'; 
+import type { Rol } from '../../types/enums';
 // Instanciamos el servicio
 const clienteUsuarioService = new ClienteUsuarioService();
 
@@ -26,14 +26,14 @@ const clienteUsuarioService = new ClienteUsuarioService();
  * @description Propiedades que el componente `UserForm` espera recibir.
  * @property {boolean} show - Controla la visibilidad del modal.
  * @property {() => void} handleClose - Función para cerrar el modal.
- * @property {() => void} onSave - Callback que se ejecuta después de guardar exitosamente un usuario.
- * @property {Usuario | null} [userToEdit] - Objeto Usuario a editar. Si es `null` o `undefined`, se asume modo creación.
+ * @property {() => void} onSave - Callback que se ejecuta después de guardar exitosamente un usuarioResUsuarioResponse.
+ * @property {UsuarioResponse | null} [userToEdit] - Objeto UsuarioResponse a editar. Si es `null` o `undefined`, se asume modo creación.
  */
 interface UserFormProps {
   show: boolean;
   handleClose: () => void;
   onSave: () => void;
-  userToEdit?: Usuario | null;
+  userToEdit?: UsuarioResponse | null;
 }
 
 const UserForm: React.FC<UserFormProps> = ({ show, handleClose, onSave, userToEdit }) => {
@@ -46,14 +46,14 @@ const UserForm: React.FC<UserFormProps> = ({ show, handleClose, onSave, userToEd
 
   /**
    * @state formData
-   * @description Estado que almacena los datos del formulario del Usuario.
-   * Utiliza `UsuarioRequestDTO` para tipificar los datos que se enviarán al backend.
-   * El rol se inicializa como 'CLIENTE' por defecto para nuevos usuarios.
+   * @description Estado que almacena los datos del formulario del UsuarioResponse.
+   * Utiliza `UsuarioRequest  para tipificar los datos que se enviarán al backend.
+   * El rol se inicializa como 'CLIENTE' por defecto para nuevos usuarioResUsuarioResponses.
    */
-  const [formData, setFormData] = useState<UsuarioRequestDTO>({
+  const [formData, setFormData] = useState<UsuarioRequest> ({
     auth0Id: '',
     username: '',
-    rol: 'CLIENTE', // Default para nuevos usuarios
+    rol: 'CLIENTE', // Default para nuevos usuarioResUsuarioResponses
     estadoActivo: true,
   });
 
@@ -72,30 +72,26 @@ const UserForm: React.FC<UserFormProps> = ({ show, handleClose, onSave, userToEd
 
   /**
    * @hook useEffect
-   * @description Hook que se encarga de precargar el formulario con los datos del usuario
+   * @description Hook que se encarga de precargar el formulario con los datos del usuarioResUsuarioResponse
    * si se está en modo edición, o de resetearlo a los valores iniciales para el modo creación.
    * Se ejecuta cuando `userToEdit` o la visibilidad del modal (`show`) cambian.
    */
   useEffect(() => {
     if (show) { // Solo actualiza el estado si el modal está visible
       if (userToEdit) {
-        // Precarga los datos del usuario a editar
+        // Precarga los datos del usuarioResUsuarioResponse a editar
         setFormData({
-          id: userToEdit.id, // Incluir ID si existe (asumiendo que Usuario.id es 'number' y no 'number | undefined')
           auth0Id: userToEdit.auth0Id,
           username: userToEdit.username,
           rol: userToEdit.rol,
           estadoActivo: userToEdit.estadoActivo,
         });
       } else {
-        // Resetea el formulario para un nuevo usuario
+        // Resetea el formulario para un nuevo usuarioResUsuarioResponse
         setFormData({
-          // No se incluye 'id' aquí porque es para una creación y el backend lo asigna.
-          // Si UsuarioRequestDTO requiere 'id' incluso para creaciones (ej. con id: 0),
-          // entonces debería ser `id: 0,` aquí. Asumimos que es opcional para creación.
           auth0Id: '',
           username: '',
-          rol: 'CLIENTE', // Restablece el rol predeterminado
+          rol: 'CLIENTE',
           estadoActivo: true,
         });
       }
@@ -106,7 +102,7 @@ const UserForm: React.FC<UserFormProps> = ({ show, handleClose, onSave, userToEd
   /**
    * @function handleSubmit
    * @description Manejador para el envío del formulario.
-   * Realiza validaciones básicas y luego llama al servicio de API para crear o actualizar el usuario.
+   * Realiza validaciones básicas y luego llama al servicio de API para crear o actualizar el usuarioResUsuarioResponse.
    * @param {React.FormEvent} e - Evento de envío del formulario.
    */
   const handleSubmit = async (e: React.FormEvent) => {
@@ -129,16 +125,16 @@ const UserForm: React.FC<UserFormProps> = ({ show, handleClose, onSave, userToEd
         // CORRECCIÓN FINAL: Usamos el operador de aserción no nula '!' en userToEdit.id
         // para asegurar a TypeScript que aquí será un número.
         await clienteUsuarioService.updateUsuario(userToEdit.id!, formData, token);
-        alert('Usuario actualizado con éxito.');
+        alert('UsuarioResponse actualizado con éxito.');
       } else {
         await clienteUsuarioService.createUsuario(formData, token);
-        alert('Usuario creado con éxito.');
+        alert('UsuarioResponse creado con éxito.');
       }
 
       onSave(); // Llama al callback `onSave` para notificar al componente padre
       handleClose(); // Cierra el modal
     } catch (err) {
-      console.error('Error al guardar usuario:', err);
+      console.error('Error al guardar usuarioResUsuarioResponse:', err);
       // Extrae el mensaje de error de la respuesta de Axios o un mensaje genérico
       const errorMessage = (err as any).response?.data?.message || (err as any).message || 'Error desconocido al guardar.';
       setError(`Error al guardar: ${errorMessage}`);
@@ -150,7 +146,7 @@ const UserForm: React.FC<UserFormProps> = ({ show, handleClose, onSave, userToEd
   return (
     <Modal show={show} onHide={handleClose} size="lg">
       <Modal.Header closeButton>
-        <Modal.Title>{userToEdit ? 'Editar Usuario' : 'Crear Usuario'}</Modal.Title>
+        <Modal.Title>{userToEdit ? 'Editar UsuarioResponse' : 'Crear UsuarioResponse'}</Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body>
@@ -166,7 +162,7 @@ const UserForm: React.FC<UserFormProps> = ({ show, handleClose, onSave, userToEd
               // Manejador inline para actualizar solo el campo `auth0Id`
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, auth0Id: e.target.value }))}
               required
-              // Deshabilita el campo Auth0 ID si se está editando un usuario existente
+              // Deshabilita el campo Auth0 ID si se está editando un usuarioResUsuarioResponse existente
               disabled={!!userToEdit}
             />
             {userToEdit && <Form.Text className="text-muted">El Auth0 ID no se puede modificar después de la creación.</Form.Text>}

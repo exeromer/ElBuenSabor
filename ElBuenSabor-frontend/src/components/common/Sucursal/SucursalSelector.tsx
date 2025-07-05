@@ -5,11 +5,9 @@ import { useCart } from '../../../context/CartContext';
 import './SucursalSelector.sass';
 
 const SucursalSelector: React.FC = () => {
-  // Obtenemos todo lo que necesitamos de nuestros contextos
   const { sucursales, selectedSucursal, selectSucursal, loading } = useSucursal();
-  const { clearCart, isCartOpen } = useCart(); // <-- FIX: Obtenemos clearCart
+  const { clearCart, isCartOpen } = useCart(); 
 
-  // El manejador para el evento onChange del select
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const sucursalId = Number(event.target.value);
 
@@ -20,9 +18,8 @@ const SucursalSelector: React.FC = () => {
 
         if (userConfirmation) {
             selectSucursal(sucursalId);
-            clearCart(); // Limpiamos el carrito desde el componente que dispara la acción
+            clearCart(); 
         } else {
-            // Si el usuario cancela, reseteamos el valor del select al anterior
             event.target.value = String(selectedSucursal.id);
         }
     } else if (!selectedSucursal) {
@@ -36,7 +33,7 @@ const SucursalSelector: React.FC = () => {
       <Form.Select
         value={selectedSucursal?.id || ''}
         onChange={handleChange}
-        disabled={loading || isCartOpen} // Se deshabilita si está cargando O si el carrito está abierto
+        disabled={loading || isCartOpen}
         aria-label="Selector de sucursal"
         className="sucursal-selector-select"
       >

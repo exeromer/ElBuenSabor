@@ -22,4 +22,5 @@ public interface PromocionRepository extends JpaRepository<Promocion, Integer> {
             @Param("sucursalId") Integer sucursalId,
             @Param("fechaActual") LocalDate fechaActual,
             @Param("horaActual") LocalTime horaActual);
+    List<Promocion> findBySucursales_IdAndEstadoActivoTrue(Long sucursalId);
 }

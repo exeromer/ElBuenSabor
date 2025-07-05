@@ -1,15 +1,14 @@
 @use "../../../styles/vars" as *
 
 .product-card
-  border: 1px solid $color-clay // Puedes definir esta variable si quieres un borde distinto
-  border-radius: $br2
+  border: 1px solid $color-clay
+  border-radius: $br1
   overflow: hidden
   cursor: pointer
   box-shadow: $shadow
 
   &:hover
-    transform: translateY(-5px)
-    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2)
+    box-shadow: $shadow
 
   .product-card-img
     height: 180px
@@ -45,50 +44,50 @@
       flex-grow: 1
       font-family: $f-f-dos
 
-    .product-card-bottom-section // Nuevo contenedor para precio y botones
+    .product-card-bottom-section
       display: flex
-      flex-direction: column // Organiza los hijos verticalmente
-      align-items: center // Centra horizontalmente el contenido
+      flex-direction: column 
+      align-items: center 
       margin-top: auto
-      padding-top: $p1 // Pequeño padding para separar del texto de la descripción
+      padding-top: $p1
 
-      .product-card-price-display // Clase para el precio más grande
-        font-size: $f-s-4 // ¡Hazlo más grande!
+      .product-card-price-display 
+        font-size: $f-s-4 
         font-weight: bold
-        color: $color-clay
-        margin-bottom: $m2 // Margen entre el precio y los botones
-        text-align: center // Asegura que esté centrado
-        width: 100% // Ocupa todo el ancho disponible para centrado
+        color: $color-grey
+        margin-bottom: $m2 
+        text-align: center 
+        width: 100% 
 
-      .product-card-buttons-group // Contenedor para agrupar los dos botones
+      .product-card-buttons-group 
         display: flex
-        flex-direction: column // Pone los botones uno debajo del otro
-        width: 100% // Ocupa todo el ancho
-        gap: $m2 // Espacio entre los botones
+        flex-direction: column
+        width: 100% 
+        gap: $m2
 
         .product-card-add-button
-          background-color: $color-clay
+          background-color: $color-grey
           border-color: $color-clay
           padding: $p1 $p2
           font-size: $f-s-1
           font-weight: 500
           border-radius: $br1
-          width: 100% // Ocupa todo el ancho del grupo
+          width: 100% 
 
           &:hover
-            background-color: $color-clay
+            background-color: $color-ivory
             border-color: $color-clay
 
           &:active
             background-color: $color-clay
             border-color: $color-clay
 
-        .product-card-controls-wrapper // Nuevo contenedor para los botones de cantidad
+        .product-card-controls-wrapper 
           display: flex
           align-items: center
-          justify-content: center // Centra los controles de cantidad
+          justify-content: center 
           gap: 5px
-          width: 100% // Ocupa todo el ancho del grupo
+          width: 100% 
 
           .product-card-control-button
             padding: 0.4rem 0.6rem
@@ -130,16 +129,25 @@
             text-align: center
 
         .product-card-details-button
-          width: 100% // Ocupa todo el ancho del grupo
+          width: 100% 
           background-color: $color-stone
-          border-color: $color-stone
-          color: $color-ivory
+          border: none
+          color: $color-clay
           font-size: $f-s-1
           border-radius: $br1
           padding: 0.6rem 1rem
           display: flex
           align-items: center
           justify-content: center
+
+          &:hover
+            background-color: $color-ivory
+            border-color: $color-clay
+
+          &:active
+            background-color: $color-clay
+            border-color: $color-clay
+
         .product-card.product-unavailable
           opacity: 0.7
 
@@ -151,8 +159,6 @@
             background-color: $color-stone
             border-color: $color-stone
 
-
-// Media queries para responsividad (ajustes opcionales)
 @media (max-width: $breakpoint-sm)
   .product-card
     .product-card-body
@@ -162,7 +168,7 @@
         font-size: 0.85rem
       .product-card-bottom-section
         .product-card-price-display
-          font-size: $f-s-3 // Un poco más pequeño en móvil
+          font-size: $f-s-3 
         .product-card-add-button, .product-card-details-button
           font-size: 0.85rem
           padding: 0.5rem 0.8rem

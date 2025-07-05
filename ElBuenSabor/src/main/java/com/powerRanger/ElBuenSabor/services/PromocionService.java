@@ -15,4 +15,5 @@ public interface PromocionService {
     PromocionResponseDTO update(Integer id, @Valid PromocionRequestDTO dto) throws Exception;
     void softDelete(Integer id) throws Exception;
     List<PromocionResponseDTO> getPromocionesActivasPorSucursal(Integer sucursalId, LocalDate fecha, LocalTime hora) throws Exception;
+    List<PromocionResponseDTO> findBySucursalId(Long sucursalId);
 }

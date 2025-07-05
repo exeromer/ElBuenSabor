@@ -1,10 +1,10 @@
 // src/components/promociones/PromotionCard.tsx
 
 import React from 'react';
-import { Card, Badge } from 'react-bootstrap';
+import { Card } from 'react-bootstrap';
 import type { PromocionResponse } from '../../types/types';
 import apiClient from '../../services/apiClient';
-
+import './PromotionCard.sass';
 
 interface PromotionCardProps {
   promocion: PromocionResponse;
@@ -17,7 +17,7 @@ const PromotionCard: React.FC<PromotionCardProps> = ({ promocion }) => {
     : defaultImage;
 
   return (
-    <Card className="h-100 shadow-sm">
+    <Card className="h-100 shadow-sm promocion-card">
       <Card.Img variant="top" src={imageUrl} style={{ height: '180px', objectFit: 'cover' }} />
       <Card.Body>
         <Card.Title>{promocion.denominacion}</Card.Title>

@@ -19,52 +19,37 @@
  * @component `ArticuloInsumoDetailModal`, `ArticuloManufacturadoDetailModal`: Modales de detalle.
  */
 import React, { useState, useCallback, useEffect } from 'react';
-import { Container, Tabs, Tab, Button, Badge, Card, Form, Row, Col } from 'react-bootstrap'; // Se añade Form, Row, Col
-//import { useAuth0 } from '@auth0/auth0-react';
-
-// Servicios
+import { Container, Tabs, Tab, Button, Badge, Card, Form, Row, Col } from 'react-bootstrap';
 import { ArticuloInsumoService } from '../services/articuloInsumoService';
 import { ArticuloManufacturadoService } from '../services/ArticuloManufacturadoService';
 import { StockInsumoSucursalService } from '../services/StockInsumoSucursalService';
 import { CategoriaService } from '../services/categoriaService';
 import { SucursalService } from '../services/sucursalService';
-
-// Tipos
-import type { ArticuloManufacturadoResponse, ArticuloInsumoResponse, CategoriaResponse } from '../types/types';
-
-// Tabla Genérica y Hook
+import { PromocionService } from '../services/PromocionService';
+import type { ArticuloManufacturadoResponse, ArticuloInsumoResponse, CategoriaResponse, PromocionResponse } from '../types/types';
 import { SearchableTable, type ColumnDefinition } from '../components/common/Tables/SearchableTable';
 import { useSearchableData } from '../hooks/useSearchableData';
 import { useSucursal } from '../context/SucursalContext';
-
-// Iconos
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEdit, faTrash, faBoxOpen, faTools, faEye, faExclamationTriangle, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
-
-// Componentes de UI anidados
+import { faEdit, faTrash, faBoxOpen, faTools, faEye, faExclamationTriangle, faCheckCircle, faTags } from '@fortawesome/free-solid-svg-icons';
 import ArticuloInsumoForm from '../components/admin/ArticuloInsumoForm';
 import ArticuloManufacturadoForm from '../components/admin/ArticuloManufacturadoForm';
 import ArticuloManufacturadoDetailModal from '../components/admin/ArticuloManufacturadoDetailModal';
 import ArticuloInsumoDetailModal from '../components/admin/ArticuloInsumoDetailModal';
 import CategoriaForm from '../components/admin/CategoriaForm';
+import PromocionForm from '../components/admin/PromocionForm';
+import Titulo from '../components/utils/Titulo/Titulo';
 
-
-// INSTANCIAS DE SERVICIOS
 interface InsumoConStock extends ArticuloInsumoResponse {
   stockActualSucursal?: number;
   stockMinimoSucursal?: number;
 }
 
-// ------ COMPONENTE PRINCIPAL ------
-
 const ManageProductsPage: React.FC = () => {
-  //  const { getAccessTokenSilently } = useAuth0();
   const { selectedSucursal, reloadSucursales } = useSucursal();
-  const [activeTab, setActiveTab] = useState<'manufacturados' | 'insumos' | 'categorias'>('manufacturados');
+  const [activeTab, setActiveTab] = useState<'manufacturados' | 'insumos' | 'categorias' | 'promociones'>('manufacturados');
 
-  // --- ESTADOS Y MANEJADORES PARA MODALES (Común a ambas pestañas) ---
-  // Estos estados se quedan en ManageProductsPage porque los modales se renderizan aquí.
-
+  // ESTADOS Y MANEJADORES PARA MODALES
   // Para ArticuloInsumo
   const [showInsumoForm, setShowInsumoForm] = useState(false);
   const [editingInsumo, setEditingInsumo] = useState<ArticuloInsumoResponse | null>(null);
@@ -82,9 +67,13 @@ const ManageProductsPage: React.FC = () => {
   const [showCategoriaForm, setShowCategoriaForm] = useState(false);
   const [editingCategoria, setEditingCategoria] = useState<CategoriaResponse | null>(null);
 
-  //  -- Lógica para Artículos Insumo con el Hook ---
+  // Para Promociones
+  const [showPromocionForm, setShowPromocionForm] = useState(false);
+  const [editingPromocion, setEditingPromocion] = useState<PromocionResponse | null>(null);
+
+  // Lógica para Artículos Insumo
   const fetchInsumosConStock = useCallback(async (searchTerm: string) => {
-    if (!selectedSucursal) return []; // Si no hay sucursal, no cargamos nada
+    if (!selectedSucursal) return [];
     const insumosBase = await ArticuloInsumoService.getAll(searchTerm);
     const insumosConStockPromises = insumosBase.map(async (insumo) => {
       try {
@@ -99,11 +88,7 @@ const ManageProductsPage: React.FC = () => {
 
   const insumosData = useSearchableData<InsumoConStock>({ fetchData: fetchInsumosConStock });
 
-  // --- Lógica para Artículos Manufacturados con el Hook ---
-  /**
-  * @function fetchManufacturadosFunction
-  * @description Función envuelta en useCallback que llama al servicio para obtener manufacturados.
-  */
+  // Lógica para Artículos Manufacturados
   const fetchManufacturadosPorSucursal = useCallback(async (searchTerm: string) => {
     if (!selectedSucursal) return [];
     const todosLosManufacturados = await ArticuloManufacturadoService.getAll(searchTerm);
@@ -113,14 +98,24 @@ const ManageProductsPage: React.FC = () => {
 
   const manufacturadosData = useSearchableData<ArticuloManufacturadoResponse>({ fetchData: fetchManufacturadosPorSucursal });
 
-  //  -- Lógica para Categorias sin el Hook ---
+  // Lógica para Categorias 
   const fetchCategorias = useCallback((_: string) => {
     return CategoriaService.getAll();
   }, []);
   const categoriasData = useSearchableData<CategoriaResponse>({ fetchData: fetchCategorias });
 
+  // Lógica para Promociones
+  const fetchPromocionesPorSucursal = useCallback(async (_: string) => {
+    if (!selectedSucursal || !selectedSucursal.id) {
+      console.warn('Búsqueda de promociones OMITIDA: La sucursal o su ID no son válidos.');
+      return [];
+    }
+    return PromocionService.getBySucursalId(selectedSucursal.id);
+  }, [selectedSucursal]);
 
-  // --- FILTRADO LOCAL DE DATOS ---
+  const promocionesData = useSearchableData<PromocionResponse>({ fetchData: fetchPromocionesPorSucursal });
+
+  // FILTRADO LOCAL DE DATOS
   const manufacturadosFiltrados = filtroCategoriaManuf
     ? manufacturadosData.items.filter(m => m.categoria.id === filtroCategoriaManuf)
     : manufacturadosData.items;
@@ -129,9 +124,10 @@ const ManageProductsPage: React.FC = () => {
     if (activeTab === 'insumos') insumosData.reload();
     else if (activeTab === 'manufacturados') manufacturadosData.reload();
     else if (activeTab === 'categorias') categoriasData.reload();
+    else if (activeTab === 'promociones') promocionesData.reload();
   }, [selectedSucursal, activeTab]);
 
-  // --- MANEJADORES DE ACCIONES ---
+  // MANEJADORES DE ACCIONES
   /**
    * @function handleOpenInsumoForm
    * @description Abre el modal de formulario para ArticuloInsumo.
@@ -191,9 +187,10 @@ const ManageProductsPage: React.FC = () => {
       reloadSucursales();
     } else if (activeTab === 'insumos') {
       insumosData.reload();
-    } else {
+    } else if (activeTab === 'manufacturados') {
       manufacturadosData.reload();
-    }
+    } else if (activeTab === 'promociones') promocionesData.reload();
+    setShowPromocionForm(false);
   };
 
   const handleOpenCategoriaForm = (categoria: CategoriaResponse | null) => {
@@ -211,9 +208,7 @@ const ManageProductsPage: React.FC = () => {
         } else {
           await SucursalService.asociarCategoria(selectedSucursal.id, categoriaId);
         }
-        // FIX: En lugar de recargar la página, recargamos solo los datos del contexto
         await reloadSucursales();
-        // Recargamos también los datos de la tabla de categorías para reflejar cualquier cambio
         categoriasData.reload();
       } catch (err) {
         alert(`Error al ${action} la categoría.`);
@@ -234,11 +229,23 @@ const ManageProductsPage: React.FC = () => {
     }
   };
 
-  // --- DEFINICIÓN DE COLUMNAS  ---
-  /**
-     * @constant insumoColumns
-     * @description Definición de columnas para la tabla de Artículos Insumo.
-     */
+  const handleOpenPromocionForm = (promocion: PromocionResponse | null) => {
+    setEditingPromocion(promocion);
+    setShowPromocionForm(true);
+  };
+
+  const handleDeletePromocion = async (id: number) => {
+    if (window.confirm(`¿Seguro que quieres eliminar la promoción ID ${id}?`)) {
+      try {
+        await PromocionService.delete(id);
+        promocionesData.reload();
+      } catch (err) {
+        alert(`Error al eliminar: ${err}`);
+      }
+    }
+  };
+
+  // Columnas para la tabla de Artículos Insumo
   const insumoColumns: ColumnDefinition<InsumoConStock>[] = [
     {
       key: 'id',
@@ -261,7 +268,7 @@ const ManageProductsPage: React.FC = () => {
     { key: 'estadoActivo', header: 'Estado', renderCell: (i) => <Badge bg={i.estadoActivo ? 'success' : 'danger'}>{i.estadoActivo ? 'Activo' : 'Inactivo'}</Badge> },
   ];
 
-  // Definición de columnas para la tabla de ArticuloManufacturado
+  // Columnas para la tabla de ArticuloManufacturado
   const manufacturadoColumns: ColumnDefinition<ArticuloManufacturadoResponse>[] = [
     { key: 'id', header: 'ID', renderCell: (am) => am.id, sortable: true },
     { key: 'denominacion', header: 'Denominación', renderCell: (am) => am.denominacion, sortable: true },
@@ -270,7 +277,7 @@ const ManageProductsPage: React.FC = () => {
     { key: 'estadoActivo', header: 'Estado', renderCell: (am) => <Badge bg={am.estadoActivo ? 'success' : 'danger'}>{am.estadoActivo ? 'Activo' : 'Inactivo'}</Badge> },
   ];
 
-  // Definicion de columnas para la tabla de Categorias
+  // Columnas para la tabla de Categorias
   const categoriaColumns: ColumnDefinition<CategoriaResponse>[] = [
     { key: 'id', header: 'ID', renderCell: (c) => c.id },
     { key: 'denominacion', header: 'Denominación', renderCell: (c) => c.denominacion },
@@ -284,6 +291,15 @@ const ManageProductsPage: React.FC = () => {
         return <Badge bg={estaAsociada ? 'success' : 'secondary'}>{estaAsociada ? 'Sí' : 'No'}</Badge>;
       }
     },
+  ];
+
+  // Columnas para la tabla de Promociones
+  const promocionColumns: ColumnDefinition<PromocionResponse>[] = [
+    { key: 'id', header: 'ID', renderCell: (p) => p.id, sortable: true },
+    { key: 'denominacion', header: 'Denominación', renderCell: (p) => p.denominacion, sortable: true },
+    { key: 'tipoPromocion', header: 'Tipo', renderCell: (p) => p.tipoPromocion },
+    { key: 'fechas', header: 'Vigencia', renderCell: (p) => `${p.fechaDesde} - ${p.fechaHasta}` },
+    { key: 'estadoActivo', header: 'Estado', renderCell: (p) => <Badge bg={p.estadoActivo ? 'success' : 'danger'}>{p.estadoActivo ? 'Activa' : 'Inactiva'}</Badge> },
   ];
 
   /**
@@ -344,30 +360,35 @@ const ManageProductsPage: React.FC = () => {
     );
   };
 
+  const renderPromocionActions = (promocion: PromocionResponse) => (
+    <>
+      <Button variant="info" size="sm" className="me-1" onClick={() => handleOpenPromocionForm(promocion)} title="Editar"><FontAwesomeIcon icon={faEdit} /></Button>
+      <Button variant="danger" size="sm" onClick={() => handleDeletePromocion(promocion.id)} title="Eliminar"><FontAwesomeIcon icon={faTrash} /></Button>
+    </>
+  );
+
   const handleTabSelect = (key: string | null) => {
     if (key) setActiveTab(key as any);
   };
 
-
   return (
     <Container className="my-4">
-      <h1 className="text-center mb-4">Gestión de Artículos</h1>
+      <Titulo texto='Gestión de artículos' nivel='titulo' />
       <Tabs activeKey={activeTab} onSelect={handleTabSelect} className="mb-3 justify-content-center">
-        {/* PESTAÑA DE MANUFACTURADOS */}
+
+        {/* PESTAÑA DE ARTICULOS MANUFACTURADOS */}
         <Tab eventKey="manufacturados" title={<span><FontAwesomeIcon icon={faBoxOpen} /> Art. Manufacturados</span>}>
+          <Form.Group as={Row} className="mb-3 align-items-center">
+            <Form.Label className='filtro-categoria-articuloManufacturado' column sm={2}>Filtrar por Categoría:</Form.Label>
+            <Col sm={4}>
+              <Form.Select onChange={(e) => setFiltroCategoriaManuf(Number(e.target.value) || '')} value={filtroCategoriaManuf} disabled={!selectedSucursal}>
+                <option value="">Todas</option>
+                {selectedSucursal?.categorias.map(c => <option key={c.id} value={c.id}>{c.denominacion}</option>)}
+              </Form.Select>
+            </Col>
+          </Form.Group>
           <Card className="shadow-sm">
             <Card.Body>
-              {/* FIX: Filtro por categoría para manufacturados */}
-              <Form.Group as={Row} className="mb-3 align-items-center">
-                <Form.Label column sm={2} className="fw-bold">Filtrar por Categoría:</Form.Label>
-                <Col sm={4}>
-                  <Form.Select onChange={(e) => setFiltroCategoriaManuf(Number(e.target.value) || '')} value={filtroCategoriaManuf} disabled={!selectedSucursal}>
-                    <option value="">Todas</option>
-                    {selectedSucursal?.categorias.map(c => <option key={c.id} value={c.id}>{c.denominacion}</option>)}
-                  </Form.Select>
-                </Col>
-              </Form.Group>
-              <hr />
               <SearchableTable
                 {...manufacturadosData}
                 items={manufacturadosFiltrados}
@@ -380,11 +401,10 @@ const ManageProductsPage: React.FC = () => {
           </Card>
         </Tab>
 
-        {/* PESTAÑA DE INSUMOS */}
+        {/* PESTAÑA DE ARTICULOS INSUMOS */}
         <Tab eventKey="insumos" title={<span><FontAwesomeIcon icon={faTools} /> Art. Insumo</span>}>
           <Card className="shadow-sm">
             <Card.Body>
-              {/*Filtro por categoría para insumos */}
               <SearchableTable
                 {...insumosData}
                 columns={insumoColumns}
@@ -395,7 +415,8 @@ const ManageProductsPage: React.FC = () => {
             </Card.Body>
           </Card>
         </Tab>
-        {/* Nueva pestaña para Categorías */}
+
+        {/* PESTAÑA DE CATEGORIAS */}
         <Tab eventKey="categorias" title={<span><FontAwesomeIcon icon={faTools} /> Categorías</span>}>
           <Card className="shadow-sm">
             <Card.Body>
@@ -409,13 +430,31 @@ const ManageProductsPage: React.FC = () => {
             </Card.Body>
           </Card>
         </Tab>
+
+        {/* PESTAÑA DE PROMOCIONES */}
+        <Tab eventKey="promociones" title={<span><FontAwesomeIcon icon={faTags} /> Promociones</span>}>
+          <Card className="shadow-sm">
+            <Card.Body>
+              <SearchableTable
+                {...promocionesData}
+                columns={promocionColumns}
+                renderRowActions={renderPromocionActions}
+                createButtonText="Nueva Promoción"
+                onCreate={() => handleOpenPromocionForm(null)}
+                searchPlaceholder="Buscar promociones..."
+              />
+            </Card.Body>
+          </Card>
+        </Tab>
       </Tabs>
-      {/* Modales */}
+
+      {/* MODALES */}
       <ArticuloInsumoForm show={showInsumoForm} handleClose={() => setShowInsumoForm(false)} onSave={handleFormSubmit} articuloToEdit={editingInsumo} />
       <ArticuloManufacturadoForm show={showManufacturadoForm} handleClose={() => setShowManufacturadoForm(false)} onSave={handleFormSubmit} articuloToEdit={editingManufacturado} />
       <ArticuloManufacturadoDetailModal show={showManufacturadoDetailModal} handleClose={() => setShowManufacturadoDetailModal(false)} articulo={selectedManufacturadoForDetail} />
       <ArticuloInsumoDetailModal show={showInsumoDetailModal} handleClose={() => setShowInsumoDetailModal(false)} articulo={selectedInsumoForDetail} />
       <CategoriaForm show={showCategoriaForm} handleClose={() => setShowCategoriaForm(false)} onSave={handleFormSubmit} categoriaToEdit={editingCategoria} />
+      <PromocionForm show={showPromocionForm} handleClose={() => setShowPromocionForm(false)} onSave={handleFormSubmit} promocionToEdit={editingPromocion} />
     </Container>
   );
 };

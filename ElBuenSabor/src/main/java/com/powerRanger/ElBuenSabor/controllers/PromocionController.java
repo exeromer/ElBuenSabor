@@ -60,6 +60,28 @@ public class PromocionController {
         }
     }
 
+    /**
+     * Obtiene todas las promociones activas para una sucursal específica.
+     * @param sucursalId El ID de la sucursal por la cual filtrar las promociones.
+     * @return Una lista de promociones para la sucursal.
+     */
+    @GetMapping("/sucursal/{sucursalId}")
+    public ResponseEntity<List<PromocionResponseDTO>> getPromocionesBySucursal(@PathVariable Long sucursalId) {
+        try {
+            // Llamamos al método del servicio que buscará por sucursalId
+            List<PromocionResponseDTO> promociones = promocionService.findBySucursalId(sucursalId);
+            if (promociones.isEmpty()) {
+                // Si no hay promociones, devolvemos un 204 No Content, lo cual es correcto.
+                return ResponseEntity.noContent().build();
+            }
+            // Si se encuentran promociones, se devuelven con un 200 OK.
+            return ResponseEntity.ok(promociones);
+        } catch (Exception e) {
+            // En caso de un error inesperado en el servidor.
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<?> updatePromocion(@PathVariable Integer id, @Valid @RequestBody PromocionRequestDTO dto) {
         try {

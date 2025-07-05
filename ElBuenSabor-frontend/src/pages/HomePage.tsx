@@ -13,7 +13,6 @@ import type { ArticuloManufacturadoResponse, PromocionResponse, SucursalSimpleRe
 
 const HomePage: React.FC = () => {
   const { selectedSucursal } = useSucursal();
-  // Estados para manejar la lista de productos, la carga y los errores
   const [productos, setProductos] = useState<ArticuloManufacturadoResponse[]>([]);
   const [promociones, setPromociones] = useState<PromocionResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -38,18 +37,13 @@ const HomePage: React.FC = () => {
           PromocionService.getAll()
         ]);
 
-        // --- Lógica de Productos Corregida ---
-        // 1. Obtenemos los IDs de las categorías que pertenecen a la sucursal
         const idsCategoriasDeSucursal = selectedSucursal.categorias.map(c => c.id);
 
-        // 2. Filtramos la lista de productos en un solo paso
         const productosDeLaSucursal = fetchedProducts.filter(p =>
           p.estadoActivo && idsCategoriasDeSucursal.includes(p.categoria.id)
         );
         setProductos(productosDeLaSucursal);
 
-        // --- Lógica de Promociones Corregida ---
-        // 3. Filtramos las promociones, añadiendo los tipos explícitos
         const promocionesDeLaSucursal = fetchedPromotions.filter((promo: PromocionResponse) =>
           promo.estadoActivo &&
           promo.sucursales.some((suc: SucursalSimpleResponse) => suc.id === selectedSucursal.id)
@@ -85,14 +79,12 @@ const HomePage: React.FC = () => {
         </div>
       </Contenedor>
 
-      {/* Si no hay sucursal, no mostramos ni productos ni promociones */}
       {!selectedSucursal ? (
         <Alert variant="info" className="text-center">Por favor, selecciona una sucursal en el menú superior para ver nuestro catálogo y promociones.</Alert>
       ) : error ? (
         <Alert variant="danger">{error}</Alert>
       ) : (
         <>
-          {/* Sección de Promociones */}
           {promociones.length > 0 && (
             <div className="mt-5">
               <Titulo texto="Nuestras Promociones" nivel="subtitulo" />
@@ -106,7 +98,6 @@ const HomePage: React.FC = () => {
             </div>
           )}
 
-          {/* Sección de Productos */}
           <div className="mt-5">
             <Titulo texto="Nuestro Menú" nivel="subtitulo" />
             <Row xs={1} md={2} lg={3} xl={4} className="g-4">
