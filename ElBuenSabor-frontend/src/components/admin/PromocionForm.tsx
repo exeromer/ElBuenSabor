@@ -10,8 +10,8 @@ import { faPlusCircle, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
 
 // Servicios
 import { PromocionService } from '../../services/PromocionService';
-import { SucursalService } from '../../services/sucursalService'; 
-import { ArticuloInsumoService } from '../../services/articuloInsumoService'; 
+import { SucursalService } from '../../services/SucursalService'; 
+import { ArticuloInsumoService } from '../../services/ArticuloInsumoService'; 
 import { ArticuloManufacturadoService } from '../../services/ArticuloManufacturadoService'; 
 
 // Tipos y Enums

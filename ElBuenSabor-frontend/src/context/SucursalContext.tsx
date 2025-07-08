@@ -1,6 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, type ReactNode, useCallback } from 'react';
 import type { SucursalResponse } from '../types/types';
-import { SucursalService } from '../services/sucursalService';
+import { SucursalService } from '../services/SucursalService';
 
 
 // 1. Definición del tipo para el contexto

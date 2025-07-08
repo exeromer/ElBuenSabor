@@ -1,5 +1,3 @@
-// Nueva carpeta/ElBuenSabor-frontend/src/services/clienteUsuarioService.ts
-
 /**
  * @file clienteUsuarioService.ts
  * @description Provee funciones para interactuar con los endpoints de Clientes y Usuarios de la API.
@@ -9,7 +7,6 @@
 import apiClient, { setAuthToken } from './apiClient';
 import type { ClienteResponse, ClienteRequest, UsuarioResponse, UsuarioRequest } from '../types/types';
 
-// Definimos la clase ClienteUsuarioService
 export class ClienteUsuarioService {
 
     /**

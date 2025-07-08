@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner, Row, Col, Image } from 'react-bootstrap';
-import { ArticuloInsumoService } from '../../services/articuloInsumoService';
-import { UnidadMedidaService } from '../../services/unidadMedidaService';
-import { FileUploadService } from '../../services/fileUploadService';
-import { ImagenService } from '../../services/imagenService';
+import { ArticuloInsumoService } from '../../services/ArticuloInsumoService';
+import { UnidadMedidaService } from '../../services/UnidadMedidaService';
+import { FileUploadService } from '../../services/FileUploadService';
+import { ImagenService } from '../../services/ImagenService';
 import { StockInsumoSucursalService } from '../../services/StockInsumoSucursalService';
 import { useSucursal } from '../../context/SucursalContext';
 import type { ArticuloInsumoRequest, UnidadMedidaResponse, ArticuloInsumoResponse, ImagenResponse, StockInsumoSucursalRequest } from '../../types/types';

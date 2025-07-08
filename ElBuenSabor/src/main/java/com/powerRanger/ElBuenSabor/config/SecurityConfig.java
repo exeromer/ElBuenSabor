@@ -128,6 +128,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/pedidos/cajero/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.GET, "/api/pedidos/cocina/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.GET, "/api/pedidos/delivery/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.GET, "/api/empleados/usuario/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
 
                                 // Endpoints de Empleado (solo para ADMIN)
                                 .requestMatchers("/api/empleados/**").hasAuthority("ROLE_ADMIN")

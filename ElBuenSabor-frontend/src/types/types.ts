@@ -404,6 +404,17 @@ export interface UsuarioResponse {
   fechaBaja?: string; // LocalDate -> string
 }
 
+export interface EmpleadoResponse {
+  id: number;
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  rolEmpleado: 'CAJERO' | 'COCINA' | 'DELIVERY';
+  usuarioId: number;
+  usernameUsuario: string;
+  estadoActivo: boolean;
+  fechaBaja?: string;
+}
 
 // --- Tipos Polimórficos (Uniones Discriminadas) ---
 

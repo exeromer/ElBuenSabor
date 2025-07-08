@@ -57,16 +57,6 @@ const CheckoutPage: React.FC = () => {
     aplicarDescuentosAdicionales(tipoEnvio, formaPago);
   }, [tipoEnvio, formaPago, aplicarDescuentosAdicionales]);
 
-
-  /** useEffect(() => {
-    let discount = 0;
-    if (tipoEnvio === 'TAKEAWAY' && formaPago === 'EFECTIVO') {
-      discount = totalPrice * 0.10;
-    }
-    setCalculatedDiscount(discount);
-    setFinalTotal(totalPrice - discount);
-  }, [tipoEnvio, formaPago, totalPrice]); */
-
   useEffect(() => {
     if (preferenceId) {
       const publicKey = import.meta.env.VITE_MERCADOPAGO_PUBLIC_KEY;

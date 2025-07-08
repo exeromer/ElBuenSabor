@@ -19,9 +19,9 @@ import { Modal, Form, Button, Alert, Spinner, Row, Col, InputGroup, Card, ListGr
 import { useSucursal } from '../../context/SucursalContext';
 
 import { ArticuloManufacturadoService } from '../../services/ArticuloManufacturadoService';
-import { ArticuloInsumoService } from '../../services/articuloInsumoService';
-import { FileUploadService } from '../../services/fileUploadService';
-import { ImagenService } from '../../services/imagenService';
+import { ArticuloInsumoService } from '../../services/ArticuloInsumoService';
+import { FileUploadService } from '../../services/FileUploadService';
+import { ImagenService } from '../../services/ImagenService';
 
 import type { ArticuloManufacturadoResponse, CategoriaResponse, ArticuloInsumoResponse, ArticuloManufacturadoRequest, ArticuloManufacturadoDetalleResponse, ImagenResponse } from '../../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';

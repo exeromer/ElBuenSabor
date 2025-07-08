@@ -1,4 +1,4 @@
-import apiClient from '../services/apiClient';
+import apiClient from './apiClient';
 import type { StockInsumoSucursalRequest, StockInsumoSucursalResponse,ArticuloManufacturadoResponse } from '../types/types';
 
 export class StockInsumoSucursalService {

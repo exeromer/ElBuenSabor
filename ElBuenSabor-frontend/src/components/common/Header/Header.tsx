@@ -9,48 +9,70 @@ import { Navbar, Nav, Container, Button, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faShoppingCart, faUser, faSignInAlt, faSignOutAlt, faClipboardList } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faUser, faSignInAlt, faSignOutAlt, faClipboardList, faTachometerAlt, faCashRegister, faUtensils, faMotorcycle, faChartLine  } from '@fortawesome/free-solid-svg-icons';
 import { useCart } from '../../../context/CartContext';
 import { useSucursal } from '../../../context/SucursalContext';
+import { useUser } from '../../../context/UserContext';
 import SucursalSelector from '../Sucursal/SucursalSelector';
 import CartModal from '../../cart/CartModal';
 import './Header.sass'
 
-interface HeaderProps {}
+interface HeaderProps { }
 
 const Header: React.FC<HeaderProps> = () => {
   const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
   const { totalItems, openCart } = useCart();
   const { sucursales } = useSucursal();
-  const getUserRole = (): string | undefined => {
-    if (user?.email?.endsWith('@admin.com')) return 'ADMIN';
-    if (user?.email?.endsWith('@empleado.com')) return 'EMPLEADO';
-    if (isAuthenticated) return 'CLIENTE';
-    return undefined;
-  };
-  const userRole = getUserRole();
+  const { userRole, employeeRole } = useUser();
+
 
   return (
     <Navbar expand="lg">
       <Container>
         <Navbar.Brand as={Link} to="/">
-          <img
-            src="/logo.png"
-            alt="logo de la página"
-            className='logo'
-          />
+          <img src="/logo.png" alt="logo de la página" className='logo' />
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
             <Nav.Link as={Link} to="/">Inicio</Nav.Link>
             <Nav.Link as={Link} to="/products">Menú</Nav.Link>
-            {isAuthenticated && (userRole === 'ADMIN' || userRole === 'EMPLEADO') && (
-              <Nav.Link as={Link} to="/admin-dashboard">Administración</Nav.Link>
-            )}
-            {isAuthenticated && userRole === 'CLIENTE' && (
+
+            {/* --- ENLACES CONDICIONALES --- */}
+
+            {/* Para Clientes */}
+            {userRole === 'CLIENTE' && (
               <Nav.Link as={Link} to="/mis-pedidos">
                 <FontAwesomeIcon icon={faClipboardList} className="me-1" /> Mis Pedidos
+              </Nav.Link>
+            )}
+
+            {/* Para Todos los Empleados y Admins */}
+            {(userRole === 'ADMIN' || userRole === 'EMPLEADO') && (
+              <Nav.Link as={Link} to="/admin-dashboard">
+                <FontAwesomeIcon icon={faTachometerAlt} className="me-1" /> Administración
+              </Nav.Link>
+            )}
+
+            {/* Específicos para cada rol de Empleado */}
+            {employeeRole === 'CAJERO' && (
+              <Nav.Link as={Link} to="/cajero">
+                <FontAwesomeIcon icon={faCashRegister} className="me-1" /> Caja
+              </Nav.Link>
+            )}
+            {employeeRole === 'COCINA' && (
+              <Nav.Link as={Link} to="/cocina">
+                <FontAwesomeIcon icon={faUtensils} className="me-1" /> Cocina
+              </Nav.Link>
+            )}
+            {employeeRole === 'DELIVERY' && (
+              <Nav.Link as={Link} to="/delivery">
+                <FontAwesomeIcon icon={faMotorcycle} className="me-1" /> Delivery
+              </Nav.Link>
+            )}
+            {userRole === 'ADMIN' && (
+              <Nav.Link as={Link} to="/estadisticas">
+                <FontAwesomeIcon icon={faChartLine} className="me-1" /> Estadísticas
               </Nav.Link>
             )}
           </Nav>
@@ -60,14 +82,16 @@ const Header: React.FC<HeaderProps> = () => {
           </div>
 
           <Nav>
-            <Nav.Link onClick={openCart} style={{ cursor: 'pointer' }}>
-              <FontAwesomeIcon className="h" icon={faShoppingCart} />
-              {totalItems > 0 && (
-                <Badge pill bg="danger" className="ms-1">
-                  {totalItems}
-                </Badge>
-              )}
-            </Nav.Link>
+            {/* El carrito solo es visible para clientes */}
+            {userRole === 'CLIENTE' && (
+              <Nav.Link onClick={openCart} style={{ cursor: 'pointer' }}>
+                <FontAwesomeIcon className="h" icon={faShoppingCart} />
+                {totalItems > 0 && (
+                  <Badge pill bg="danger" className="ms-1">{totalItems}</Badge>
+                )}
+              </Nav.Link>
+            )}
+
             {!isAuthenticated ? (
               <Button variant="secondary" onClick={() => loginWithRedirect()}>
                 <FontAwesomeIcon icon={faSignInAlt} className="me-1" /> Iniciar Sesión

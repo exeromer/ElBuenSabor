@@ -9,7 +9,13 @@ import AdminDashboardPage from './pages/AdminDashboardPage';
 import ManageProductsPage from './pages/ManageProductsPage';
 import ManageUsersPage from './pages/ManageUsersPage';
 import PrivateRoute from './components/auth/PrivateRoute';
-import { Button } from 'react-bootstrap';
+import CajeroPage from './pages/CajeroPage';
+import { Button, Container} from 'react-bootstrap';
+
+// Placeholders para las paginas
+const CocinaPage = () => <Container className="my-4"><h1>Vista de Cocina</h1></Container>;
+const DeliveryPage = () => <Container className="my-4"><h1>Vista de Delivery</h1></Container>;
+const EstadisticasPage = () => <Container className="my-4"><h1>Vista de Estadísticas</h1></Container>;
 
 
 /**
@@ -21,33 +27,31 @@ import { Button } from 'react-bootstrap';
 function AppRoutes() {
   return (
     <Routes>
-      {/* Rutas Públicas */}
+      {/* --- Rutas Públicas y de Cliente (sin cambios) --- */}
       <Route path="/" element={<HomePage />} />
       <Route path="/products" element={<ProductsPage />} />
-
-      {/* Rutas Protegidas por Rol de Cliente */}
-      {/* Checkout: requiere rol de CLIENTE, ADMIN, EMPLEADO */}
       <Route path="/checkout" element={<PrivateRoute component={CheckoutPage} requiredRoles={['CLIENTE', 'ADMIN', 'EMPLEADO']} />} />
-      {/* Perfil: accesible por CLIENTE, ADMIN, EMPLEADO */}
       <Route path="/profile" element={<PrivateRoute component={ProfilePage} requiredRoles={['CLIENTE', 'ADMIN', 'EMPLEADO']} />} />
-      {/* Mis Pedidos: requiere rol de CLIENTE, ADMIN, EMPLEADO */}
       <Route path="/mis-pedidos" element={<PrivateRoute component={MyOrdersPage} requiredRoles={['CLIENTE', 'ADMIN', 'EMPLEADO']} />} />
+      
+      {/* --- Rutas de Administración y Empleados --- */}
+      <Route path="/admin-dashboard" element={<PrivateRoute component={AdminDashboardPage} requiredRoles={['ADMIN', 'EMPLEADO']} />} />
+      <Route path="/manage-products" element={<PrivateRoute component={ManageProductsPage} requiredRoles={['ADMIN', 'EMPLEADO']} />} />
+      <Route path="/manage-users" element={<PrivateRoute component={ManageUsersPage} requiredRoles={['ADMIN']} />} />
+      
+      {/* --- NUEVAS RUTAS POR ROL --- */}
+      <Route path="/cajero" element={<PrivateRoute component={CajeroPage} requiredRoles={['ADMIN', 'EMPLEADO']} />} />
+      <Route path="/cocina" element={<PrivateRoute component={CocinaPage} requiredRoles={['ADMIN', 'EMPLEADO']} />} />
+      <Route path="/delivery" element={<PrivateRoute component={DeliveryPage} requiredRoles={['ADMIN', 'EMPLEADO']} />} />
+      <Route path="/estadisticas" element={<PrivateRoute component={EstadisticasPage} requiredRoles={['ADMIN']} />} />
 
-      {/* Rutas Protegidas por Rol de Administración/Empleado */}
-      {/* Dashboard de Administración: requiere rol de ADMIN o EMPLEADO */}
-      <Route path="/admin-dashboard" element={<PrivateRoute component={AdminDashboardPage} requiredRoles={['CLIENTE', 'ADMIN', 'EMPLEADO']} />} />
-      {/* Gestión de Productos: requiere rol de ADMIN o EMPLEADO */}
-      <Route path="/manage-products" element={<PrivateRoute component={ManageProductsPage} requiredRoles={['CLIENTE', 'ADMIN', 'EMPLEADO']} />} />
-      {/* Gestión de Usuarios y Clientes: requiere rol de ADMIN */}
-      <Route path="/manage-users" element={<PrivateRoute component={ManageUsersPage} requiredRoles={['CLIENTE', 'ADMIN', 'EMPLEADO']} />} />
-      {/* Ruta comodín para páginas no encontradas (404) */}
+      {/* Ruta comodín para 404 */}
       <Route path="*" element={
         <div className="d-flex justify-content-center align-items-center text-center my-5" style={{ minHeight: '60vh' }}>
           <div>
             <h1 className="display-4">404</h1>
             <p className="lead">¡Oops! Página no encontrada.</p>
-            <p>La dirección a la que intentas acceder no existe.</p>
-            <Button variant="primary" onClick={() => window.location.href = '/'}>Volver a la Página Principal</Button>
+            <Button variant="primary" onClick={() => window.location.href = '/'}>Volver al Inicio</Button>
           </div>
         </div>
       } />

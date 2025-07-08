@@ -1,4 +1,4 @@
-import apiClient from '../services/apiClient';
+import apiClient from './apiClient';
 import type { ClienteRanking, ArticuloManufacturadoRanking } from '../types/types';
 
 interface RankingParams {
