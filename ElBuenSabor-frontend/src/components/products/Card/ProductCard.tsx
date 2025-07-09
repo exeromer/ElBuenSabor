@@ -7,7 +7,6 @@ import { useAuth0 } from '@auth0/auth0-react'; // <-- 1. Importamos el hook de A
 import { OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { useSucursal } from '../../../context/SucursalContext';
 import { StockInsumoSucursalService } from '../../../services/StockInsumoSucursalService';
-import apiClient from '../../../services/apiClient'; // Importamos apiClient para la URL de la imagen
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faMinus, faTrash, faEye } from '@fortawesome/free-solid-svg-icons';
 import DetalleModal from '../../../components/products/DetalleModal/DetalleModal';
@@ -52,9 +51,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const quantity = cartItem ? cartItem.quantity : 0;
 
   const defaultImage = '/placeholder-food.png';
-  const imageUrl = product.imagenes && product.imagenes.length > 0
-    ? `${apiClient.defaults.baseURL}/files/download/${product.imagenes[0].denominacion}`
-    : defaultImage;
+  const imageUrl = product.imagenes?.[0]?.denominacion || defaultImage;
+
 
   const handleAddToCart = () => {
     if (!isDisponible || !product.id || isLoading) return;

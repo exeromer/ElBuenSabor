@@ -2,47 +2,56 @@ import { useEffect, useRef } from 'react';
 import SockJS from 'sockjs-client';
 import Stomp from 'stompjs';
 import apiClient from '../services/apiClient';
+import toast from 'react-hot-toast';
+import type { PedidoResponse } from '../types/types'; 
 
 // El callback recibirá el cuerpo del mensaje, que esperamos sea un objeto (ej. PedidoResponse)
 type MessageCallback = (message: any) => void;
 
 export const useWebSocket = (topic: string, onMessageReceived: MessageCallback) => {
-    // Usamos useRef para mantener una única instancia del cliente Stomp durante el ciclo de vida del componente
     const stompClientRef = useRef<Stomp.Client | null>(null);
+    const processedMessageIds = useRef(new Set());
 
     useEffect(() => {
-        // Solo intentamos conectar si el topic es válido
         if (!topic) return;
 
-        // URL del endpoint de WebSocket de tu backend
         const socket = new SockJS(`${apiClient.defaults.baseURL}/ws`);
         const stompClient = Stomp.over(socket);
         stompClientRef.current = stompClient;
         
-        // Desactivamos los logs de debug de Stomp en la consola para no saturarla
         stompClient.debug = () => {};
 
         stompClient.connect({}, () => {
             console.log(`Conectado al WebSocket y suscrito al tema: ${topic}`);
             
-            // Suscripción al tema específico
             stompClient.subscribe(topic, (message) => {
-                // Cuando llega un mensaje, parseamos su contenido y llamamos al callback
-                const messageBody = JSON.parse(message.body);
-                onMessageReceived(messageBody);
+                const pedido: PedidoResponse = JSON.parse(message.body);
+
+                // --- LÓGICA DE NOTIFICACIÓN REFINADA ---
+                // Solo notificar si es un pedido nuevo (PENDIENTE) y no ha sido notificado antes.
+                if (pedido.estado === 'PENDIENTE' && !processedMessageIds.current.has(pedido.id)) {
+                    processedMessageIds.current.add(pedido.id);
+                    toast.success(`¡Nuevo pedido! #${pedido.id} de ${pedido.cliente.nombre}`, {
+                        icon: '🔔',
+                        duration: 5000,
+                        position: 'top-right',
+                    });
+                }
+                
+                // Siempre llamar al callback para que el componente decida si actualizar la tabla.
+                onMessageReceived(pedido);
             });
         }, (error) => {
             console.error('Error de conexión con WebSocket:', error);
         });
 
-        // Función de limpieza que se ejecuta cuando el componente se "desmonta"
         return () => {
+            processedMessageIds.current.clear();
             if (stompClient.connected) {
-                console.log(`Desconectando del tema: ${topic}`);
                 stompClient.disconnect(() => {
                     console.log('Desconectado del WebSocket.');
                 });
             }
         };
-    }, [topic, onMessageReceived]); // El efecto se vuelve a ejecutar si el tema o el callback cambian
+    }, [topic, onMessageReceived]);
 };

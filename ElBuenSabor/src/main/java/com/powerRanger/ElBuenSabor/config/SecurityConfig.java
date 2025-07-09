@@ -52,11 +52,8 @@ public class SecurityConfig {
                                 // =================================================================================
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // Pre-flight requests de CORS
                                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
-                                .requestMatchers(
-                                        HttpMethod.GET,
-                                        "/api/sucursales", // Permite el GET a la lista de sucursales
-                                        "/api/sucursales/**" // Opcional: si quieres que el detalle también sea público
-                                ).permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/sucursales", "/api/sucursales/**").permitAll()
+                                .requestMatchers("/api/ws/**").permitAll()
                                 .requestMatchers(
                                         "/api/mercado-pago/notificaciones",
                                         "/payment/**", // Permite /payment/success, /payment/failure, etc.
@@ -67,6 +64,8 @@ public class SecurityConfig {
                                 // Endpoints públicos de la API
                                 .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/files/view/{filename}").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/files/view/**").permitAll()
+
 
                                 // Endpoints de LECTURA de catálogos (Artículos, Categorías, etc.)
                                 .requestMatchers(HttpMethod.GET, "/api/categorias/**").permitAll()

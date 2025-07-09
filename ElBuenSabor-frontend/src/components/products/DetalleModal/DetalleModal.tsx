@@ -2,10 +2,9 @@ import React from 'react';
 import { Modal, Button, Image, Container, Row, Col, Badge } from 'react-bootstrap';
 import type { ArticuloManufacturadoResponse } from '../../../types/types';
 import { useCart } from '../../../context/CartContext';
-import apiClient from '../../../services/apiClient';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faMinus, faTrash } from '@fortawesome/free-solid-svg-icons';
-import './DetalleModal.sass'; 
+import './DetalleModal.sass';
 
 interface DetalleModalProps {
   product: ArticuloManufacturadoResponse;
@@ -16,14 +15,13 @@ interface DetalleModalProps {
 
 const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDisponible }) => {
   const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
-  
+
   const cartItem = cart.find(item => item.articulo.id === product.id);
   const quantity = cartItem ? cartItem.quantity : 0;
 
   const defaultImage = '/placeholder-food.png';
-  const imageUrl = product.imagenes && product.imagenes.length > 0
-    ? `${apiClient.defaults.baseURL}/files/download/${product.imagenes[0].denominacion}`
-    : defaultImage;
+  const imageUrl = product.imagenes?.[0]?.denominacion || defaultImage;
+
 
   // --- Funciones para manejar el carrito (idénticas a las de ProductCard) ---
   const handleAddToCart = () => {
@@ -64,7 +62,7 @@ const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDi
             <Col md={6}>
               <h5 className="detalle-modal-section-title">Descripción:</h5>
               <p className="detalle-modal-description">{product.descripcion}</p>
-              
+
               <h5 className="detalle-modal-section-title">Precio:</h5>
               <p className="detalle-modal-price">${product.precioVenta.toFixed(2)}</p>
 
@@ -88,9 +86,9 @@ const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDi
           </Button>
         ) : (
           <div className="d-flex align-items-center">
-             <Button variant="outline-danger" onClick={handleRemoveFromCart} disabled={!isDisponible}>
-                <FontAwesomeIcon icon={faTrash} />
-             </Button>
+            <Button variant="outline-danger" onClick={handleRemoveFromCart} disabled={!isDisponible}>
+              <FontAwesomeIcon icon={faTrash} />
+            </Button>
             <Button variant="outline-secondary" onClick={handleDecreaseQuantity} className="ms-2" disabled={!isDisponible}>
               <FontAwesomeIcon icon={faMinus} />
             </Button>

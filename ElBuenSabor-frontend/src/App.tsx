@@ -21,6 +21,7 @@ import Footer from './components/common/Footer/Footer';
 import Loading from './components/auth/Loading'; 
 import { useAuth0 } from '@auth0/auth0-react';
 import AppRoutes from './AppRoutes';
+import {Toaster} from 'react-hot-toast';
 
 /**
  * @function App
@@ -57,6 +58,7 @@ function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <Toaster/>
       <Header />
       <main className="flex-grow-1">
         <AppRoutes />

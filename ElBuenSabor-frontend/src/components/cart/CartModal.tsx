@@ -4,8 +4,6 @@ import { useCart } from '../../context/CartContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
-// FIX: Importamos apiClient para las URLs de las imágenes
-import apiClient from '../../services/apiClient';
 
 const CartModal: React.FC = () => {
   // FIX: Obtenemos los nuevos valores de desglose de precios del contexto
@@ -43,11 +41,7 @@ const CartModal: React.FC = () => {
                 <Col xs={2} className="d-flex justify-content-center">
                   <Image
                     // FIX: Construimos la URL de la imagen correctamente
-                    src={
-                      item.articulo.imagenes && item.articulo.imagenes.length > 0
-                        ? `${apiClient.defaults.baseURL}/files/download/${item.articulo.imagenes[0].denominacion}`
-                        : defaultImage
-                    }
+                    src={item.articulo.imagenes?.[0]?.denominacion || defaultImage}
                     thumbnail
                     style={{ width: '80px', height: '80px', objectFit: 'cover' }}
                     alt={`Imagen de ${item.articulo.denominacion}`}

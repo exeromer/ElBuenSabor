@@ -1,5 +1,3 @@
-// En: src/context/UserContext.tsx
-
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { setAuthToken } from '../services/apiClient';

@@ -8,7 +8,6 @@ import { debounce } from '../components/utils/Functions/debounce';
 type SortDirection = 'ascending' | 'descending';
 
 // Interfaz para la configuración del ordenamiento
-// CAMBIO CLAVE AQUÍ: key es SOLO keyof T, ya no string.
 export interface SortConfig<T> {
   key: keyof T; // Ahora la clave de ordenamiento debe ser una propiedad directa de T
   direction: SortDirection;

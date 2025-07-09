@@ -27,7 +27,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         // Registra el endpoint "/ws" para la conexión WebSocket.
         // Con SockJS se habilita un fallback para navegadores que no soportan WebSockets nativos.
         // Permite orígenes específicos para CORS, lo cual es crucial en entornos de desarrollo.
-        registry.addEndpoint("/ws")
+        registry.addEndpoint("/api" +
+                        "/ws")
                 .setAllowedOriginPatterns("http://localhost:5173", "http://localhost:8080", "http://localhost:4200") // Permite orígenes específicos para CORS
                 .withSockJS();
     }

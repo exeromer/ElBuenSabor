@@ -9,7 +9,6 @@ import type { ArticuloResponse, CarritoResponse, PromocionResponse, SucursalSimp
 import type { TipoEnvio, FormaPago } from '../types/enums';
 
 
-
 // Tipo enriquecido para el estado local
 export interface EnrichedCartItem {
   id: number; // ID del CarritoItem

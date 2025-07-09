@@ -20,6 +20,7 @@
     "react": "^19.1.0",
     "react-bootstrap": "^2.10.10",
     "react-dom": "^19.1.0",
+    "react-hot-toast": "^2.5.2",
     "react-router-dom": "^7.6.0",
     "sockjs-client": "^1.6.1",
     "stompjs": "^2.3.3"
