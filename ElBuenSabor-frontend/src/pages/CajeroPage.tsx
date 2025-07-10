@@ -1,5 +1,5 @@
-import React, { useState, useCallback} from 'react';
-import { Container, Card, Button, Spinner, Alert, Tabs, Tab, Badge, Form, InputGroup} from 'react-bootstrap';
+import React, { useState, useCallback } from 'react';
+import { Container, Card, Button, Spinner, Alert, Tabs, Tab, Badge } from 'react-bootstrap';
 import { useSucursal } from '../context/SucursalContext';
 import { PedidoService } from '../services/PedidoService';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -10,45 +10,29 @@ import toast from 'react-hot-toast';
 
 // Componente de tabla reutilizable que ya tienes
 import { SearchableTable, type ColumnDefinition } from '../components/common/Tables/SearchableTable';
+import { faEye } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSearch } from '@fortawesome/free-solid-svg-icons';
+import CajeroPedidoDetailModal from '../components/pedidos/PedidoDetailModal';
 
 const CajeroPage: React.FC = () => {
-
-    // =================================================================================
-    // PASO 1: ESTADOS Y HOOKS PRINCIPALES
-    // =================================================================================
-
-    // --- Contexto ---
-    // Obtenemos la sucursal seleccionada globalmente.
     const { selectedSucursal } = useSucursal();
 
-    // --- Estados del Componente ---
-    // Pestaña de estado activa ('PENDIENTE', 'EN_PREPARACION', etc.).
     const [activeTab, setActiveTab] = useState<Estado>('PENDIENTE');
-    // Término de búsqueda para el ID del pedido.
     const [pedidoIdSearch, setPedidoIdSearch] = useState('');
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [selectedPedido, setSelectedPedido] = useState<PedidoResponse | null>(null);
 
-
-    // =================================================================================
-    // PASO 2: LÓGICA DE DATOS (BÚSQUEDA, ORDENAMIENTO Y CARGA)
-    // =================================================================================
-
-    // --- Carga de Datos ---
-    // Definimos la función que `useSearchableData` usará para obtener los pedidos.
-    // Se ejecutará cada vez que cambie la sucursal, la pestaña o el término de búsqueda.
     const fetchPedidos = useCallback(async () => {
         if (!selectedSucursal) return [];
-        
+
         // Convertimos el string de búsqueda a número, o undefined si está vacío.
         const id = pedidoIdSearch ? parseInt(pedidoIdSearch, 10) : undefined;
-        
+
         // Llamamos al servicio con todos los filtros.
         return PedidoService.getPedidosCajero(selectedSucursal.id, activeTab, id);
     }, [selectedSucursal, activeTab, pedidoIdSearch]);
 
     // --- Hook de Datos ---
-    // Centralizamos toda la gestión de datos (carga, error, ordenamiento) en este hook.
     const {
         items: pedidos,
         isLoading,
@@ -64,10 +48,7 @@ const CajeroPage: React.FC = () => {
     // =================================================================================
 
     // --- Manejador de Mensajes ---
-    // Esta función se ejecutará cada vez que llegue un mensaje del WebSocket.
     const handleWebSocketMessage = useCallback((pedido: PedidoResponse) => {
-        // Si el pedido recibido pertenece a la pestaña que estamos viendo,
-        // simplemente recargamos la tabla para mostrarlo.
         if (pedido.estado === activeTab) {
             reload();
         }
@@ -84,21 +65,12 @@ const CajeroPage: React.FC = () => {
     // =================================================================================
     // PASO 4: MANEJADORES DE ACCIONES DEL USUARIO
     // =================================================================================
-
-    // Se ejecuta cuando el usuario hace clic en una pestaña.
     const handleTabSelect = (k: string | null) => {
         if (k) {
             setPedidoIdSearch(''); // Limpiamos la búsqueda anterior.
             setActiveTab(k as Estado);
         }
     };
-
-    // Se ejecuta cuando el usuario presiona el botón de buscar.
-    const handleSearch = () => {
-        reload(); // Forzamos una recarga con el nuevo término de búsqueda.
-    };
-
-    // Se ejecuta cuando el cajero cambia el estado de un pedido.
     const handleUpdateEstado = async (pedidoId: number, nuevoEstado: Estado) => {
         if (!selectedSucursal) return;
 
@@ -117,13 +89,15 @@ const CajeroPage: React.FC = () => {
             console.error(err); // El toast ya muestra el error, aquí solo lo registramos en consola.
         }
     };
+    const handleViewDetails = (pedido: PedidoResponse) => {
+        setSelectedPedido(pedido);
+        setShowDetailModal(true);
+    };
 
 
     // =================================================================================
     // PASO 5: DEFINICIÓN DE LA ESTRUCTURA DE LA TABLA
     // =================================================================================
-
-    // Definimos cómo se verá cada columna en nuestra tabla.
     const columns: ColumnDefinition<PedidoResponse>[] = [
         { key: 'id', header: 'ID', renderCell: (p) => p.id, sortable: true },
         { key: 'cliente.nombre', header: 'Cliente', renderCell: (p) => `${p.cliente.nombre} ${p.cliente.apellido}` },
@@ -140,33 +114,46 @@ const CajeroPage: React.FC = () => {
         { key: 'estado', header: 'Estado Actual', renderCell: (p) => <Badge bg="info">{p.estado}</Badge> },
     ];
 
-    // Definimos qué botones de acción se mostrarán según el estado del pedido.
-    const renderRowActions = (pedido: PedidoResponse) => {
-        switch (pedido.estado) {
-            case 'PENDIENTE':
-                return (
-                    <>
-                        <Button variant="danger" size="sm" className="me-2" onClick={() => handleUpdateEstado(pedido.id, 'RECHAZADO')}>Rechazar</Button>
-                        <Button variant="success" size="sm" onClick={() => handleUpdateEstado(pedido.id, 'PREPARACION')}>Confirmar</Button>
-                    </>
-                );
-            case 'LISTO':
-                return (
-                    <>
-                        {pedido.tipoEnvio === 'DELIVERY' &&
-                            <Button variant="primary" size="sm" className="me-2" onClick={() => handleUpdateEstado(pedido.id, 'EN_CAMINO')}>A Delivery</Button>
-                        }
-                        {pedido.tipoEnvio === 'TAKEAWAY' &&
-                            <Button variant="success" size="sm" onClick={() => handleUpdateEstado(pedido.id, 'ENTREGADO')}>Entregar</Button>
-                        }
-                    </>
-                );
-            default:
-                return <span className="text-muted">Sin acciones</span>;
-        }
-    };
+    const renderRowActions = (pedido: PedidoResponse) => (
+        <>
+            <Button
+                variant="info"
+                size="sm"
+                className="me-2"
+                onClick={() => handleViewDetails(pedido)}
+                title="Ver Detalle del Pedido"
+            >
+                <FontAwesomeIcon icon={faEye} />
+            </Button>
 
-        return (
+            {(() => {
+                switch (pedido.estado) {
+                    case 'PENDIENTE':
+                        return (
+                            <>
+                                <Button variant="danger" size="sm" className="me-2" onClick={() => handleUpdateEstado(pedido.id, 'RECHAZADO')}>Rechazar</Button>
+                                <Button variant="success" size="sm" onClick={() => handleUpdateEstado(pedido.id, 'PREPARACION')}>Confirmar</Button>
+                            </>
+                        );
+                    case 'LISTO':
+                        return (
+                            <>
+                                {pedido.tipoEnvio === 'DELIVERY' &&
+                                    <Button variant="primary" size="sm" className="me-2" onClick={() => handleUpdateEstado(pedido.id, 'EN_CAMINO')}>A Delivery</Button>
+                                }
+                                {pedido.tipoEnvio === 'TAKEAWAY' &&
+                                    <Button variant="success" size="sm" onClick={() => handleUpdateEstado(pedido.id, 'ENTREGADO')}>Entregar</Button>
+                                }
+                            </>
+                        );
+                    default:
+                        return null;
+                }
+            })()}
+        </>
+    );
+
+    return (
         <Container className="my-4">
             <h1 className="text-center mb-4">Gestión de Pedidos (Cajero)</h1>
             <Tabs activeKey={activeTab} onSelect={handleTabSelect} id="pedidos-tabs" className="mb-3" fill>
@@ -189,18 +176,23 @@ const CajeroPage: React.FC = () => {
                             renderRowActions={renderRowActions}
                             isLoading={isLoading}
                             error={error}
-                            reload={reload} // Usamos reload del hook
-                            // Pasamos las propiedades para búsqueda y ordenamiento
+                            reload={reload}
                             searchTerm={pedidoIdSearch}
                             setSearchTerm={setPedidoIdSearch}
                             sortConfig={sortConfig}
                             requestSort={requestSort}
-                            searchPlaceholder="Buscar por ID..." // Placeholder actualizado
+                            searchPlaceholder="Buscar por ID..."
                         />
                     )}
                 </Card.Body>
             </Card>
-        </Container>
+            <CajeroPedidoDetailModal
+                show={showDetailModal}
+                onHide={() => setShowDetailModal(false)}
+                pedido={selectedPedido}
+            />
+        </Container >
+
     );
 };
 export default CajeroPage;
