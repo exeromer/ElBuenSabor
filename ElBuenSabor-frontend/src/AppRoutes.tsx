@@ -10,11 +10,11 @@ import ManageProductsPage from './pages/ManageProductsPage';
 import ManageUsersPage from './pages/ManageUsersPage';
 import PrivateRoute from './components/auth/PrivateRoute';
 import CajeroPage from './pages/CajeroPage';
+import CocinaPage from './pages/CocinaPage';
+import DeliveryPage from './pages/DeliveryPage';
 import { Button, Container} from 'react-bootstrap';
 
 // Placeholders para las paginas
-const CocinaPage = () => <Container className="my-4"><h1>Vista de Cocina</h1></Container>;
-const DeliveryPage = () => <Container className="my-4"><h1>Vista de Delivery</h1></Container>;
 const EstadisticasPage = () => <Container className="my-4"><h1>Vista de Estadísticas</h1></Container>;
 
 

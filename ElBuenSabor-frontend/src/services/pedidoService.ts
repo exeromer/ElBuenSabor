@@ -37,6 +37,17 @@ export class PedidoService {
   }
 
   /**
+   * Obtiene los pedidos para la vista de Cocina.
+   * @param sucursalId - El ID de la sucursal actual.
+   */
+  static async getPedidosCocina(sucursalId: number): Promise<PedidoResponse[]> {
+    const response = await apiClient.get<PedidoResponse[]>(`/pedidos/cocina/${sucursalId}`);
+    return response.data;
+  }
+
+
+
+  /**
    * Obtiene todos los pedidos de un cliente específico por su ID.
    * @param clienteId - El ID del cliente.
    */
@@ -112,4 +123,24 @@ export class PedidoService {
     return response.data;
   }
 
+  /**
+   * Añade tiempo de demora a un pedido en cocina.
+   * @param pedidoId - El ID del pedido.
+   * @param sucursalId - El ID de la sucursal.
+   * @param minutos - Los minutos a añadir.
+   */
+  static async addTiempoCocina(pedidoId: number, sucursalId: number, minutos: number): Promise<PedidoResponse> {
+    const response = await apiClient.put<PedidoResponse>(`/pedidos/${pedidoId}/tiempo-cocina/${sucursalId}?minutosToAdd=${minutos}`);
+    return response.data;
+  }
+
+
+  /**
+   * Obtiene los pedidos para la vista de Delivery (estado EN_CAMINO).
+   * @param sucursalId - El ID de la sucursal actual.
+   */
+  static async getPedidosDelivery(sucursalId: number): Promise<PedidoResponse[]> {
+    const response = await apiClient.get<PedidoResponse[]>(`/pedidos/delivery/${sucursalId}`);
+    return response.data;
+  }
 }

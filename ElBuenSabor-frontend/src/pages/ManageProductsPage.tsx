@@ -20,10 +20,10 @@
  */
 import React, { useState, useCallback, useEffect } from 'react';
 import { Container, Tabs, Tab, Button, Badge, Card, Form, Row, Col } from 'react-bootstrap';
-import { ArticuloInsumoService } from '../services/ArticuloInsumoService';
+import { ArticuloInsumoService } from '../services/articuloInsumoService';
 import { ArticuloManufacturadoService } from '../services/ArticuloManufacturadoService';
 import { StockInsumoSucursalService } from '../services/StockInsumoSucursalService';
-import { CategoriaService } from '../services/CategoriaService';
+import { CategoriaService } from '../services/categoriaService';
 import { SucursalService } from '../services/SucursalService';
 import { PromocionService } from '../services/PromocionService';
 import type { ArticuloManufacturadoResponse, ArticuloInsumoResponse, CategoriaResponse, PromocionResponse } from '../types/types';
