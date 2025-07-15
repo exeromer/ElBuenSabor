@@ -1,127 +1,90 @@
-/**
- * @file MyOrdersPage.tsx
- * @description Página que muestra el historial de pedidos de un cliente autenticado.
- * Permite a los usuarios ver un listado de sus pedidos anteriores, incluyendo detalles
- * como el total, tipo de envío, forma de pago, sucursal, domicilio (si aplica),
- * y el estado actual del pedido. Cada pedido se visualiza con sus artículos y la opción
- * de ver la factura asociada (si existe).
- *
- * @hook `useAuth0`: Para gestionar la autenticación del usuario, obtener el ID del usuario y el token de acceso.
- * @hook `useState`: Gestiona los pedidos del usuario, estados de carga/error.
- * @hook `useEffect`: Carga los pedidos del cliente al montar el componente o al cambiar el estado de autenticación.
- * @hook `Link` de `react-router-dom`: Permite la navegación a otras páginas (ej. menú, facturas).
- *
- * @service `PedidoService`: Servicio para obtener los pedidos de un cliente específico.
- * @service `FileUploadService`: Servicio de utilidad para construir las URLs completas de las imágenes de los artículos.
- */
-
-import React, { useEffect, useState } from 'react';
-import { Container, Row, Col, Card, ListGroup, Spinner, Alert, Button, Image, Badge, Modal } from 'react-bootstrap';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Container, Table, Spinner, Alert, Button, Badge } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Link } from 'react-router-dom';
 
-import { PedidoService } from '../services/PedidoService';
-import apiClient from '../services/apiClient';
-import { FacturaService } from '../services/FacturaService';
-
-// FIX: Corregimos los tipos
-import type { PedidoResponse, ArticuloSimpleResponse, FacturaResponse } from '../types/types';
+import { PedidoService } from '../services/pedidoService';
+import type { PedidoResponse, FacturaResponse } from '../types/types';
 import type { Estado } from '../types/enums';
-import FacturaDetailModal from '../components/facturas/FacturaDetailModal';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHistory, faCheckCircle, faTimesCircle, faClock, faCog, faTruck, faStore, faMoneyBillWave, faCreditCard } from '@fortawesome/free-solid-svg-icons';
 
-function articuloTieneImagenes(articulo: ArticuloSimpleResponse): articulo is ArticuloSimpleResponse & { imagenes: { denominacion: string }[] } {
-  return (articulo as any).imagenes !== undefined && Array.isArray((articulo as any).imagenes);
-}
+import Titulo from '../components/utils/Titulo/Titulo';
+import PedidoDetailModal from '../components/pedidos/PedidoDetailModal'; 
+import FacturaDetailModal from '../components/facturas/FacturaDetailModal'; 
+import { FacturaService } from '../services/FacturaService'; 
+
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faFileInvoiceDollar, faCheckCircle, faTimesCircle, faCog, faTruck, faClock } from '@fortawesome/free-solid-svg-icons';
 
 const MyOrdersPage: React.FC = () => {
-  const { isAuthenticated, getAccessTokenSilently, isLoading: authLoading } = useAuth0();
+  const { isAuthenticated, isLoading: authLoading } = useAuth0();
   const [pedidos, setPedidos] = useState<PedidoResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Estados para los modales
+  const [showPedidoModal, setShowPedidoModal] = useState(false);
   const [showFacturaModal, setShowFacturaModal] = useState(false);
+  const [selectedPedido, setSelectedPedido] = useState<PedidoResponse | null>(null);
   const [selectedFactura, setSelectedFactura] = useState<FacturaResponse | null>(null);
-  const [loadingFactura, setLoadingFactura] = useState(false);
 
-  // const fileUploadService = new FileUploadService(); 
-  useEffect(() => {
-    const fetchMyOrders = async () => {
-      if (authLoading) return;
-      if (!isAuthenticated) {
+  const fetchMyOrders = useCallback(async () => {
+    if (authLoading || !isAuthenticated) {
+      if (!authLoading) {
         setError('Debes iniciar sesión para ver tus pedidos.');
         setLoading(false);
-        return;
       }
-      setLoading(true);
-      setError(null);
-      try {
-        const fetchedPedidos = await PedidoService.getMisPedidos();
-        setPedidos(fetchedPedidos);
-      } catch (err) {
-        console.error('Error al obtener mis pedidos:', err);
-        setError('No se pudieron cargar tus pedidos.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMyOrders();
-  }, [isAuthenticated, authLoading, getAccessTokenSilently]);
-
-  /**
-   * @function handleShowFactura
-   * @description Función que maneja la visualización de la factura asociada a un pedido.
-   * @param {number} facturaId - El ID de la factura a visualizar.
-   * @returns {Promise<void>} Una promesa que se resuelve cuando se completa la visualización de la factura.
-   */
-  const handleShowFactura = async (facturaId: number) => {
-    setLoadingFactura(true);
-    setShowFacturaModal(true);
+      return;
+    }
+    setLoading(true);
+    setError(null);
     try {
-      // Usamos el servicio para obtener los detalles completos de la factura
+      const fetchedPedidos = await PedidoService.getMisPedidos();
+      setPedidos(fetchedPedidos);
+    } catch (err) {
+      console.error('Error al obtener mis pedidos:', err);
+      setError('No se pudieron cargar tus pedidos.');
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated, authLoading]);
+
+  useEffect(() => {
+    fetchMyOrders();
+  }, [fetchMyOrders]);
+
+  const handleShowPedido = (pedido: PedidoResponse) => {
+    setSelectedPedido(pedido);
+    setShowPedidoModal(true);
+  };
+  
+  const handleShowFactura = async (facturaId: number) => {
+    setShowFacturaModal(true);
+    setSelectedFactura(null); 
+    try {
       const facturaCompleta = await FacturaService.findByIdIncludingAnuladas(facturaId);
       setSelectedFactura(facturaCompleta);
     } catch (error) {
       console.error("Error al cargar detalle de la factura:", error);
-      // Opcional: mostrar un toast o alerta de error
-    } finally {
-      setLoadingFactura(false);
+      setError("No se pudo cargar la factura.");
     }
   };
 
-  /**
-   * @function getEstadoIcon
-   * @description Función de utilidad que devuelve un icono de FontAwesome y un color
-   * basados en el `Estado` del pedido.
-   * @param {Estado} estado - El estado del pedido.
-   * @returns {JSX.Element | null} Un elemento `FontAwesomeIcon` con su color correspondiente, o `null` si no hay un icono definido.
-   */
-  const getEstadoIcon = (estado: Estado) => {
+  const getEstadoBadge = (estado: Estado) => {
+    let bg = 'secondary';
+    let icon = faCog;
     switch (estado) {
-      case 'PENDIENTE':
-        return <FontAwesomeIcon icon={faClock} className="text-warning" title="Pendiente" />;
-      case 'PREPARACION':
-        return <FontAwesomeIcon icon={faCog} className="text-info" title="En Preparación" />;
-      case 'EN_CAMINO':
-        return <FontAwesomeIcon icon={faTruck} className="text-primary" title="En Camino" />;
-      case 'ENTREGADO':
-        return <FontAwesomeIcon icon={faCheckCircle} className="text-success" title="Entregado" />;
+      case 'PENDIENTE': bg = 'warning'; icon = faClock; break;
+      case 'PREPARACION': bg = 'info'; icon = faCog; break;
+      case 'EN_CAMINO': bg = 'primary'; icon = faTruck; break;
+      case 'ENTREGADO': bg = 'success'; icon = faCheckCircle; break;
       case 'CANCELADO':
-        return <FontAwesomeIcon icon={faTimesCircle} className="text-danger" title="Cancelado" />;
-      case 'RECHAZADO':
-        return <FontAwesomeIcon icon={faTimesCircle} className="text-danger" title="Rechazado" />;
-      case 'LISTO':
-        return <FontAwesomeIcon icon={faCheckCircle} className="text-success" title="Listo" />;
-      default:
-        return null;
+      case 'RECHAZADO': bg = 'danger'; icon = faTimesCircle; break;
+      case 'LISTO': bg = 'success'; icon = faCheckCircle; break;
     }
+    return <Badge bg={bg}><FontAwesomeIcon icon={icon} className="me-1" /> {estado}</Badge>;
   };
 
-  // --- Renderizado condicional basado en estados de carga o error ---
-  // Muestra un spinner si los pedidos están cargando
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <Container className="text-center my-5">
         <Spinner animation="border" role="status" />
@@ -130,125 +93,66 @@ const MyOrdersPage: React.FC = () => {
     );
   }
 
-  // Muestra un mensaje de error si ocurre un problema
   if (error) {
     return (
       <Container className="my-5 text-center">
-        <Alert variant="danger">
-          <Alert.Heading>¡Error al Cargar Pedidos!</Alert.Heading>
-          <p>{error}</p>
-          <hr />
-          {/* Enlace para volver al inicio */}
-          <Link to="/" style={{ textDecoration: 'none' }}>
-            <Button variant="primary">Volver al Inicio</Button>
-          </Link>
-        </Alert>
+        <Alert variant="danger">{error}</Alert>
       </Container>
     );
   }
 
   return (
     <>
-    <Container className="my-4">
-      <h1 className="text-center mb-4">
-        <FontAwesomeIcon icon={faHistory} className="me-2 text-primary" /> Mis Pedidos
-      </h1>
+      <Container className="my-4">
+        <Titulo texto="Mi Historial de Pedidos" nivel="titulo" />
 
-      {pedidos.length === 0 ? (
-        <Alert variant="info" className="text-center">
-          No tienes pedidos registrados todavía.
-          <div className="mt-3">
-            <Link to="/products"><Button variant="primary">Explorar Menú</Button></Link>
-          </div>
-        </Alert>
-      ) : (
-        <Row xs={1} md={1} lg={2} className="g-4">
-          {pedidos.map((pedido) => (
-            <Col key={pedido.id}>
-              <Card className="h-100 shadow-sm">
-                <Card.Header className="d-flex justify-content-between align-items-center">
-                  <div>
-                    <h5 className="mb-0">Pedido #{pedido.id}</h5>
-                    <small className="text-muted">{new Date(pedido.fechaPedido).toLocaleDateString()} - {pedido.horaEstimadaFinalizacion}</small>
-                  </div>
-                  <div className="text-end">
-                    <Badge bg={
-                      pedido.estado === 'ENTREGADO' ? 'success' :
-                        pedido.estado === 'CANCELADO' || pedido.estado === 'RECHAZADO' ? 'danger' :
-                          'secondary'
-                    } className="me-2">{pedido.estado}</Badge>
-                    {getEstadoIcon(pedido.estado)}
-                  </div>
-                </Card.Header>
-                <Card.Body>
-                  <Card.Text>
-                    <strong>Total:</strong> <span className="text-success">${pedido.total.toFixed(2)}</span> <br />
-                    <strong>Envío:</strong> <FontAwesomeIcon icon={pedido.tipoEnvio === 'DELIVERY' ? faTruck : faStore} className="me-1" /> {pedido.tipoEnvio} <br />
-                    {pedido.tipoEnvio === 'DELIVERY' && pedido.domicilio && (
-                      <small className="text-muted d-block ms-3">
-                        ({pedido.domicilio.calle} {pedido.domicilio.numero}, {pedido.domicilio.localidad?.nombre ?? 'N/A'})
-                      </small>
-                    )}
-                    <strong>Pago:</strong> <FontAwesomeIcon icon={pedido.formaPago === 'EFECTIVO' ? faMoneyBillWave : faCreditCard} className="me-1" /> {pedido.formaPago} <br />
-                    <strong>Sucursal:</strong> {pedido.sucursal.nombre}
-                  </Card.Text>
-                  <hr />
-                  <h6>Detalle de los Artículos:</h6>
-                  <ListGroup variant="flush">
-                    {pedido.detalles.map((detalle) => (
-                      <ListGroup.Item key={detalle.id} className="d-flex justify-content-between align-items-center py-1 px-0">
-                        <div className="d-flex align-items-center">
-                          {articuloTieneImagenes(detalle.articulo) && detalle.articulo.imagenes.length > 0 && (
-                            <Image
-                              src={`${apiClient.defaults.baseURL}/files/download/${detalle.articulo.imagenes[0].denominacion}`}
-                              alt={detalle.articulo.denominacion}
-                              style={{ width: '30px', height: '30px', objectFit: 'cover' }}
-                              className="me-2 rounded"
-                            />
-                          )}
-                          {detalle.cantidad} x {detalle.articulo.denominacion}
-                        </div>
-                        <small className="fw-bold">${detalle.subTotal.toFixed(2)}</small>
-                      </ListGroup.Item>
-                    ))}
-                  </ListGroup>
-                  {pedido.factura && (
-                      <div className="mt-3 text-end">
-                        <Button
-                          variant="outline-info"
-                          size="sm"
-                          onClick={() => handleShowFactura(pedido.factura!.id)} // El "!" asegura que el id existe si la factura existe
-                        >
-                        Ver Factura
+        {pedidos.length === 0 ? (
+          <Alert variant="info" className="text-center">
+            Aún no has realizado ningún pedido.
+            <div className="mt-3">
+              <Link to="/products"><Button variant="primary">¡Empieza a Comprar!</Button></Link>
+            </div>
+          </Alert>
+        ) : (
+          <Table striped bordered hover responsive className="text-center align-middle shadow-sm">
+            <thead>
+              <tr>
+                <th>N° Pedido</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Total</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pedidos.map((pedido) => (
+                <tr key={pedido.id}>
+                  <td>#{pedido.id}</td>
+                  <td>{new Date(pedido.fechaPedido).toLocaleDateString()}</td>
+                  <td>{getEstadoBadge(pedido.estado)}</td>
+                  <td>${pedido.total.toFixed(2)}</td>
+                  <td>
+                    <Button variant="outline-info" size="sm" onClick={() => handleShowPedido(pedido)} className="me-2" title="Ver Detalle">
+                      <FontAwesomeIcon icon={faEye} />
+                    </Button>
+                    {pedido.factura && (
+                      <Button variant="outline-primary" size="sm" onClick={() => handleShowFactura(pedido.factura!.id)} title="Ver Factura">
+                        <FontAwesomeIcon icon={faFileInvoiceDollar} />
                       </Button>
-                    </div>
-                  )}
-                </Card.Body>
-              </Card>
-            </Col>
-          ))}
-        </Row>
-      )}
-    </Container>
-
-  <FacturaDetailModal
-    show={showFacturaModal}
-    onHide={() => setShowFacturaModal(false)}
-    factura={loadingFactura ? null : selectedFactura}
-  />
-  {
-    showFacturaModal && loadingFactura && (
-      <Modal show={true} centered backdrop="static">
-        <Modal.Body className="text-center">
-          <Spinner animation="border" />
-          <p className="mt-3">Cargando factura...</p>
-        </Modal.Body>
-      </Modal>
-    )
-  }
-  </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        )}
+      </Container>
+      
+      {/* Modales */}
+      <PedidoDetailModal show={showPedidoModal} onHide={() => setShowPedidoModal(false)} pedido={selectedPedido} />
+      <FacturaDetailModal show={showFacturaModal} onHide={() => setShowFacturaModal(false)} factura={selectedFactura} />
+    </>
   );
 };
-
 
 export default MyOrdersPage;

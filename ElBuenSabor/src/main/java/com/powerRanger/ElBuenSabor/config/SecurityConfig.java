@@ -94,15 +94,16 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.PUT, "/api/clientes/{clienteId}/carrito/items/{carritoItemId}").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items/**").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers("/api/carrito/**").hasAuthority("ROLE_CLIENTE") // Rutas del carrito
-                                .requestMatchers("/api/domicilios/**").hasAuthority("ROLE_CLIENTE") // Cliente gestiona sus domicilios
+                                .requestMatchers("/api/clientes/perfil").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers("/api/domicilios/**").hasAuthority("ROLE_CLIENTE")
 
                                 // ---- CLIENTE y ADMIN ----
-                                .requestMatchers(HttpMethod.GET, "/api/clientes/usuario/{auth0Id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.GET, "/api/pedidos/cliente/{clienteId}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.POST,"/api/domicilios/").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.PUT,"/api/domicilios/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.DELETE,"/api/domicilios/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
-                                .requestMatchers(HttpMethod.GET, "/api/clientes/perfil").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers("/api/clientes/perfil").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
+                                .requestMatchers("/api/domicilios/**").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.POST, "/api/pedidos").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.POST, "/api/pedidos/cliente/{clienteId}/desde-carrito").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers(HttpMethod.GET, "/api/pedidos/mis-pedidos").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers("/api/carrito/**").hasAuthority("ROLE_CLIENTE")
 
                                 // ---- EMPLEADOS (Cualquier tipo) y ADMIN ----
                                 .requestMatchers(HttpMethod.POST, "/api/categorias/**", "/api/unidadesmedida/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
@@ -129,17 +130,14 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.GET, "/api/pedidos/delivery/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.GET, "/api/empleados/usuario/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
 
-                                // Endpoints de Empleado (solo para ADMIN)
-                                .requestMatchers("/api/empleados/**").hasAuthority("ROLE_ADMIN")
-
-
                                 // ---- CUALQUIER USUARIO LOGUEADO PUEDE VER SU FACTURA ----
                                 .requestMatchers(HttpMethod.GET,"/api/facturas/{id}").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
 
                                 // ---- SOLO ADMIN ----
-                                .requestMatchers("/api/clientes/**").hasAuthority("ROLE_ADMIN") // Regla general para clientes al final
+                                .requestMatchers("/api/empleados/**").hasAuthority("ROLE_ADMIN")
                                 .requestMatchers("/api/usuarios/**").hasAuthority("ROLE_ADMIN")
                                 .requestMatchers("/api/estadisticas/**").hasAuthority("ROLE_ADMIN")
+                                .requestMatchers("/api/clientes/**").hasAuthority("ROLE_ADMIN")
 
                                 // =================================================================================
                                 // 4. CATCH-ALL - Cualquier otra petición no definida arriba, requiere autenticación

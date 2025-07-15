@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { setAuthToken } from '../services/apiClient';
-import { UsuarioService } from '../services/UsuarioService';
+import { UsuarioService } from '../services/usuarioService';
 import { ClienteService } from '../services/ClienteService';
 import { EmpleadoService } from '../services/EmpleadoService';
 import type { ClienteResponse, EmpleadoResponse, UsuarioResponse } from '../types/types';

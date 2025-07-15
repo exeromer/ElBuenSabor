@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import Loading from './Loading';
 import { Alert, Container, Button } from 'react-bootstrap';
 // FIX: Usamos el servicio de forma estática
-import { UsuarioService } from '../../services/UsuarioService';
+import { UsuarioService } from '../../services/usuarioService';
 // FIX: Usamos el tipo de DTO de respuesta para consistencia
 import type { UsuarioResponse } from '../../types/types';
 import { setAuthToken } from '../../services/apiClient'; // <-- Asegúrate de tener este import

@@ -8,11 +8,11 @@ import java.util.List;
 public interface ClienteService {
     List<ClienteResponseDTO> getAllClientes(String searchTerm); // Modificado
     ClienteResponseDTO getClienteById(Integer id) throws Exception;
-    ClienteResponseDTO getMyProfile(String auth0Id) throws Exception; // Metodo para obtener el perfil del cliente autenticado
-
+    ClienteResponseDTO getMyProfile(String auth0Id) throws Exception;
     ClienteResponseDTO findOrCreateClienteByAuth0Id(String auth0Id, String email) throws Exception;
-
     ClienteResponseDTO createCliente(@Valid ClienteRequestDTO dto) throws Exception;
     ClienteResponseDTO updateCliente(Integer id, @Valid ClienteRequestDTO dto) throws Exception;
+    ClienteResponseDTO updateMyProfile(String auth0Id, @Valid ClienteRequestDTO dto) throws Exception;
+
     void softDeleteCliente(Integer id) throws Exception;
 }

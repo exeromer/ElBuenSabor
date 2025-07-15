@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Container, Card, Button, Spinner, Alert, Tabs, Tab, Badge } from 'react-bootstrap';
 import { useSucursal } from '../context/SucursalContext';
-import { PedidoService } from '../services/PedidoService';
+import { PedidoService } from '../services/pedidoService';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useSearchableData } from '../hooks/useSearchableData';
 import type { PedidoResponse } from '../types/types';

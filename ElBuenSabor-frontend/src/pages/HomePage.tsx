@@ -5,7 +5,7 @@ import Titulo from '../components/utils/Titulo/Titulo';
 import Nosotros from '../components/common/Nosotros/Nosotros';
 import ProductCard from '../components/products/Card/ProductCard';
 import PromotionCard from '../components/promociones/PromotionCard';
-import { ArticuloManufacturadoService } from '../services/ArticuloManufacturadoService';
+import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService';
 import { useSucursal } from '../context/SucursalContext';
 import { PromocionService } from '../services/PromocionService';
 import type { ArticuloManufacturadoResponse, PromocionResponse, SucursalSimpleResponse } from '../types/types';

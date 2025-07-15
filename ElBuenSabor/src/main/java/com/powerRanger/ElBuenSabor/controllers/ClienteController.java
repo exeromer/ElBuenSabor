@@ -6,6 +6,7 @@ import com.powerRanger.ElBuenSabor.services.ClienteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -89,6 +90,25 @@ public class ClienteController {
     public ResponseEntity<?> updateCliente(@PathVariable Integer id, @Valid @RequestBody ClienteRequestDTO dto) {
         try {
             ClienteResponseDTO clienteActualizadoDto = clienteService.updateCliente(id, dto);
+            return ResponseEntity.ok(clienteActualizadoDto);
+        } catch (ConstraintViolationException e) {
+            return handleConstraintViolation(e);
+        } catch (Exception e) {
+            HttpStatus status = e.getMessage().contains("no encontrado") ? HttpStatus.NOT_FOUND : HttpStatus.BAD_REQUEST;
+            return handleGenericException(e, status);
+        }
+    }
+
+    @PutMapping("/perfil")
+    public ResponseEntity<?> updateMyProfile(@Valid @RequestBody ClienteRequestDTO dto, Authentication authentication) {
+        try {
+            if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("error", "No autenticado o token inválido."));
+            }
+            Jwt jwt = (Jwt) authentication.getPrincipal();
+            String auth0Id = jwt.getSubject();
+            ClienteResponseDTO clienteActualizadoDto = clienteService.updateMyProfile(auth0Id, dto);
             return ResponseEntity.ok(clienteActualizadoDto);
         } catch (ConstraintViolationException e) {
             return handleConstraintViolation(e);

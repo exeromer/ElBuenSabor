@@ -1,11 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useCallback } from 'react';
 import { Container, Card, Button, Spinner, Alert, Row, Col, ListGroup } from 'react-bootstrap';
 import { useSucursal } from '../context/SucursalContext';
-import { PedidoService } from '../services/PedidoService';
+import { PedidoService } from '../services/pedidoService';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useSearchableData } from '../hooks/useSearchableData';
 import type { PedidoResponse } from '../types/types';
-import type { Estado } from '../types/enums';
 import toast from 'react-hot-toast';
 import Titulo from '../components/utils/Titulo/Titulo';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';

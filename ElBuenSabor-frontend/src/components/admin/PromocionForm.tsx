@@ -10,9 +10,9 @@ import { faPlusCircle, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
 
 // Servicios
 import { PromocionService } from '../../services/PromocionService';
-import { SucursalService } from '../../services/SucursalService'; 
+import { SucursalService } from '../../services/sucursalService'; 
 import { ArticuloInsumoService } from '../../services/articuloInsumoService'; 
-import { ArticuloManufacturadoService } from '../../services/ArticuloManufacturadoService'; 
+import { ArticuloManufacturadoService } from '../../services/articuloManufacturadoService'; 
 
 // Tipos y Enums
 import type { PromocionResponse, PromocionRequest, ArticuloSimpleResponse, SucursalSimpleResponse, PromocionDetalleRequest } from '../../types/types';

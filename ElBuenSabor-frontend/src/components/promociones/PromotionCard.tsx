@@ -1,5 +1,3 @@
-// src/components/promociones/PromotionCard.tsx
-
 import React from 'react';
 import { Card } from 'react-bootstrap';
 import type { PromocionResponse } from '../../types/types';

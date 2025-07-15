@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner } from 'react-bootstrap';
-import { CategoriaService } from '../../services/CategoriaService';
+import { CategoriaService } from '../../services/categoriaService';
 import type { CategoriaRequest, CategoriaResponse } from '../../types/types';
 import { useSucursal } from '../../context/SucursalContext';
-import { SucursalService } from '../../services/SucursalService';
+import { SucursalService } from '../../services/sucursalService';
 
 interface CategoriaFormProps {
     show: boolean;

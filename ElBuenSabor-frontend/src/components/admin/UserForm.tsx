@@ -15,7 +15,7 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
-import { ClienteUsuarioService } from '../../services/ClienteUsuarioService';
+import { ClienteUsuarioService } from '../../services/clienteUsuarioService';
 import type { UsuarioResponse, UsuarioRequest } from '../../types/types'; 
 import type { Rol } from '../../types/enums';
 // Instanciamos el servicio

@@ -50,6 +50,15 @@ export class ClienteService {
   }
 
   /**
+   * Actualiza el perfil del cliente autenticado.
+   * @param {ClienteRequest} cliente - Los datos del cliente a actualizar.
+   */
+  static async updateMiPerfil(cliente: ClienteRequest): Promise<ClienteResponse> {
+    const response = await apiClient.put<ClienteResponse>('/clientes/perfil', cliente);
+    return response.data;
+  }
+
+  /**
    * Realiza un borrado lógico de un cliente.
    * @param id - El ID del cliente.
    */
