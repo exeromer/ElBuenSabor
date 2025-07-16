@@ -23,20 +23,23 @@ public class EstadisticaServiceImpl implements EstadisticaService {
     @Autowired
     private DetallePedidoRepository detallePedidoRepository;
 
+    // Definimos una constante para el estado de los pedidos que cuentan para estadísticas.
     private final Estado ESTADO_PEDIDO_PARA_RANKING = Estado.ENTREGADO;
 
     @Override
     @Transactional(readOnly = true)
     public List<ClienteRankingDTO> getRankingClientesPorCantidadPedidos(LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception {
+        // Validación de fechas
         if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
             throw new Exception("La fecha 'desde' no puede ser posterior a la fecha 'hasta'.");
         }
         if (size <= 0) {
-            size = 10;
+            size = 10; // Valor por defecto si no se especifica un tamaño válido
         }
 
         Pageable pageable = PageRequest.of(page, size);
 
+        // Llamada al método del repositorio
         return pedidoRepository.findRankingClientesByCantidadPedidos(
                 ESTADO_PEDIDO_PARA_RANKING,
                 fechaDesde,
@@ -57,6 +60,7 @@ public class EstadisticaServiceImpl implements EstadisticaService {
 
         Pageable pageable = PageRequest.of(page, size);
 
+        // Llamada al método del repositorio
         return pedidoRepository.findRankingClientesByMontoTotal(
                 ESTADO_PEDIDO_PARA_RANKING,
                 fechaDesde,
@@ -77,6 +81,7 @@ public class EstadisticaServiceImpl implements EstadisticaService {
 
         Pageable pageable = PageRequest.of(page, size);
 
+        // Llamada al método del repositorio de detalles
         return detallePedidoRepository.findRankingArticulosManufacturadosMasVendidos(
                 ESTADO_PEDIDO_PARA_RANKING,
                 fechaDesde,
