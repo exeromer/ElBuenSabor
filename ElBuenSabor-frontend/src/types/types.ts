@@ -1,5 +1,12 @@
 // --- Enums y Tipos Literales ---
-import type { Rol, Estado, FormaPago, TipoEnvio, EstadoFactura, TipoPromocion } from './enums';
+import type {
+  Rol,
+  Estado,
+  FormaPago,
+  TipoEnvio,
+  EstadoFactura,
+  TipoPromocion,
+} from "./enums";
 
 // --- Interfaces de DTOs ---
 
@@ -32,6 +39,12 @@ export interface ArticuloManufacturadoDetalleResponse {
 }
 
 export interface ArticuloManufacturadoRanking {
+  articuloId: number;
+  denominacion: string;
+  cantidadVendida: number;
+}
+
+export interface ArticuloInsumoRanking {
   articuloId: number;
   denominacion: string;
   cantidadVendida: number;
@@ -234,6 +247,12 @@ export interface MercadoPagoCreatePreference {
   pedidoId: number;
 }
 
+export interface MovimientosMonetarios {
+  ingresosTotales: number;
+  costosTotales: number;
+  gananciasNetas: number;
+}
+
 export interface PaisResponse {
   id: number;
   nombre: string;
@@ -409,7 +428,7 @@ export interface EmpleadoResponse {
   nombre: string;
   apellido: string;
   telefono: string;
-  rolEmpleado: 'CAJERO' | 'COCINA' | 'DELIVERY';
+  rolEmpleado: "CAJERO" | "COCINA" | "DELIVERY";
   usuarioId: number;
   usernameUsuario: string;
   estadoActivo: boolean;
@@ -427,19 +446,19 @@ export interface ArticuloBaseResponse {
   unidadMedida: UnidadMedidaResponse;
   categoria: CategoriaResponse;
   imagenes: ImagenResponse[];
-  type: 'insumo' | 'manufacturado'; // Propiedad discriminante
+  type: "insumo" | "manufacturado"; // Propiedad discriminante
 }
 
 // DTO de respuesta para Artículo Insumo, extendiendo la base
 export interface ArticuloInsumoResponse extends ArticuloBaseResponse {
-  type: 'insumo';
+  type: "insumo";
   precioCompra?: number;
   esParaElaborar: boolean;
 }
 
 // DTO de respuesta para Artículo Manufacturado, extendiendo la base
 export interface ArticuloManufacturadoResponse extends ArticuloBaseResponse {
-  type: 'manufacturado';
+  type: "manufacturado";
   descripcion?: string;
   tiempoEstimadoMinutos: number;
   preparacion: string;
@@ -448,4 +467,6 @@ export interface ArticuloManufacturadoResponse extends ArticuloBaseResponse {
 }
 
 // Unión discriminada para manejar cualquier tipo de Artículo en el frontend
-export type ArticuloResponse = ArticuloInsumoResponse | ArticuloManufacturadoResponse;
+export type ArticuloResponse =
+  | ArticuloInsumoResponse
+  | ArticuloManufacturadoResponse;

@@ -1,7 +1,9 @@
 package com.powerRanger.ElBuenSabor.services;
 
 import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoRankingDTO;
+import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoRankingDTO;
 import com.powerRanger.ElBuenSabor.dtos.ClienteRankingDTO;
+import com.powerRanger.ElBuenSabor.dtos.MovimientosMonetariosDTO;
 import com.powerRanger.ElBuenSabor.entities.enums.Estado;
 import com.powerRanger.ElBuenSabor.repository.DetallePedidoRepository;
 import com.powerRanger.ElBuenSabor.repository.PedidoRepository;
@@ -83,5 +85,42 @@ public class EstadisticaServiceImpl implements EstadisticaService {
                 fechaHasta,
                 pageable
         );
+    }
+    
+     @Override
+    @Transactional(readOnly = true)
+    public List<ArticuloInsumoRankingDTO> getRankingArticulosInsumosMasVendidos(LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception {
+        if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
+            throw new Exception("La fecha 'desde' no puede ser posterior a la fecha 'hasta'.");
+        }
+        if (size <= 0) {
+            size = 10;
+        }
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        return detallePedidoRepository.findRankingArticulosInsumosMasVendidos(
+                ESTADO_PEDIDO_PARA_RANKING,
+                fechaDesde,
+                fechaHasta,
+                pageable
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public MovimientosMonetariosDTO getMovimientosMonetarios(LocalDate fechaDesde, LocalDate fechaHasta) throws Exception {
+        if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
+            throw new Exception("La fecha 'desde' no puede ser posterior a la fecha 'hasta'.");
+        }
+
+        Double ingresos = pedidoRepository.sumTotalByEstadoAndFechaRange(fechaDesde, fechaHasta);
+        Double costos = pedidoRepository.sumTotalCostoByEstadoAndFechaRange(fechaDesde, fechaHasta);
+
+        ingresos = (ingresos != null) ? ingresos : 0.0;
+        costos = (costos != null) ? costos : 0.0;
+        Double ganancias = ingresos - costos;
+
+        return new MovimientosMonetariosDTO(ingresos, costos, ganancias);
     }
 }

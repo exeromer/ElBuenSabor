@@ -1,0 +1,38 @@
+@use "../../styles/vars" as *
+
+.client-ranking-tab
+  .card-header
+    background-color: $color-clay
+    color: $color-grey
+    font-weight: bold
+    border-bottom: 1px solid $color-sand
+  
+  .card-body
+    padding: $p2
+    background-color: $color-clay
+
+  .form-label
+    color: $color-grey
+    font-weight: 500
+
+  .table
+    color: $color-grey
+    background-color: white
+    border: 1px solid $color-sand
+    thead
+      th
+        background-color: $color-mist
+        color: white
+        border-color: $color-stone
+    tbody
+      tr
+        &:nth-of-type(odd)
+          background-color: $color-clay
+        &:nth-of-type(even)
+          background-color: $color-sand
+        td
+          border-color: $color-sand
+
+  .recharts-wrapper
+    font-family: $f-f-dos
+    font-size: $f-s-1

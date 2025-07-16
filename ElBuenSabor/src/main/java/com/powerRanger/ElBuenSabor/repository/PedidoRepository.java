@@ -90,4 +90,20 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
 
 
     Optional<Pedido> findByIdAndSucursalId(Integer pedidoId, Integer sucursalId);
+    
+   
+    @Query("SELECT SUM(p.total) FROM Pedido p " +
+            "WHERE p.estadoActivo = true " +
+            "AND p.estado = 'ENTREGADO' " +
+            "AND (:fechaDesde IS NULL OR p.fechaPedido >= :fechaDesde) " +
+            "AND (:fechaHasta IS NULL OR p.fechaPedido <= :fechaHasta)")
+    Double sumTotalByEstadoAndFechaRange(@Param("fechaDesde") LocalDate fechaDesde, @Param("fechaHasta") LocalDate fechaHasta);
+
+    @Query("SELECT SUM(p.totalCosto) FROM Pedido p " +
+            "WHERE p.estadoActivo = true " +
+            "AND p.estado = 'ENTREGADO' " +
+            "AND (:fechaDesde IS NULL OR p.fechaPedido >= :fechaDesde) " +
+            "AND (:fechaHasta IS NULL OR p.fechaPedido <= :fechaHasta)")
+    Double sumTotalCostoByEstadoAndFechaRange(@Param("fechaDesde") LocalDate fechaDesde, @Param("fechaHasta") LocalDate fechaHasta);
+    
 }

@@ -3,6 +3,7 @@ package com.powerRanger.ElBuenSabor.repository;
 import com.powerRanger.ElBuenSabor.dtos.ArticuloManufacturadoRankingDTO;
 import com.powerRanger.ElBuenSabor.entities.DetallePedido;
 import com.powerRanger.ElBuenSabor.entities.enums.Estado;
+import com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoRankingDTO;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -23,6 +24,23 @@ public interface DetallePedidoRepository extends JpaRepository<DetallePedido, In
             "GROUP BY art.id, art.denominacion " +
             "ORDER BY SUM(dp.cantidad) DESC, art.denominacion ASC")
     List<ArticuloManufacturadoRankingDTO> findRankingArticulosManufacturadosMasVendidos(
+            @Param("estado") Estado estado,
+            @Param("fechaDesde") LocalDate fechaDesde,
+            @Param("fechaHasta") LocalDate fechaHasta,
+            Pageable pageable
+    );
+    
+     @Query("SELECT NEW com.powerRanger.ElBuenSabor.dtos.ArticuloInsumoRankingDTO(ai.id, ai.denominacion, SUM(dp.cantidad)) " +
+            "FROM DetallePedido dp JOIN dp.articulo ai " +
+            "JOIN dp.pedido ped " +
+            "WHERE TYPE(ai) = com.powerRanger.ElBuenSabor.entities.ArticuloInsumo " +
+            "AND ai.esParaElaborar = false " + // Filter for insumos that are not for elaboration
+            "AND ped.estadoActivo = true AND ped.estado = :estado " +
+            "AND (:fechaDesde IS NULL OR ped.fechaPedido >= :fechaDesde) " +
+            "AND (:fechaHasta IS NULL OR ped.fechaPedido <= :fechaHasta) " +
+            "GROUP BY ai.id, ai.denominacion " +
+            "ORDER BY SUM(dp.cantidad) DESC, ai.denominacion ASC")
+    List<ArticuloInsumoRankingDTO> findRankingArticulosInsumosMasVendidos(
             @Param("estado") Estado estado,
             @Param("fechaDesde") LocalDate fechaDesde,
             @Param("fechaHasta") LocalDate fechaHasta,
