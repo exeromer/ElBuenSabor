@@ -3,10 +3,8 @@ import { Container, Card, Spinner, Alert, Form, Row, Col, Button, Table } from '
 import { EstadisticaService } from '../../services/EstadisticaService';
 import type { ArticuloManufacturadoRanking, ArticuloInsumoRanking } from '../../types/types';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { format } from 'date-fns';
 import { faFileExcel } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-// **CÓDIGO NUEVO: Importación del archivo de estilos**
 import './ProductRankingTab.sass';
 
 const ProductRankingTab: React.FC = () => {
@@ -72,7 +70,6 @@ const ProductRankingTab: React.FC = () => {
   };
 
   return (
-    // **CÓDIGO MODIFICADO: Aplicación de la clase CSS principal**
     <Container fluid className="product-ranking-tab">
       <Card className="shadow-sm mb-4">
         <Card.Header as="h5">Filtro por Fechas</Card.Header>
@@ -112,7 +109,6 @@ const ProductRankingTab: React.FC = () => {
                 {manufacturedRanking.length > 0 ? (
                   <>
                     <div style={{ width: '100%', height: 300 }}>
-                      {/* **CÓDIGO MODIFICADO: Aplicación de la clase CSS para el gráfico** */}
                       <ResponsiveContainer className="recharts-wrapper">
                         <BarChart
                           data={manufacturedRanking}
@@ -127,7 +123,6 @@ const ProductRankingTab: React.FC = () => {
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
-                    {/* **CÓDIGO MODIFICADO: Aplicación de la clase CSS para la tabla** */}
                     <Table striped bordered hover responsive className="mt-3">
                       <thead>
                         <tr>
@@ -162,7 +157,6 @@ const ProductRankingTab: React.FC = () => {
                 {insumoRanking.length > 0 ? (
                   <>
                     <div style={{ width: '100%', height: 300 }}>
-                      {/* **CÓDIGO MODIFICADO: Aplicación de la clase CSS para el gráfico** */}
                       <ResponsiveContainer className="recharts-wrapper">
                         <BarChart
                           data={insumoRanking}
@@ -177,7 +171,6 @@ const ProductRankingTab: React.FC = () => {
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
-                    {/* **CÓDIGO MODIFICADO: Aplicación de la clase CSS para la tabla** */}
                     <Table striped bordered hover responsive className="mt-3">
                       <thead>
                         <tr>

@@ -11,4 +11,12 @@ export class EmpleadoService {
     const response = await apiClient.get<EmpleadoResponse>(`/empleados/usuario/${usuarioId}`);
     return response.data;
   }
+  /**
+ * Obtiene el perfil del empleado actualmente autenticado.
+ */
+  static async getMiPerfil(): Promise<EmpleadoResponse> {
+    const response = await apiClient.get<EmpleadoResponse>('/empleados/perfil');
+    return response.data;
+  }
+  
 }

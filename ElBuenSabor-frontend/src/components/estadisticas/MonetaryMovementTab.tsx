@@ -1,30 +1,10 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Container,
-  Card,
-  Spinner,
-  Alert,
-  Form,
-  Row,
-  Col,
-  Button,
-  Table,
-} from "react-bootstrap";
+import {Container,Card,  Spinner,  Alert,  Form,  Row,  Col,  Button,Table,} from "react-bootstrap";
 import { EstadisticaService } from "../../services/EstadisticaService";
 import type { MovimientosMonetarios } from "../../types/types";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import {  BarChart,  Bar,  XAxis,  YAxis,  CartesianGrid,  Tooltip,  Legend,  ResponsiveContainer,} from "recharts";
 import { faFileExcel } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-// **CÓDIGO NUEVO: Importación del archivo de estilos**
 import "./MonetaryMovementTab.sass";
 
 const MonetaryMovementTab: React.FC = () => {
@@ -57,8 +37,6 @@ const MonetaryMovementTab: React.FC = () => {
   useEffect(() => {
     fetchMovimientos();
   }, [fetchMovimientos]);
-
-  // **INICIO DE CÓDIGO NUEVO: Manejador para exportar a Excel**
   const handleExport = async () => {
     try {
       const excelBlob =
@@ -78,9 +56,7 @@ const MonetaryMovementTab: React.FC = () => {
       console.error(err);
     }
   };
-  // **FIN DE CÓDIGO NUEVO: Manejador para exportar a Excel**
 
-  // **INICIO DE CÓDIGO NUEVO: Datos para el gráfico**
   const chartData = movimientos
     ? [
         { name: "Ingresos", value: movimientos.ingresosTotales },
@@ -88,10 +64,8 @@ const MonetaryMovementTab: React.FC = () => {
         { name: "Ganancias", value: movimientos.gananciasNetas },
       ]
     : [];
-  // **FIN DE CÓDIGO NUEVO: Datos para el gráfico**
 
   return (
-    // **CÓDIGO MODIFICADO: Aplicación de la clase CSS principal**
     <Container fluid className="monetary-movement-tab">
       <Card className="shadow-sm mb-4">
         <Card.Header as="h5">Filtro por Fechas</Card.Header>
@@ -143,7 +117,6 @@ const MonetaryMovementTab: React.FC = () => {
           <Card.Body>
             {movimientos ? (
               <>
-                {/* **CÓDIGO MODIFICADO: Aplicación de la clase CSS para la tabla** */}
                 <Table striped bordered hover responsive className="mb-4">
                   <tbody>
                     <tr>
@@ -161,7 +134,6 @@ const MonetaryMovementTab: React.FC = () => {
                   </tbody>
                 </Table>
 
-                {/* **INICIO DE CÓDIGO NUEVO: Gráfico de barras** */}
                 <div style={{ width: "100%", height: 300 }}>
                   <ResponsiveContainer className="recharts-wrapper">
                     <BarChart
@@ -179,9 +151,8 @@ const MonetaryMovementTab: React.FC = () => {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                {/* **FIN DE CÓDIGO NUEVO: Gráfico de barras** */}
 
-                {/* **CÓDIGO NUEVO: Botón de exportar a Excel** */}
+                {/* Botón de exportar a Excel** */}
                 <Button
                   variant="success"
                   onClick={handleExport}
@@ -190,7 +161,6 @@ const MonetaryMovementTab: React.FC = () => {
                   <FontAwesomeIcon icon={faFileExcel} className="me-2" />{" "}
                   Exportar a Excel
                 </Button>
-                {/* **FIN DE CÓDIGO NUEVO: Botón de exportar a Excel** */}
               </>
             ) : (
               <Alert variant="info">

@@ -13,4 +13,6 @@ public interface EmpleadoService {
     EmpleadoResponseDTO update(Integer id, @Valid EmpleadoRequestDTO dto) throws Exception;
     void softDelete(Integer id) throws Exception;
     EmpleadoResponseDTO getByUsuarioId(Integer usuarioId) throws Exception;
+    EmpleadoResponseDTO findOrCreateEmpleadoPorAuth0Id(String auth0Id) throws Exception;
+
 }

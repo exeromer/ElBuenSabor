@@ -9,6 +9,8 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -74,6 +76,19 @@ public class EmpleadoController {
             return handleGenericException(e, HttpStatus.NOT_FOUND);
         }
     }
+    @GetMapping("/perfil")
+    public ResponseEntity<?> getMiPerfil(Authentication authentication) {
+        try {
+            Jwt jwt = (Jwt) authentication.getPrincipal();
+            String auth0Id = jwt.getSubject();
+            EmpleadoResponseDTO empleadoDto = empleadoService.findOrCreateEmpleadoPorAuth0Id(auth0Id);
+            return ResponseEntity.ok(empleadoDto);
+        } catch (Exception e) {
+            // Un manejador de errores genérico. Puedes adaptarlo.
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateEmpleado(@PathVariable Integer id, @Valid @RequestBody EmpleadoRequestDTO dto) {
@@ -100,6 +115,7 @@ public class EmpleadoController {
         }
     }
 
+
     private ResponseEntity<Map<String, Object>> handleConstraintViolation(ConstraintViolationException e) {
         Map<String, Object> errorResponse = new HashMap<>();
         errorResponse.put("status", HttpStatus.BAD_REQUEST.value());
@@ -117,4 +133,5 @@ public class EmpleadoController {
         e.printStackTrace();
         return ResponseEntity.status(status).body(errorResponse);
     }
+
 }

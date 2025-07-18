@@ -22,6 +22,7 @@
     "react-dom": "^19.1.0",
     "react-hot-toast": "^2.5.2",
     "react-router-dom": "^7.6.0",
+    "react-toastify": "^11.0.5",
     "recharts": "^3.1.0",
     "sockjs-client": "^1.6.1",
     "stompjs": "^2.3.3"
@@ -32,6 +33,7 @@
     "@types/react-bootstrap": "^1.0.1",
     "@types/react-dom": "^19.1.6",
     "@types/react-router-dom": "^5.3.3",
+    "@types/recharts": "^1.8.29",
     "@types/sockjs-client": "^1.5.4",
     "@types/stompjs": "^2.3.9",
     "@types/typescript": "^0.4.29",

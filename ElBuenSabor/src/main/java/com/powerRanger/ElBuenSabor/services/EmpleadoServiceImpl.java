@@ -138,4 +138,32 @@ public class EmpleadoServiceImpl implements EmpleadoService {
                 .orElseThrow(() -> new Exception("Empleado no encontrado para el Usuario ID: " + usuarioId));
         return convertToResponseDto(empleado);
     }
+    @Override
+    @Transactional
+    public EmpleadoResponseDTO findOrCreateEmpleadoPorAuth0Id(String auth0Id) throws Exception {
+        // 1. Buscamos el usuario por su auth0Id. Asumimos que el JWTConverter ya lo creó.
+        Usuario usuario = usuarioRepository.findByAuth0Id(auth0Id)
+                .orElseThrow(() -> new Exception("Usuario de Auth0 no encontrado en la base de datos local."));
+
+        // 2. Intentamos encontrar un empleado asociado a ese usuario.
+        return empleadoRepository.findByUsuarioId(usuario.getId())
+                .map(this::convertToResponseDto)
+                .orElseGet(() -> {
+                    try {
+                        Empleado nuevoEmpleado = new Empleado();
+                        nuevoEmpleado.setNombre("Nuevo"); // Valores por defecto
+                        nuevoEmpleado.setApellido("Empleado");
+                        nuevoEmpleado.setUsuario(usuario);
+                        nuevoEmpleado.setEstadoActivo(true);
+                        // Asigna un rol de empleado por defecto si es necesario, por ejemplo:
+                        nuevoEmpleado.setRolEmpleado(RolEmpleado.CAJERO);
+
+                        Empleado empleadoGuardado = empleadoRepository.save(nuevoEmpleado);
+                        return convertToResponseDto(empleadoGuardado);
+                    } catch (Exception e) {
+                        throw new RuntimeException("Error al crear el perfil de empleado por defecto.", e);
+                    }
+                });
+    }
+
 }

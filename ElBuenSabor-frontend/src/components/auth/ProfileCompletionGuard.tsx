@@ -1,100 +1,86 @@
-import React, { useEffect, useState } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { ClienteUsuarioService } from "../../services/clienteUsuarioService";
-import FullScreenSpinner from "../utils/Spinner/FullScreenSpinner";
+import React, { useEffect } from 'react';
+import { useLocation, Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { useUser } from '../../context/UserContext';
+const ProfileCompletionToast = () => (
+  <span>
+    ¡Bienvenido! Notamos que eres nuevo.
+    <Link
+      to="/profile"
+      style={{ color: '#fff', textDecoration: 'underline', marginLeft: '5px' }}
+      onClick={() => toast.dismiss('profile-completion-toast')}
+    >
+      <b>Completa tu perfil aquí</b>
+    </Link>
+    {' '}para una mejor experiencia.
+  </span>
+);
 
-const ProfileCompletionGuard: React.FC<{ children: React.ReactNode }> = ({
-  children,
-}) => {
-  const { user, isAuthenticated, isLoading, getAccessTokenSilently } =
-    useAuth0();
-  const navigate = useNavigate();
+const ProfileCompletionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { cliente, empleado, userRole, isLoading: isUserContextLoading } = useUser();
   const location = useLocation();
-  const [isProfileChecked, setIsProfileChecked] = useState(false);
 
   useEffect(() => {
-    const checkProfile = async () => {
-      const roles = (user?.["https://buensabor.com/roles"] as string[]) || [];
+    const checkProfile = () => {
+      const hasShownProfileToast = sessionStorage.getItem('profileToastShown');
+      
+      // Si el contexto está cargando, o ya estamos en /profile, o ya se mostró el toast, no hacemos nada.
+      if (isUserContextLoading || location.pathname === '/profile' || hasShownProfileToast) {
+        return;
+      }
 
-      // **INICIO DE CÓDIGO NUEVO:**
-      // Flag para indicar que el perfil ya ha sido verificado o que el usuario ya visitó /profile
-      const profileInitiallyChecked = localStorage.getItem(
-        "profile_initially_checked"
-      );
-      // **FIN DE CÓDIGO NUEVO**
+      // Si el rol es ADMIN, no hacemos nada.
+      if (userRole === 'ADMIN') {
+        return;
+      }
+      
+      let profileIsIncomplete = false;
 
-      // Si el usuario está autenticado, no es ADMIN/EMPLEADO y no está ya en la página de perfil
-      if (
-        isAuthenticated &&
-        !roles.includes("ADMIN") &&
-        !roles.includes("EMPLEADO") &&
-        location.pathname !== "/profile"
-      ) {
-        // **INICIO DE CÓDIGO NUEVO: Comprobación del flag de localStorage**
-        if (profileInitiallyChecked === "true") {
-          setIsProfileChecked(true); // Ya se chequeó antes y se puede continuar
-          return; // Salir de la función para no re-redirigir
+      // Verificamos los datos que nos proveyó el contexto.
+      if (userRole === 'CLIENTE' && cliente) {
+        if (cliente.nombre === 'Nuevo' && cliente.apellido === 'Cliente') {
+          profileIsIncomplete = true;
         }
-        // **FIN DE CÓDIGO NUEVO**
-
-        try {
-          const token = await getAccessTokenSilently();
-          const clienteService = new ClienteUsuarioService();
-          const profile = await clienteService.getMyProfile(token);
-
-          // Si el perfil aún tiene los valores predeterminados, redirigir
-          if (profile.nombre === "Nuevo" && profile.apellido === "Cliente") {
-            console.warn(
-              "Perfil incompleto detectado. Redirigiendo a /profile."
-            ); // Log para depuración
-            navigate("/profile", { replace: true });
-            // **INICIO DE CÓDIGO NUEVO: Marcar que se ha iniciado el proceso de verificación**
-            // No marcamos 'true' aquí directamente, porque la redirección significa que aún no se ha completado.
-            // La bandera se marcará cuando el usuario aterrice en /profile y potencialmente lo complete.
-          } else {
-            // Perfil completo, marcar como verificado y permitir el acceso
-            console.log("Perfil completo. Acceso permitido."); // Log para depuración
-            setIsProfileChecked(true);
-            // **INICIO DE CÓDIGO NUEVO: Marcar que el perfil ha sido revisado exitosamente**
-            localStorage.setItem("profile_initially_checked", "true");
-            // **FIN DE CÓDIGO NUEVO**
-          }
-        } catch (error) {
-          console.error("Error al verificar el perfil del cliente:", error);
-          // En caso de error, se permite continuar para no bloquear al usuario
-          setIsProfileChecked(true);
-          // **INICIO DE CÓDIGO NUEVO: En caso de error, también se marca para evitar bucles**
-          localStorage.setItem("profile_initially_checked", "true"); // Evitar bucle si hay error de API
-          // **FIN DE CÓDIGO NUEVO**
+      } else if (userRole === 'EMPLEADO' && empleado) {
+        if (empleado.nombre === 'Nuevo' && empleado.apellido === 'Empleado') {
+          profileIsIncomplete = true;
         }
-      } else {
-        // Si es ADMIN/EMPLEADO, ya está en /profile, o no autenticado, permitir acceso
-        setIsProfileChecked(true);
-        // **INICIO DE CÓDIGO NUEVO: Si llega a /profile, marcar como verificado (asume que aquí se completa)**
-        if (location.pathname === "/profile") {
-          localStorage.setItem("profile_initially_checked", "true");
-        }
-        // **FIN DE CÓDIGO NUEVO**
+      }
+      
+      if (profileIsIncomplete) {
+        toast.custom(
+          (t) => (
+            <div
+              style={{
+                opacity: t.visible ? 1 : 0,
+                transition: 'all 0.25s ease-in-out',
+                backgroundColor: '#0d6efd',
+                color: 'white',
+                padding: '16px',
+                borderRadius: '8px',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                maxWidth: '450px',
+                textAlign: 'center',
+                zIndex: 9999,
+              }}
+            >
+              <ProfileCompletionToast />
+            </div>
+          ),
+          { id: 'profile-completion-toast', duration: 10000, position: 'top-center' }
+        );
+        sessionStorage.setItem('profileToastShown', 'true');
       }
     };
 
-    if (!isLoading) {
+    // La lógica se ejecuta solo cuando el contexto ha terminado de cargar.
+    if (!isUserContextLoading) {
       checkProfile();
     }
-  }, [
-    isLoading,
-    isAuthenticated,
-    user,
-    navigate,
-    location.pathname,
-    getAccessTokenSilently,
-  ]);
+    
+  }, [isUserContextLoading, cliente, empleado, userRole, location.pathname]); // Las dependencias ahora son los datos del contexto.
 
-  if (!isProfileChecked || isLoading) {
-    return <FullScreenSpinner />;
-  }
-
+  // El guardián simplemente renderiza a sus hijos.
   return <>{children}</>;
 };
 

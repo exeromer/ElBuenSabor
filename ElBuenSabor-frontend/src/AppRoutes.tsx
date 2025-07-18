@@ -13,7 +13,7 @@ import CajeroPage from "./pages/CajeroPage";
 import CocinaPage from "./pages/CocinaPage";
 import DeliveryPage from "./pages/DeliveryPage";
 import EstadisticasPage from "./pages/EstadisticasPage";
-import { Button, Container } from "react-bootstrap";
+import { Button } from "react-bootstrap";
 
 /**
  * @function AppRoutes
@@ -88,8 +88,6 @@ function AppRoutes() {
             />
           }
         />
-
-        {/* --- NUEVAS RUTAS POR ROL --- */}
         <Route
           path="/cajero"
           element={
