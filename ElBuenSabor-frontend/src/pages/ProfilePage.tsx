@@ -72,9 +72,11 @@ const ProfilePage: React.FC = () => {
                     <Card className="mt-4">
                         <Card.Header as="h5">Información Personal</Card.Header>
                         <Card.Body>
+                            <Card.Text><strong>Rol:</strong> {cliente.rolUsuario}</Card.Text>
                             <Card.Text><strong>Nombre:</strong> {cliente.nombre} {cliente.apellido}</Card.Text>
                             <Card.Text><strong>Email:</strong> {cliente.email}</Card.Text>
                             <Card.Text><strong>Teléfono:</strong> {cliente.telefono || 'No especificado'}</Card.Text>
+                            <Card.Text><strong>Dirección:</strong> {cliente.domicilios.length > 0 ? cliente.domicilios.map(d => `${d.calle} ${d.numero}, ${d.localidad.nombre}`).join('; ') : 'No especificada'}</Card.Text>
                             <Button variant="primary" onClick={() => setShowForm(true)}>Editar Perfil y Domicilios</Button>
                         </Card.Body>
                     </Card>
