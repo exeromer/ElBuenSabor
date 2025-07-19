@@ -9,8 +9,7 @@ import java.util.List;
 public interface DomicilioService {
     List<DomicilioResponseDTO> getAll(); // Devuelve lista de DTOs
     DomicilioResponseDTO getById(Integer id) throws Exception; // Devuelve un DTO
-
-    Domicilio create(@Valid DomicilioRequestDTO dto) throws Exception;
-    Domicilio update(Integer id, @Valid DomicilioRequestDTO dto) throws Exception;
+    DomicilioResponseDTO create(DomicilioRequestDTO domicilio) throws Exception;
+    DomicilioResponseDTO update(Integer id, DomicilioRequestDTO domicilio) throws Exception;
     void delete(Integer id) throws Exception;
 }

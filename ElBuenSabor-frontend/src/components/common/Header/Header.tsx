@@ -9,12 +9,13 @@ import { Navbar, Nav, Container, Button, Badge } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faShoppingCart, faUser, faSignInAlt, faSignOutAlt, faClipboardList, faTachometerAlt, faCashRegister, faUtensils, faMotorcycle, faChartLine  } from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faSignInAlt, faSignOutAlt, faClipboardList, faTachometerAlt, faCashRegister, faUtensils, faMotorcycle, faChartLine  } from '@fortawesome/free-solid-svg-icons';
 import { useCart } from '../../../context/CartContext';
 import { useSucursal } from '../../../context/SucursalContext';
 import { useUser } from '../../../context/UserContext';
 import SucursalSelector from '../Sucursal/SucursalSelector';
 import CartModal from '../../cart/CartModal';
+import { Image } from 'react-bootstrap';
 import './Header.sass'
 
 interface HeaderProps { }
@@ -23,8 +24,7 @@ const Header: React.FC<HeaderProps> = () => {
   const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
   const { totalItems, openCart } = useCart();
   const { sucursales } = useSucursal();
-  const { userRole, employeeRole } = useUser();
-
+  const { userRole, employeeRole, cliente } = useUser();
 
   return (
     <Navbar expand="lg">
@@ -85,9 +85,9 @@ const Header: React.FC<HeaderProps> = () => {
             {/* El carrito solo es visible para clientes */}
             {userRole === 'CLIENTE' && (
               <Nav.Link onClick={openCart} style={{ cursor: 'pointer' }}>
-                <FontAwesomeIcon className="h" icon={faShoppingCart} />
+                <FontAwesomeIcon className="h mt-1 fs-4" icon={faShoppingCart} />
                 {totalItems > 0 && (
-                  <Badge pill bg="danger" className="ms-1">{totalItems}</Badge>
+                  <Badge pill bg="danger" className="ms-2">{totalItems}</Badge>
                 )}
               </Nav.Link>
             )}
@@ -99,7 +99,8 @@ const Header: React.FC<HeaderProps> = () => {
             ) : (
               <>
                 <Nav.Link as={Link} to="/profile">
-                  <FontAwesomeIcon icon={faUser} className="me-1" /> {user?.name || user?.nickname || 'Perfil'}
+                  {user?.picture && <Image src={user.picture} alt="Perfil" roundedCircle style={{ width: '30px', marginRight: '8px' }} />}
+                  <span>{cliente?.nombre || user?.name || user?.nickname}</span>
                 </Nav.Link>
                 <Button variant="secondary" onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>
                   <FontAwesomeIcon icon={faSignOutAlt} className="me-1" /> Cerrar Sesión

@@ -15,8 +15,11 @@ public class DomicilioRequestDTO {
     // @Pattern(regexp = "^[0-9]{4}$", message = "El código postal debe tener 4 dígitos") // Ejemplo, ajusta
     private String cp;
 
-    @NotNull(message = "El ID de la localidad es obligatorio")
-    private Integer localidadId;
+    @NotEmpty(message = "El nombre de la localidad es obligatorio")
+    private String localidadNombre;
+
+    @NotNull(message = "El ID de la provincia es obligatorio")
+    private Integer provinciaId;
 
     // Getters y Setters
     public String getCalle() { return calle; }
@@ -25,6 +28,8 @@ public class DomicilioRequestDTO {
     public void setNumero(Integer numero) { this.numero = numero; }
     public String getCp() { return cp; }
     public void setCp(String cp) { this.cp = cp; }
-    public Integer getLocalidadId() { return localidadId; }
-    public void setLocalidadId(Integer localidadId) { this.localidadId = localidadId; }
+    public String getLocalidadNombre() { return localidadNombre; }
+    public void setLocalidadNombre(String localidadNombre) { this.localidadNombre = localidadNombre; }
+    public Integer getProvinciaId() { return provinciaId; }
+    public void setProvinciaId(Integer provinciaId) { this.provinciaId = provinciaId; }
 }

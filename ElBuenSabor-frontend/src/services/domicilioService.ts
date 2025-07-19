@@ -12,6 +12,16 @@ export class DomicilioService {
   }
 
   /**
+   * Actualiza un domicilio existente.
+   * @param id - El ID del domicilio a actualizar.
+   * @param data - Los nuevos datos del domicilio.
+   */
+  static async update(id: number, data: DomicilioRequest): Promise<DomicilioResponse> {
+    const response = await apiClient.put<DomicilioResponse>(`/domicilios/${id}`, data);
+    return response.data;
+  }
+
+  /**
    * Obtiene todos los domicilios.
    */
   static async getAll(): Promise<DomicilioResponse[]> {
@@ -27,17 +37,7 @@ export class DomicilioService {
     const response = await apiClient.get<DomicilioResponse>(`/domicilios/${id}`);
     return response.data;
   }
-  
-  /**
-   * Actualiza un domicilio existente.
-   * @param id - El ID del domicilio a actualizar.
-   * @param data - Los nuevos datos del domicilio.
-   */
-  static async update(id: number, data: DomicilioRequest): Promise<DomicilioResponse> {
-    const response = await apiClient.put<DomicilioResponse>(`/domicilios/${id}`, data);
-    return response.data;
-  }
-  
+
   /**
    * Elimina un domicilio.
    * @param id - El ID del domicilio a eliminar.

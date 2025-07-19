@@ -129,6 +129,7 @@ export interface ClienteResponse {
   username: string;
   rolUsuario: Rol;
   domicilios: DomicilioResponse[];
+  imagen: ImagenResponse | null; // Puede ser null si no tiene imagen
 }
 
 export interface CrearPedidoRequest {
@@ -162,7 +163,8 @@ export interface DomicilioRequest {
   calle: string;
   numero: number;
   cp: string;
-  localidadId: number;
+  localidadNombre: string; 
+  provinciaId: number;   
 }
 
 export interface DomicilioResponse {
@@ -470,3 +472,9 @@ export interface ArticuloManufacturadoResponse extends ArticuloBaseResponse {
 export type ArticuloResponse =
   | ArticuloInsumoResponse
   | ArticuloManufacturadoResponse;
+
+// Interfaz para la respuesta de la API Georef
+export interface GeorefLocalidad {
+  id: string;
+  nombre: string;
+}

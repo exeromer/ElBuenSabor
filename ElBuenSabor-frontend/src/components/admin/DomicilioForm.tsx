@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner, Row, Col } from 'react-bootstrap';
 import { DomicilioService } from '../../services/domicilioService';
 import { UbicacionService } from '../../services/ubicacionService';
-import type { DomicilioResponse, DomicilioRequest, PaisResponse, ProvinciaResponse, LocalidadResponse } from '../../types/types';
+import type { DomicilioResponse, DomicilioRequest, PaisResponse, ProvinciaResponse, GeorefLocalidad } from '../../types/types';
 
-// Se instancian los servicios para usar sus métodos de instancia.
 const ubicacionService = new UbicacionService();
 
 interface DomicilioFormProps {
@@ -16,26 +15,21 @@ interface DomicilioFormProps {
 
 const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave, domicilioToEdit }) => {
 
-    const [formData, setFormData] = useState<DomicilioRequest>({
-        calle: '', numero: 0, cp: '', localidadId: 0,
+    const [formData, setFormData] = useState<Omit<DomicilioRequest, 'provinciaId'>>({
+        calle: '', numero: 0, cp: '', localidadNombre: '',
     });
 
     const [paises, setPaises] = useState<PaisResponse[]>([]);
     const [provincias, setProvincias] = useState<ProvinciaResponse[]>([]);
-    const [localidades, setLocalidades] = useState<LocalidadResponse[]>([]);
-    
-    // Almacenamos todas las provincias y localidades para filtrar en el cliente y evitar múltiples llamadas a la API.
+    const [localidades, setLocalidades] = useState<GeorefLocalidad[]>([]);
     const [allProvincias, setAllProvincias] = useState<ProvinciaResponse[]>([]);
-    const [allLocalidades, setAllLocalidades] = useState<LocalidadResponse[]>([]);
-
     const [selectedPaisId, setSelectedPaisId] = useState<number | ''>('');
     const [selectedProvinciaId, setSelectedProvinciaId] = useState<number | ''>('');
-
     const [loadingOptions, setLoadingOptions] = useState(true);
+    const [loadingLocalidades, setLoadingLocalidades] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Carga todas las ubicaciones una sola vez cuando el modal se abre.
     useEffect(() => {
         if (show) {
             setLoadingOptions(true);
@@ -44,11 +38,9 @@ const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave
             Promise.all([
                 ubicacionService.getAllPaises(),
                 ubicacionService.getAllProvincias(),
-                ubicacionService.getAllLocalidades(),
-            ]).then(([fetchedPaises, fetchedProvincias, fetchedLocalidades]) => {
+            ]).then(([fetchedPaises, fetchedProvincias]) => {
                 setPaises(fetchedPaises);
                 setAllProvincias(fetchedProvincias);
-                setAllLocalidades(fetchedLocalidades);
 
                 if (domicilioToEdit) {
                     const paisId = domicilioToEdit.localidad.provincia.pais.id;
@@ -58,19 +50,19 @@ const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave
                         calle: domicilioToEdit.calle,
                         numero: domicilioToEdit.numero,
                         cp: domicilioToEdit.cp,
-                        localidadId: domicilioToEdit.localidad.id,
+                        localidadNombre: domicilioToEdit.localidad.nombre,
                     });
-
                     setSelectedPaisId(paisId);
                     setProvincias(fetchedProvincias.filter(p => p.pais.id === paisId));
                     setSelectedProvinciaId(provinciaId);
-                    setLocalidades(fetchedLocalidades.filter(l => l.provincia.id === provinciaId));
                 } else {
-                    setFormData({ calle: '', numero: 0, cp: '', localidadId: 0 });
+                    setFormData({ calle: '', numero: 0, cp: '', localidadNombre: '' });
                     setSelectedPaisId('');
+                    setProvincias([]);
                     setSelectedProvinciaId('');
+                    setLocalidades([]);
                 }
-            }).catch((err) => {
+            }).catch((err: any) => {
                 setError(err.message || 'Error al cargar opciones de localización.');
             }).finally(() => {
                 setLoadingOptions(false);
@@ -78,26 +70,46 @@ const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave
         }
     }, [show, domicilioToEdit]);
 
-    // Maneja el cambio de País y filtra las Provincias.
+    useEffect(() => {
+        if (selectedProvinciaId) {
+            setLoadingLocalidades(true);
+            setError(null);
+            setLocalidades([]);
+
+            const provinciaSeleccionada = allProvincias.find(p => p.id === selectedProvinciaId);
+            if (provinciaSeleccionada) {
+                UbicacionService.getLocalidadesPorProvincia(provinciaSeleccionada.nombre)
+                    .then((data: GeorefLocalidad[]) => {
+                        setLocalidades(data);
+                        if (domicilioToEdit && domicilioToEdit.localidad.provincia.id === selectedProvinciaId) {
+                            setFormData(prev => ({ ...prev, localidadNombre: domicilioToEdit.localidad.nombre }));
+                        }
+                    })
+                    .catch((err: any) => setError("Error al cargar localidades: " + err.message))
+                    .finally(() => setLoadingLocalidades(false));
+            }
+        } else {
+            setLocalidades([]);
+        }
+    }, [selectedProvinciaId, allProvincias, domicilioToEdit]);
+
     const handlePaisChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const paisId = Number(e.target.value);
         setSelectedPaisId(paisId);
         setProvincias(allProvincias.filter(p => p.pais.id === paisId));
         setSelectedProvinciaId('');
         setLocalidades([]);
-        setFormData(prev => ({ ...prev, localidadId: 0 }));
+        setFormData(prev => ({ ...prev, localidadNombre: '' }));
     };
 
-    // Maneja el cambio de Provincia y filtra las Localidades.
     const handleProvinciaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const provinciaId = Number(e.target.value);
         setSelectedProvinciaId(provinciaId);
-        setLocalidades(allLocalidades.filter(l => l.provincia.id === provinciaId));
-        setFormData(prev => ({ ...prev, localidadId: 0 }));
+        setFormData(prev => ({ ...prev, localidadNombre: '' }));
     };
 
     const handleLocalidadChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        setFormData(prev => ({ ...prev, localidadId: Number(e.target.value) }));
+        setFormData(prev => ({ ...prev, localidadNombre: e.target.value }));
     };
     
     const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -107,19 +119,24 @@ const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (formData.localidadId === 0) {
-            setError("Por favor, selecciona una localidad válida.");
+        if (!formData.localidadNombre || !selectedProvinciaId) {
+            setError("Por favor, selecciona una provincia y localidad válidas.");
             return;
         }
         setSubmitting(true);
         setError(null);
+
+        const dataToSend: DomicilioRequest = {
+            ...formData,
+            provinciaId: selectedProvinciaId,
+        };
+
         try {
             let savedDomicilio: DomicilioResponse;
             if (domicilioToEdit) {
-                // CORRECCIÓN: Usamos el nombre de método correcto: 'update'
-                savedDomicilio = await DomicilioService.update(domicilioToEdit.id, formData);
+                savedDomicilio = await DomicilioService.update(domicilioToEdit.id, dataToSend);
             } else {
-                savedDomicilio = await DomicilioService.create(formData);
+                savedDomicilio = await DomicilioService.create(dataToSend);
             }
             onSave(savedDomicilio);
             handleClose();
@@ -147,7 +164,10 @@ const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave
                             </Row>
                             <Form.Group className="mb-3"><Form.Label>País</Form.Label><Form.Select value={selectedPaisId} onChange={handlePaisChange} required><option value="">Seleccione un País</option>{paises.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</Form.Select></Form.Group>
                             <Form.Group className="mb-3"><Form.Label>Provincia</Form.Label><Form.Select value={selectedProvinciaId} onChange={handleProvinciaChange} required disabled={!selectedPaisId}><option value="">Seleccione una Provincia</option>{provincias.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</Form.Select></Form.Group>
-                            <Form.Group className="mb-3"><Form.Label>Localidad</Form.Label><Form.Select name="localidadId" value={formData.localidadId} onChange={handleLocalidadChange} required disabled={!selectedProvinciaId}><option value="">Seleccione una Localidad</option>{localidades.map(l => <option key={l.id} value={l.id}>{l.nombre}</option>)}</Form.Select></Form.Group>
+                            <Form.Group className="mb-3"><Form.Label>Localidad</Form.Label><Form.Select name="localidadNombre" value={formData.localidadNombre} onChange={handleLocalidadChange} required disabled={!selectedProvinciaId || loadingLocalidades}>
+                                <option value="">{loadingLocalidades ? 'Cargando...' : 'Seleccione una Localidad'}</option>
+                                {localidades.map(l => <option key={l.id} value={l.nombre}>{l.nombre}</option>)}
+                            </Form.Select></Form.Group>
                         </>
                     )}
                 </Modal.Body>

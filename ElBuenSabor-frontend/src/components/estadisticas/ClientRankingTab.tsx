@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Container, Card, Spinner, Alert, Form, Row, Col, Button, Table, Modal } from "react-bootstrap";
 import { EstadisticaService } from "../../services/EstadisticaService";
-import type { ClienteRanking, PedidoResponse } from "../../types/types"; // Asegúrate de tener PedidoResponse o un tipo similar
+import type { ClienteRanking, PedidoResponse } from "../../types/types";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { format } from "date-fns";
 import { faFileExcel, faEye } from "@fortawesome/free-solid-svg-icons";

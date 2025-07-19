@@ -85,7 +85,6 @@ const ProfilePage: React.FC = () => {
                 <ClientForm
                     show={showForm}
                     handleClose={() => setShowForm(false)}
-                    // CORRECCIÓN: Pasamos la función correcta que coincide con la firma.
                     onSave={handleFormSaved}
                     clientToEdit={cliente}
                     isProfileMode={true}

@@ -28,6 +28,7 @@ public class SucursalServiceImpl implements SucursalService {
     @Autowired private LocalidadRepository localidadRepository;
     @Autowired private PromocionRepository promocionRepository;
     @Autowired private CategoriaRepository categoriaRepository;
+    @Autowired private ProvinciaRepository provinciaRepository;
 
     // Mappers para DTOs anidados (podrían estar en sus propios servicios/mappers)
     private PaisResponseDTO convertPaisToDto(Pais pais) {
@@ -141,14 +142,21 @@ public class SucursalServiceImpl implements SucursalService {
     }
 
     private Domicilio createOrUpdateDomicilio(Domicilio existingDomicilio, DomicilioRequestDTO domicilioDto) throws Exception {
-        Localidad localidad = localidadRepository.findById(domicilioDto.getLocalidadId())
-                .orElseThrow(() -> new Exception("Localidad no encontrada con ID: " + domicilioDto.getLocalidadId()));
+        Provincia provincia = provinciaRepository.findById(domicilioDto.getProvinciaId())
+                .orElseThrow(() -> new Exception("Provincia no encontrada con ID: " + domicilioDto.getProvinciaId()));
+        Localidad localidad = localidadRepository.findByNombreAndProvincia(domicilioDto.getLocalidadNombre(), provincia)
+                .orElseGet(() -> {
+                    Localidad nuevaLocalidad = new Localidad();
+                    nuevaLocalidad.setNombre(domicilioDto.getLocalidadNombre());
+                    nuevaLocalidad.setProvincia(provincia);
+                    return localidadRepository.save(nuevaLocalidad);
+                });
 
         Domicilio domicilioToSave = existingDomicilio != null ? existingDomicilio : new Domicilio();
         domicilioToSave.setCalle(domicilioDto.getCalle());
         domicilioToSave.setNumero(domicilioDto.getNumero());
         domicilioToSave.setCp(domicilioDto.getCp());
-        domicilioToSave.setLocalidad(localidad);
+        domicilioToSave.setLocalidad(localidad); // Asignamos la localidad encontrada o creada
         return domicilioRepository.save(domicilioToSave);
     }
 
