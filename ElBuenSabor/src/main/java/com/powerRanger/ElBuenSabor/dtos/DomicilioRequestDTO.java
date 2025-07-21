@@ -2,7 +2,6 @@ package com.powerRanger.ElBuenSabor.dtos;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
-// import jakarta.validation.constraints.Pattern; // Si usas validación de patrón para cp
 
 public class DomicilioRequestDTO {
     @NotEmpty(message = "La calle no puede estar vacía")

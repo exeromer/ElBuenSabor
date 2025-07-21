@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner, Row, Col } from 'react-bootstrap';
 import { DomicilioService } from '../../services/domicilioService';
 import { UbicacionService } from '../../services/ubicacionService';
-import type { DomicilioResponse, DomicilioRequest, PaisResponse, ProvinciaResponse, GeorefLocalidad } from '../../types/types';
+import type { DomicilioResponse, DomicilioRequest, ProvinciaResponse, GeorefLocalidad } from '../../types/types';
 
 const ubicacionService = new UbicacionService();
 
@@ -18,13 +18,11 @@ const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave
     const [formData, setFormData] = useState<Omit<DomicilioRequest, 'provinciaId'>>({
         calle: '', numero: 0, cp: '', localidadNombre: '',
     });
-
-    const [paises, setPaises] = useState<PaisResponse[]>([]);
+    
     const [provincias, setProvincias] = useState<ProvinciaResponse[]>([]);
     const [localidades, setLocalidades] = useState<GeorefLocalidad[]>([]);
-    const [allProvincias, setAllProvincias] = useState<ProvinciaResponse[]>([]);
-    const [selectedPaisId, setSelectedPaisId] = useState<number | ''>('');
-    const [selectedProvinciaId, setSelectedProvinciaId] = useState<number | ''>('');
+    const [selectedProvincia, setSelectedProvincia] = useState<ProvinciaResponse | null>(null);
+
     const [loadingOptions, setLoadingOptions] = useState(true);
     const [loadingLocalidades, setLoadingLocalidades] = useState(false);
     const [submitting, setSubmitting] = useState(false);
@@ -35,35 +33,23 @@ const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave
             setLoadingOptions(true);
             setError(null);
             
-            Promise.all([
-                ubicacionService.getAllPaises(),
-                ubicacionService.getAllProvincias(),
-            ]).then(([fetchedPaises, fetchedProvincias]) => {
-                setPaises(fetchedPaises);
-                setAllProvincias(fetchedProvincias);
-
+            ubicacionService.getAllProvincias().then(fetchedProvincias => {
+                setProvincias(fetchedProvincias);
                 if (domicilioToEdit) {
-                    const paisId = domicilioToEdit.localidad.provincia.pais.id;
-                    const provinciaId = domicilioToEdit.localidad.provincia.id;
-                    
+                    const provinciaActual = fetchedProvincias.find(p => p.id === domicilioToEdit.localidad.provincia.id);
                     setFormData({
                         calle: domicilioToEdit.calle,
                         numero: domicilioToEdit.numero,
                         cp: domicilioToEdit.cp,
                         localidadNombre: domicilioToEdit.localidad.nombre,
                     });
-                    setSelectedPaisId(paisId);
-                    setProvincias(fetchedProvincias.filter(p => p.pais.id === paisId));
-                    setSelectedProvinciaId(provinciaId);
+                    setSelectedProvincia(provinciaActual || null);
                 } else {
                     setFormData({ calle: '', numero: 0, cp: '', localidadNombre: '' });
-                    setSelectedPaisId('');
-                    setProvincias([]);
-                    setSelectedProvinciaId('');
-                    setLocalidades([]);
+                    setSelectedProvincia(null);
                 }
             }).catch((err: any) => {
-                setError(err.message || 'Error al cargar opciones de localización.');
+                setError(err.message || 'Error al cargar las provincias.');
             }).finally(() => {
                 setLoadingOptions(false);
             });
@@ -71,40 +57,20 @@ const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave
     }, [show, domicilioToEdit]);
 
     useEffect(() => {
-        if (selectedProvinciaId) {
+        if (selectedProvincia) {
             setLoadingLocalidades(true);
-            setError(null);
-            setLocalidades([]);
-
-            const provinciaSeleccionada = allProvincias.find(p => p.id === selectedProvinciaId);
-            if (provinciaSeleccionada) {
-                UbicacionService.getLocalidadesPorProvincia(provinciaSeleccionada.nombre)
-                    .then((data: GeorefLocalidad[]) => {
-                        setLocalidades(data);
-                        if (domicilioToEdit && domicilioToEdit.localidad.provincia.id === selectedProvinciaId) {
-                            setFormData(prev => ({ ...prev, localidadNombre: domicilioToEdit.localidad.nombre }));
-                        }
-                    })
-                    .catch((err: any) => setError("Error al cargar localidades: " + err.message))
-                    .finally(() => setLoadingLocalidades(false));
-            }
+            UbicacionService.getLocalidadesPorProvincia(selectedProvincia.nombre)
+                .then(setLocalidades)
+                .catch(err => setError(err.message))
+                .finally(() => setLoadingLocalidades(false));
         } else {
-            setLocalidades([]);
+            setLocalidades([]); 
         }
-    }, [selectedProvinciaId, allProvincias, domicilioToEdit]);
-
-    const handlePaisChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-        const paisId = Number(e.target.value);
-        setSelectedPaisId(paisId);
-        setProvincias(allProvincias.filter(p => p.pais.id === paisId));
-        setSelectedProvinciaId('');
-        setLocalidades([]);
-        setFormData(prev => ({ ...prev, localidadNombre: '' }));
-    };
+    }, [selectedProvincia]);
 
     const handleProvinciaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const provinciaId = Number(e.target.value);
-        setSelectedProvinciaId(provinciaId);
+        setSelectedProvincia(provincias.find(p => p.id === provinciaId) || null);
         setFormData(prev => ({ ...prev, localidadNombre: '' }));
     };
 
@@ -119,29 +85,26 @@ const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!formData.localidadNombre || !selectedProvinciaId) {
-            setError("Por favor, selecciona una provincia y localidad válidas.");
+        if (!selectedProvincia || !formData.localidadNombre) {
+            setError("Por favor, selecciona una provincia y una localidad válidas.");
             return;
         }
         setSubmitting(true);
         setError(null);
-
+        
         const dataToSend: DomicilioRequest = {
             ...formData,
-            provinciaId: selectedProvinciaId,
+            provinciaId: selectedProvincia.id,
         };
 
         try {
-            let savedDomicilio: DomicilioResponse;
-            if (domicilioToEdit) {
-                savedDomicilio = await DomicilioService.update(domicilioToEdit.id, dataToSend);
-            } else {
-                savedDomicilio = await DomicilioService.create(dataToSend);
-            }
+            const savedDomicilio = domicilioToEdit
+                ? await DomicilioService.update(domicilioToEdit.id, dataToSend)
+                : await DomicilioService.create(dataToSend);
             onSave(savedDomicilio);
             handleClose();
         } catch (err: any) {
-            setError(err.message || "Error al guardar el domicilio.");
+            setError(err.response?.data?.error || err.message || "Error al guardar el domicilio.");
         } finally {
             setSubmitting(false);
         }
@@ -162,9 +125,8 @@ const DomicilioForm: React.FC<DomicilioFormProps> = ({ show, handleClose, onSave
                                 <Col><Form.Group className="mb-3"><Form.Label>Número</Form.Label><Form.Control type="number" name="numero" value={formData.numero || ''} onChange={handleInputChange} required min="1" /></Form.Group></Col>
                                 <Col><Form.Group className="mb-3"><Form.Label>Código Postal</Form.Label><Form.Control type="text" name="cp" value={formData.cp} onChange={handleInputChange} required /></Form.Group></Col>
                             </Row>
-                            <Form.Group className="mb-3"><Form.Label>País</Form.Label><Form.Select value={selectedPaisId} onChange={handlePaisChange} required><option value="">Seleccione un País</option>{paises.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</Form.Select></Form.Group>
-                            <Form.Group className="mb-3"><Form.Label>Provincia</Form.Label><Form.Select value={selectedProvinciaId} onChange={handleProvinciaChange} required disabled={!selectedPaisId}><option value="">Seleccione una Provincia</option>{provincias.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</Form.Select></Form.Group>
-                            <Form.Group className="mb-3"><Form.Label>Localidad</Form.Label><Form.Select name="localidadNombre" value={formData.localidadNombre} onChange={handleLocalidadChange} required disabled={!selectedProvinciaId || loadingLocalidades}>
+                            <Form.Group className="mb-3"><Form.Label>Provincia</Form.Label><Form.Select value={selectedProvincia?.id || ''} onChange={handleProvinciaChange} required><option value="">Seleccione una Provincia</option>{provincias.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}</Form.Select></Form.Group>
+                            <Form.Group className="mb-3"><Form.Label>Localidad</Form.Label><Form.Select name="localidadNombre" value={formData.localidadNombre} onChange={handleLocalidadChange} required disabled={!selectedProvincia || loadingLocalidades}>
                                 <option value="">{loadingLocalidades ? 'Cargando...' : 'Seleccione una Localidad'}</option>
                                 {localidades.map(l => <option key={l.id} value={l.nombre}>{l.nombre}</option>)}
                             </Form.Select></Form.Group>

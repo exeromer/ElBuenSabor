@@ -1,12 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Spinner, Alert, Form } from 'react-bootstrap';
-// FIX: Importamos los hooks de contexto necesarios
 import { useSucursal } from '../context/SucursalContext';
-
-// FIX: Usamos los servicios con sus métodos estáticos
 import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService';
-
-// FIX: Corregimos los tipos para que coincidan con los DTOs de respuesta
 import type { ArticuloManufacturadoResponse, CategoriaResponse } from '../types/types';
 import ProductCard from '../components/products/Card/ProductCard';
 import Titulo from '../components/utils/Titulo/Titulo';

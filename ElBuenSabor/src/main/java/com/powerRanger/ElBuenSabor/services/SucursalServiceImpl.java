@@ -25,10 +25,9 @@ public class SucursalServiceImpl implements SucursalService {
     @Autowired private SucursalRepository sucursalRepository;
     @Autowired private EmpresaRepository empresaRepository;
     @Autowired private DomicilioRepository domicilioRepository;
-    @Autowired private LocalidadRepository localidadRepository;
+    @Autowired private DomicilioService domicilioService;
     @Autowired private PromocionRepository promocionRepository;
     @Autowired private CategoriaRepository categoriaRepository;
-    @Autowired private ProvinciaRepository provinciaRepository;
 
     // Mappers para DTOs anidados (podrían estar en sus propios servicios/mappers)
     private PaisResponseDTO convertPaisToDto(Pais pais) {
@@ -141,24 +140,6 @@ public class SucursalServiceImpl implements SucursalService {
         }
     }
 
-    private Domicilio createOrUpdateDomicilio(Domicilio existingDomicilio, DomicilioRequestDTO domicilioDto) throws Exception {
-        Provincia provincia = provinciaRepository.findById(domicilioDto.getProvinciaId())
-                .orElseThrow(() -> new Exception("Provincia no encontrada con ID: " + domicilioDto.getProvinciaId()));
-        Localidad localidad = localidadRepository.findByNombreAndProvincia(domicilioDto.getLocalidadNombre(), provincia)
-                .orElseGet(() -> {
-                    Localidad nuevaLocalidad = new Localidad();
-                    nuevaLocalidad.setNombre(domicilioDto.getLocalidadNombre());
-                    nuevaLocalidad.setProvincia(provincia);
-                    return localidadRepository.save(nuevaLocalidad);
-                });
-
-        Domicilio domicilioToSave = existingDomicilio != null ? existingDomicilio : new Domicilio();
-        domicilioToSave.setCalle(domicilioDto.getCalle());
-        domicilioToSave.setNumero(domicilioDto.getNumero());
-        domicilioToSave.setCp(domicilioDto.getCp());
-        domicilioToSave.setLocalidad(localidad); // Asignamos la localidad encontrada o creada
-        return domicilioRepository.save(domicilioToSave);
-    }
 
     private void mapDtoToEntity(SucursalRequestDTO dto, Sucursal sucursal, boolean isCreate) throws Exception {
         sucursal.setNombre(dto.getNombre());
@@ -173,7 +154,15 @@ public class SucursalServiceImpl implements SucursalService {
         if (dto.getDomicilio() == null) {
             throw new Exception("Los datos del domicilio son obligatorios.");
         }
-        Domicilio domicilioManaged = createOrUpdateDomicilio(isCreate ? null : sucursal.getDomicilio(), dto.getDomicilio());
+        DomicilioResponseDTO domicilioDtoResult;
+        if (isCreate) {
+            domicilioDtoResult = domicilioService.create(dto.getDomicilio());
+        } else {
+            Integer domicilioId = sucursal.getDomicilio().getId();
+            domicilioDtoResult = domicilioService.update(domicilioId, dto.getDomicilio());
+        }
+        Domicilio domicilioManaged = domicilioRepository.findById(domicilioDtoResult.getId())
+                .orElseThrow(() -> new Exception("Error fatal al procesar el domicilio."));
         sucursal.setDomicilio(domicilioManaged);
 
         List<Categoria> nuevasCategorias = new ArrayList<>();

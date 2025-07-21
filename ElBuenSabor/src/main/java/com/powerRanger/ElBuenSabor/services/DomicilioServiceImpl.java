@@ -33,6 +33,9 @@ public class DomicilioServiceImpl implements DomicilioService {
     @Autowired
     private ProvinciaRepository provinciaRepository;
 
+
+
+
     // Los métodos de mapeo están bien, los mantenemos para convertir la entidad a DTO de respuesta.
     private DomicilioResponseDTO convertToDto(Domicilio domicilio) {
         if (domicilio == null) return null;
@@ -73,13 +76,13 @@ public class DomicilioServiceImpl implements DomicilioService {
         return dto;
     }
 
-
-    @Override
-    @Transactional
-    public DomicilioResponseDTO create(@Valid DomicilioRequestDTO dto) throws Exception {
+    private DomicilioResponseDTO saveOrUpdate(@Valid DomicilioRequestDTO dto, Domicilio domicilio) throws Exception {
+        // 1. Valida y obtiene la Provincia usando el provinciaId del DTO.
         Provincia provincia = provinciaRepository.findById(dto.getProvinciaId())
                 .orElseThrow(() -> new Exception("Provincia no encontrada con ID: " + dto.getProvinciaId()));
 
+        // 2. Busca la Localidad por su nombre dentro de esa Provincia.
+        // Si no la encuentra, la crea automáticamente.
         Localidad localidad = localidadRepository.findByNombreAndProvincia(dto.getLocalidadNombre(), provincia)
                 .orElseGet(() -> {
                     Localidad nuevaLocalidad = new Localidad();
@@ -87,41 +90,31 @@ public class DomicilioServiceImpl implements DomicilioService {
                     nuevaLocalidad.setProvincia(provincia);
                     return localidadRepository.save(nuevaLocalidad);
                 });
-
-        Domicilio domicilio = new Domicilio();
+        // 3. Mapea los datos del DTO a la entidad Domicilio.
         domicilio.setCalle(dto.getCalle());
         domicilio.setNumero(dto.getNumero());
         domicilio.setCp(dto.getCp());
         domicilio.setLocalidad(localidad);
-
+        // 4. Guarda la entidad en la base de datos.
         Domicilio savedDomicilio = domicilioRepository.save(domicilio);
+        // 5. Convierte la entidad guardada a un DTO de respuesta y la retorna.
         return convertToDto(savedDomicilio);
+    }
+
+
+
+    @Override
+    @Transactional
+    public DomicilioResponseDTO create(DomicilioRequestDTO dto) throws Exception {
+        return saveOrUpdate(dto, new Domicilio());
     }
 
     @Override
     @Transactional
-    public DomicilioResponseDTO update(Integer id, @Valid DomicilioRequestDTO dto) throws Exception {
+    public DomicilioResponseDTO update(Integer id, DomicilioRequestDTO dto) throws Exception {
         Domicilio domicilioExistente = domicilioRepository.findById(id)
                 .orElseThrow(() -> new Exception("Domicilio no encontrado con ID: " + id));
-
-        Provincia provincia = provinciaRepository.findById(dto.getProvinciaId())
-                .orElseThrow(() -> new Exception("Provincia no encontrada con ID: " + dto.getProvinciaId()));
-
-        Localidad localidad = localidadRepository.findByNombreAndProvincia(dto.getLocalidadNombre(), provincia)
-                .orElseGet(() -> {
-                    Localidad nuevaLocalidad = new Localidad();
-                    nuevaLocalidad.setNombre(dto.getLocalidadNombre());
-                    nuevaLocalidad.setProvincia(provincia);
-                    return localidadRepository.save(nuevaLocalidad);
-                });
-
-        domicilioExistente.setCalle(dto.getCalle());
-        domicilioExistente.setNumero(dto.getNumero());
-        domicilioExistente.setCp(dto.getCp());
-        domicilioExistente.setLocalidad(localidad);
-
-        Domicilio updatedDomicilio = domicilioRepository.save(domicilioExistente);
-        return convertToDto(updatedDomicilio);
+        return saveOrUpdate(dto, domicilioExistente);
     }
 
     @Override
