@@ -90,8 +90,8 @@ const PromocionForm: React.FC<PromocionFormProps> = ({ show, handleClose, onSave
           denominacion: promocionToEdit.denominacion,
           fechaDesde: promocionToEdit.fechaDesde,
           fechaHasta: promocionToEdit.fechaHasta,
-          horaDesde: promocionToEdit.horaDesde.substring(0, 5), // CORRECCIÓN
-          horaHasta: promocionToEdit.horaHasta.substring(0, 5), // CORRECCIÓN
+          horaDesde: promocionToEdit.horaDesde,
+          horaHasta: promocionToEdit.horaHasta,
           descripcionDescuento: promocionToEdit.descripcionDescuento || '',
           precioPromocional: promocionToEdit.precioPromocional || 0,
           tipoPromocion: promocionToEdit.tipoPromocion,
@@ -161,13 +161,15 @@ const PromocionForm: React.FC<PromocionFormProps> = ({ show, handleClose, onSave
       return;
     }
 
-    const dataToSend: PromocionRequest = {
-      ...formData,
-      horaDesde: formData.horaDesde,
-      horaHasta: formData.horaHasta,
-      precioPromocional: (formData.tipoPromocion === 'CANTIDAD' || formData.tipoPromocion === 'COMBO') ? formData.precioPromocional : undefined,
-      porcentajeDescuento: formData.tipoPromocion === 'PORCENTAJE' ? formData.porcentajeDescuento : undefined,
-    };
+   const formatTime = (time: string) => time.length === 5 ? `${time}:00` : time;
+
+        const dataToSend: PromocionRequest = {
+            ...formData,
+            horaDesde: formatTime(formData.horaDesde),
+            horaHasta: formatTime(formData.horaHasta),
+            precioPromocional: (formData.tipoPromocion === 'CANTIDAD' || formData.tipoPromocion === 'COMBO') ? formData.precioPromocional : undefined,
+            porcentajeDescuento: formData.tipoPromocion === 'PORCENTAJE' ? formData.porcentajeDescuento : undefined,
+        };
 
     try {
       if (promocionToEdit) {
