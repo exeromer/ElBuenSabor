@@ -436,6 +436,14 @@ export interface EmpleadoResponse {
   estadoActivo: boolean;
   fechaBaja?: string;
 }
+export interface EmpleadoRequest {
+  nombre: string;
+  apellido: string;
+  telefono: string;
+  rolEmpleado: "CAJERO" | "COCINA" | "DELIVERY";
+  usuarioId: number;
+  estadoActivo: boolean;
+}
 
 // --- Tipos Polimórficos (Uniones Discriminadas) ---
 
