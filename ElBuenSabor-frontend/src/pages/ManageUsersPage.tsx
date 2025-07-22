@@ -8,8 +8,9 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faEdit, faUserShield, faAddressBook, faBriefcase, faToggleOn, faToggleOff, faCheckCircle, faBan } from '@fortawesome/free-solid-svg-icons';
 import UserForm from '../components/admin/UserForm';
 import ClientForm from '../components/admin/ClientForm';
+import toast from 'react-hot-toast';
 
-interface ManageUsersPageProps {}
+interface ManageUsersPageProps { }
 
 const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
     const { getAccessTokenSilently } = useAuth0();
@@ -53,38 +54,29 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
         setShowUserForm(true);
     };
 
-    const handleUpdateUserState = async (id: number, estadoActual: boolean) => {
-        if (!window.confirm(`¿Estás seguro de que quieres ${estadoActual ? 'desactivar' : 'reactivar'} el usuario ID ${id}?`)) return;
-        
+    const handleSoftDeleteClient = async (id: number) => {
+        if (!window.confirm(`¿Estás seguro de que quieres DESACTIVAR el cliente ID ${id}?`)) {
+            return;
+        }
+
         try {
             const token = await getAccessTokenSilently();
-            const userToUpdate = usuarios.find(u => u.id === id);
-            if (!userToUpdate) throw new Error("Usuario no encontrado.");
-
-            // CORRECCIÓN: El objeto de request no debe llevar 'id'.
-            const updatedData: UsuarioRequest = {
-                auth0Id: userToUpdate.auth0Id,
-                username: userToUpdate.username,
-                rol: userToUpdate.rol,
-                estadoActivo: !estadoActual,
-            };
-            await clienteUsuarioService.updateUsuario(id, updatedData, token);
-            alert(`Usuario ${!estadoActual ? 'reactivado' : 'desactivado'} con éxito.`);
+            await clienteUsuarioService.softDeleteCliente(id, token);
+            toast.success('Cliente desactivado con éxito.');
             fetchData();
+
         } catch (err: any) {
-            alert(`Error: ${err.message}`);
+            toast.error(`Error: ${err.message || 'No se pudo desactivar el cliente.'}`);
         }
     };
 
     const handleUpdateUserRole = async (id: number, newRole: Rol) => {
         if (!window.confirm(`¿Seguro que quieres cambiar el rol del usuario ID ${id} a ${newRole}?`)) return;
-        
+
         try {
             const token = await getAccessTokenSilently();
             const userToUpdate = usuarios.find(u => u.id === id);
             if (!userToUpdate) throw new Error("Usuario no encontrado.");
-
-            // CORRECCIÓN: El objeto de request no debe llevar 'id'.
             const updatedData: UsuarioRequest = {
                 auth0Id: userToUpdate.auth0Id,
                 username: userToUpdate.username,
@@ -103,16 +95,14 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
         setEditingClient(client);
         setShowClientForm(true);
     };
-    
+
     const handleUpdateClientState = async (id: number, estadoActual: boolean) => {
         if (!window.confirm(`¿Estás seguro de que quieres ${estadoActual ? 'desactivar' : 'reactivar'} el cliente ID ${id}?`)) return;
-        
+
         try {
             const token = await getAccessTokenSilently();
             const clientToUpdate = clientes.find(c => c.id === id);
             if (!clientToUpdate) throw new Error("Cliente no encontrado.");
-            
-            // CORRECCIÓN: El objeto de request no debe llevar 'id' y se tipan los parámetros del map/filter.
             const updatedData: ClienteRequest = {
                 nombre: clientToUpdate.nombre,
                 apellido: clientToUpdate.apellido,
@@ -166,7 +156,7 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
                                         <tr key={user.id}>
                                             <td>{user.id}</td>
                                             <td>{user.username}</td>
-                                            <td>{user.auth0Id.substring(user.auth0Id.indexOf('|') + 1)}</td>
+                                            <td>{user.auth0Id?.substring(user.auth0Id.indexOf('|') + 1) || 'No disponible'}</td>
                                             <td><Badge bg={user.rol === 'ADMIN' ? 'danger' : user.rol === 'EMPLEADO' ? 'info' : 'secondary'}>{user.rol}</Badge></td>
                                             <td>{user.estadoActivo ? <><FontAwesomeIcon icon={faCheckCircle} className="text-success me-1" /> Activo</> : <><FontAwesomeIcon icon={faBan} className="text-danger me-1" /> Inactivo</>}</td>
                                             <td>
@@ -176,7 +166,7 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
                                                         <Dropdown.Item key={role} onClick={() => handleUpdateUserRole(user.id, role)} disabled={user.rol === role}>Cambiar a {role}</Dropdown.Item>
                                                     ))}
                                                 </DropdownButton>
-                                                <Button variant={user.estadoActivo ? 'danger' : 'success'} size="sm" onClick={() => handleUpdateUserState(user.id, user.estadoActivo)}><FontAwesomeIcon icon={user.estadoActivo ? faToggleOff : faToggleOn} /></Button>
+                                                <Button variant='danger' size="sm" onClick={() => handleSoftDeleteClient(user.id)} title="Desactivar Usuario"><FontAwesomeIcon icon={faBan} /></Button>
                                             </td>
                                         </tr>
                                     ))}
