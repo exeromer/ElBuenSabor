@@ -38,26 +38,22 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 setAuthToken(token);
                 const backendUser: UsuarioResponse = await UsuarioService.getByAuth0Id(user.sub);
                 
+                // Reseteamos estados antes de cargar el perfil correcto
                 setCliente(null);
                 setEmpleado(null);
                 setEmployeeRole(null);
-                
-                try {
+                setUserRole(backendUser.rol); 
+              
+                if (backendUser.rol === 'EMPLEADO') {
                     const empleadoData = await EmpleadoService.getMiPerfil();
-                    if (empleadoData) {
-                        setEmpleado(empleadoData);
-                        setEmployeeRole(empleadoData.rolEmpleado);
-                        setUserRole('EMPLEADO');
-                        return;
-                    }
-                } catch (error) {
-                    console.error("Error al cargar el perfil del empleado desde el backend:", error);}
-                
-                setUserRole(backendUser.rol);
-                if (backendUser.rol === 'CLIENTE') {
+                    setEmpleado(empleadoData);
+                    setEmployeeRole(empleadoData.rolEmpleado);
+                } else if (backendUser.rol === 'CLIENTE') {
                     const clienteData = await ClienteService.getMiPerfil();
                     setCliente(clienteData);
                 }
+                // Si es ADMIN, no se carga ningún perfil específico.
+
             } catch (error) {
                 console.error("Error al cargar el perfil del usuario desde el backend:", error);
                 setCliente(null); setEmpleado(null); setUserRole(null); setEmployeeRole(null);
