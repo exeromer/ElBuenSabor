@@ -123,6 +123,31 @@ public class EmpleadoServiceImpl implements EmpleadoService {
 
     @Override
     @Transactional
+    public EmpleadoResponseDTO updateMiPerfil(String auth0Id, EmpleadoRequestDTO dto) throws Exception {
+        try {
+            Usuario usuario = usuarioRepository.findByAuth0Id(auth0Id)
+                    .orElseThrow(() -> new Exception("No se encontró un usuario con el Auth0 ID proporcionado."));
+
+            // **CORRECCIÓN 1: Usar 'empleadoRepository'**
+            Empleado empleado = empleadoRepository.findByUsuarioId(usuario.getId())
+                    .orElseThrow(() -> new Exception("No se encontró un perfil de empleado para este usuario."));
+
+            empleado.setNombre(dto.getNombre());
+            empleado.setApellido(dto.getApellido());
+            empleado.setTelefono(dto.getTelefono());
+
+            // **CORRECCIÓN 2: Usar 'empleadoRepository'**
+            Empleado empleadoGuardado = empleadoRepository.save(empleado);
+
+            // **CORRECCIÓN 3: Usar 'convertToResponseDto'**
+            return convertToResponseDto(empleadoGuardado);
+
+        } catch (Exception e) {
+            throw new Exception("Error al actualizar el perfil del empleado: " + e.getMessage());
+        }
+    }
+    @Override
+    @Transactional
     public void softDelete(Integer id) throws Exception {
         Empleado empleado = empleadoRepository.findById(id)
                 .orElseThrow(() -> new Exception("Empleado no encontrado con ID: " + id + " para borrado lógico"));

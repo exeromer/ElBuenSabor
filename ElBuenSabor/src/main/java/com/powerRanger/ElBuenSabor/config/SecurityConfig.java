@@ -124,6 +124,7 @@ public class SecurityConfig {
 
                                 // Nuevos endpoints de pedidos para roles específicos de empleado
                                 .requestMatchers("/api/empleados/perfil").hasAuthority("ROLE_EMPLEADO")
+                                .requestMatchers(HttpMethod.PUT, "/api/empleados/perfil").hasAuthority("ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.PUT, "/api/pedidos/{pedidoId}/estado-empleado/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.PUT, "/api/pedidos/{pedidoId}/tiempo-cocina/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")
                                 .requestMatchers(HttpMethod.GET, "/api/pedidos/cajero/{sucursalId}").hasAnyAuthority("ROLE_ADMIN", "ROLE_EMPLEADO")

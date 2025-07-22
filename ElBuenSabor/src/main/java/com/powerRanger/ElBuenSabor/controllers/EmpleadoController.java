@@ -89,6 +89,20 @@ public class EmpleadoController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+    @PutMapping("/perfil")
+    public ResponseEntity<?> updateMiPerfil(Authentication authentication, @Valid @RequestBody EmpleadoRequestDTO dto) {
+        try {
+            Jwt jwt = (Jwt) authentication.getPrincipal();
+            String auth0Id = jwt.getSubject();
+
+            // El servicio se encargará de encontrar al empleado por auth0Id y actualizarlo
+            EmpleadoResponseDTO empleadoActualizadoDto = empleadoService.updateMiPerfil(auth0Id, dto);
+
+            return ResponseEntity.ok(empleadoActualizadoDto);
+        } catch (Exception e) {
+            return handleGenericException(e, HttpStatus.NOT_FOUND);
+        }
+    }
 
     @PutMapping("/{id}")
     public ResponseEntity<?> updateEmpleado(@PathVariable Integer id, @Valid @RequestBody EmpleadoRequestDTO dto) {
