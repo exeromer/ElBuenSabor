@@ -16,7 +16,7 @@ import {
   faBoxOpen, // Icono para gestión de artículos (productos)
   faClipboardList, // Icono para gestión de pedidos
   faUsers, // Icono para gestión de usuarios y clientes
-  // faTools, // Eliminado: No se utiliza en el JSX
+  faStore
 } from '@fortawesome/free-solid-svg-icons';
 
 /**
@@ -87,6 +87,21 @@ const AdminDashboardPage: React.FC<AdminDashboardPageProps> = () => {
                 </Card.Body>
               </Card>
             </Col>
+            {/* Tarjeta para Gestión de Sucursales */}
+            <Col>
+            <Card className="text-center h-100 d-flex flex-column">
+              <Card.Body className="d-flex flex-column">
+                <FontAwesomeIcon icon={faStore} size="3x" className="mb-3 text-warning" /> {/* Color de icono */}
+                <Card.Title className="fw-bold">Gestión de Sucursales</Card.Title>
+                <Card.Text className="text-muted flex-grow-1">
+                  Administra las sucursales, sus horarios y domicilios.
+                </Card.Text>
+                <Link to="/manage-sucursales" style={{ textDecoration: 'none' }} className="mt-auto">
+                  <Button variant="primary">Ir a Gestión</Button>
+                </Link>
+              </Card.Body>
+            </Card>
+          </Col>
           </Row>
         </Card.Body>
       </Card>

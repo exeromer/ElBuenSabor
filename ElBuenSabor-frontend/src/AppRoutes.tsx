@@ -7,6 +7,7 @@ import MyOrdersPage from "./pages/MyOrdersPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
 import ManageProductsPage from "./pages/ManageProductsPage";
 import ManageUsersPage from "./pages/ManageUsersPage";
+import ManageSucursalesPage from "./pages/ManageSucursalesPage"; 
 import PrivateRoute from "./components/auth/PrivateRoute";
 import ProfileCompletionGuard from "./components/auth/ProfileCompletionGuard";
 import CajeroPage from "./pages/CajeroPage";
@@ -88,6 +89,24 @@ function AppRoutes() {
             />
           }
         />
+              <Route
+        path="/manage-users"
+        element={
+          <PrivateRoute
+            component={ManageUsersPage}
+            requiredRoles={["ADMIN"]}
+          />
+        }
+      />
+      <Route
+        path="/manage-sucursales"
+        element={
+          <PrivateRoute
+            component={ManageSucursalesPage}
+            requiredRoles={["ADMIN", "EMPLEADO"]}
+          />
+        }
+      />
         <Route
           path="/cajero"
           element={
