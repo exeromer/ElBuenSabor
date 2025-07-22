@@ -1,8 +1,3 @@
-/**
- * @file PromocionForm.tsx
- * @description Componente de formulario modal para la creación y edición de Promociones.
- * ... (resto de los comentarios sin cambios)
- */
 import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner, Row, Col, Card, ListGroup } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -161,15 +156,15 @@ const PromocionForm: React.FC<PromocionFormProps> = ({ show, handleClose, onSave
       return;
     }
 
-   const formatTime = (time: string) => time.length === 5 ? `${time}:00` : time;
+    const formatTime = (time: string) => time.length === 5 ? `${time}:00` : time;
 
-        const dataToSend: PromocionRequest = {
-            ...formData,
-            horaDesde: formatTime(formData.horaDesde),
-            horaHasta: formatTime(formData.horaHasta),
-            precioPromocional: (formData.tipoPromocion === 'CANTIDAD' || formData.tipoPromocion === 'COMBO') ? formData.precioPromocional : undefined,
-            porcentajeDescuento: formData.tipoPromocion === 'PORCENTAJE' ? formData.porcentajeDescuento : undefined,
-        };
+    const dataToSend: PromocionRequest = {
+      ...formData,
+      horaDesde: formatTime(formData.horaDesde),
+      horaHasta: formatTime(formData.horaHasta),
+      precioPromocional: (formData.tipoPromocion === 'CANTIDAD' || formData.tipoPromocion === 'COMBO') ? formData.precioPromocional : undefined,
+      porcentajeDescuento: formData.tipoPromocion === 'PORCENTAJE' ? formData.porcentajeDescuento : undefined,
+    };
 
     try {
       if (promocionToEdit) {
@@ -205,6 +200,10 @@ const PromocionForm: React.FC<PromocionFormProps> = ({ show, handleClose, onSave
               <Form.Group className="mb-3">
                 <Form.Label>Denominación</Form.Label>
                 <Form.Control type="text" name="denominacion" value={formData.denominacion} onChange={handleChange} required />
+              </Form.Group>
+              <Form.Group className="mb-3">
+                <Form.Label>Descripción del Descuento</Form.Label>
+                <Form.Control as="textarea" rows={2} name="descripcionDescuento" value={formData.descripcionDescuento} onChange={handleChange} placeholder="Ej: Llevate 2 pizzas muzzarella al precio de 1" />
               </Form.Group>
               <Row>
                 <Col md={6}>
