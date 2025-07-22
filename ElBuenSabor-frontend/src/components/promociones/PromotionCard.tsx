@@ -1,7 +1,6 @@
 import React from 'react';
 import { Card } from 'react-bootstrap';
 import type { PromocionResponse } from '../../types/types';
-import apiClient from '../../services/apiClient';
 import './PromotionCard.sass';
 
 interface PromotionCardProps {
@@ -10,9 +9,8 @@ interface PromotionCardProps {
 
 const PromotionCard: React.FC<PromotionCardProps> = ({ promocion }) => {
   const defaultImage = '/placeholder-promo.png'; // Puedes crear una imagen por defecto para promos
-    const imageUrl = promocion.imagenes?.[0] 
-    ? `${apiClient.defaults.baseURL}/files/download/${promocion.imagenes[0].denominacion}`
-    : defaultImage;
+  const imageUrl = promocion.imagenes?.[0]?.denominacion || defaultImage;
+
 
   return (
     <Card className="h-100 shadow-sm promocion-card">
