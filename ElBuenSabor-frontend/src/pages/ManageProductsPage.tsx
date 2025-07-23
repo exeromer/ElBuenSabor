@@ -38,6 +38,7 @@ import ArticuloManufacturadoDetailModal from '../components/admin/ArticuloManufa
 import ArticuloInsumoDetailModal from '../components/admin/ArticuloInsumoDetailModal';
 import CategoriaForm from '../components/admin/CategoriaForm';
 import PromocionForm from '../components/admin/PromocionForm';
+import PromocionDetailModal from '../components/promociones/DetalleModal/DetallePromo';
 import Titulo from '../components/utils/Titulo/Titulo';
 
 interface InsumoConStock extends ArticuloInsumoResponse {
@@ -70,6 +71,9 @@ const ManageProductsPage: React.FC = () => {
   // Para Promociones
   const [showPromocionForm, setShowPromocionForm] = useState(false);
   const [editingPromocion, setEditingPromocion] = useState<PromocionResponse | null>(null);
+  const [showPromocionDetailModal, setShowPromocionDetailModal] = useState(false);
+  const [selectedPromocionForDetail, setSelectedPromocionForDetail] = useState<PromocionResponse | null>(null);
+
 
   // Lógica para Artículos Insumo
   const fetchInsumosConStock = useCallback(async (searchTerm: string) => {
@@ -110,7 +114,12 @@ const ManageProductsPage: React.FC = () => {
       console.warn('Búsqueda de promociones OMITIDA: La sucursal o su ID no son válidos.');
       return [];
     }
-    return PromocionService.getBySucursalId(selectedSucursal.id);
+    const todasLasPromos = await PromocionService.getAll();
+    const promosDeLaSucursal = todasLasPromos.filter(promo =>
+      promo.sucursales.some(suc => suc.id === selectedSucursal.id)
+    );
+
+    return promosDeLaSucursal;
   }, [selectedSucursal]);
 
   const promocionesData = useSearchableData<PromocionResponse>({ fetchData: fetchPromocionesPorSucursal });
@@ -233,17 +242,45 @@ const ManageProductsPage: React.FC = () => {
     setEditingPromocion(promocion);
     setShowPromocionForm(true);
   };
+  const handleViewPromocion = (promocion: PromocionResponse) => {
+    setSelectedPromocionForDetail(promocion);
+    setShowPromocionDetailModal(true);
+  };
 
-  const handleDeletePromocion = async (id: number) => {
-    if (window.confirm(`¿Seguro que quieres eliminar la promoción ID ${id}?`)) {
+  const handleTogglePromocionState = async (promocion: PromocionResponse) => {
+    const action = promocion.estadoActivo ? 'desactivar' : 'activar';
+    if (window.confirm(`¿Seguro que quieres ${action} la promoción "${promocion.denominacion}"?`)) {
       try {
-        await PromocionService.delete(id);
-        promocionesData.reload();
-      } catch (err) {
-        alert(`Error al eliminar: ${err}`);
+        // Creamos el objeto de actualización con todos los datos requeridos
+        const promocionRequest: any = {
+          denominacion: promocion.denominacion,
+          fechaDesde: promocion.fechaDesde,
+          fechaHasta: promocion.fechaHasta,
+          horaDesde: promocion.horaDesde,
+          horaHasta: promocion.horaHasta,
+          descripcionDescuento: promocion.descripcionDescuento,
+          precioPromocional: promocion.precioPromocional,
+          tipoPromocion: promocion.tipoPromocion,
+          porcentajeDescuento: promocion.porcentajeDescuento,
+          imagenIds: promocion.imagenes.map(img => img.id),
+          detallesPromocion: promocion.detallesPromocion.map(d => ({
+            articuloId: d.articulo.id,
+            cantidad: d.cantidad,
+          })),
+          sucursalIds: promocion.sucursales.map(s => s.id),
+          estadoActivo: !promocion.estadoActivo, // Invertimos el estado
+        };
+
+        await PromocionService.update(promocion.id, promocionRequest);
+        alert(`Promoción ${action} con éxito.`);
+        promocionesData.reload(); // ¡El paso clave para refrescar la tabla!
+      } catch (err: any) {
+        alert(`Error al ${action} la promoción: ${err.message}`);
       }
     }
   };
+
+
 
   // Columnas para la tabla de Artículos Insumo
   const insumoColumns: ColumnDefinition<InsumoConStock>[] = [
@@ -362,8 +399,9 @@ const ManageProductsPage: React.FC = () => {
 
   const renderPromocionActions = (promocion: PromocionResponse) => (
     <>
+      <Button variant="secondary" size="sm" className="me-1" onClick={() => handleViewPromocion(promocion)} title="Ver Detalles"> <FontAwesomeIcon icon={faEye} /></Button>
       <Button variant="info" size="sm" className="me-1" onClick={() => handleOpenPromocionForm(promocion)} title="Editar"><FontAwesomeIcon icon={faEdit} /></Button>
-      <Button variant="danger" size="sm" onClick={() => handleDeletePromocion(promocion.id)} title="Eliminar"><FontAwesomeIcon icon={faTrash} /></Button>
+      <Button variant={promocion.estadoActivo ? 'warning' : 'success'} size="sm" className="me-1" onClick={() => handleTogglePromocionState(promocion)} title={promocion.estadoActivo ? 'Desactivar' : 'Activar'}>{promocion.estadoActivo ? 'Desactivar' : 'Activar'}</Button>
     </>
   );
 
@@ -455,6 +493,7 @@ const ManageProductsPage: React.FC = () => {
       <ArticuloInsumoDetailModal show={showInsumoDetailModal} handleClose={() => setShowInsumoDetailModal(false)} articulo={selectedInsumoForDetail} />
       <CategoriaForm show={showCategoriaForm} handleClose={() => setShowCategoriaForm(false)} onSave={handleFormSubmit} categoriaToEdit={editingCategoria} />
       <PromocionForm show={showPromocionForm} handleClose={() => setShowPromocionForm(false)} onSave={handleFormSubmit} promocionToEdit={editingPromocion} />
+      <PromocionDetailModal show={showPromocionDetailModal} handleClose={() => setShowPromocionDetailModal(false)} promocion={selectedPromocionForDetail} />
     </Container>
   );
 };
