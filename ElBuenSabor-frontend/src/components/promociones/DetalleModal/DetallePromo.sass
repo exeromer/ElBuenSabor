@@ -1,0 +1,57 @@
+@use 'sass:color'
+@use "../../../styles/vars" as *
+
+.promocion-detail-modal 
+  .modal-content 
+    border-radius: $br2;
+    box-shadow: $shadow;
+  
+
+  .modal-header 
+    background-color: $color-mist;
+    color: $color-clay;
+    border-bottom: 1px solid rgba(0,0,0,0.1);
+
+    .modal-title 
+      font-family: $f-f-uno;
+      font-weight: bold;
+    
+
+    .btn-close 
+      filter: invert(1) grayscale(1) brightness(2);
+
+  .modal-body 
+    background-color: $color-clay;
+    color: $color-grey;
+    padding: $p2 * 1.5;
+
+    .img-fluid 
+      border: 1px solid $color-sand;
+      max-height: 300px;
+      object-fit: cover;
+      width: 100%;
+    
+
+    h5 
+      font-family: $f-f-uno;
+      font-weight: 600;
+      margin-top: $m3;
+      color: $color-grey;
+    
+
+    .badge 
+      font-size: 0.9rem;
+    
+
+  .modal-footer 
+    background-color: $color-mist;
+    border-top: none;
+
+    .btn-secondary 
+      background-color: $color-stone;
+      border: none;
+      color: $color-clay;
+
+      &:hover 
+        background-color: color.adjust($color-stone, $lightness: -10%);
+      
