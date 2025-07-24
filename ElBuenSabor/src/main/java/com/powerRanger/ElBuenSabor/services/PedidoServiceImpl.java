@@ -255,6 +255,8 @@ public class PedidoServiceImpl implements PedidoService {
             pedido.addDetalle(detalle);
         }
         pedido.setTotal(totalPedido);
+        double costoTotal = calcularTotalCosto(pedido);
+        pedido.setTotalCosto(costoTotal);
         return pedido;
     }
 
@@ -598,7 +600,8 @@ public class PedidoServiceImpl implements PedidoService {
         nuevoPedido.setDescuentoAplicado(descuentoGlobal); // Este campo ahora refleja solo el descuento global
 
         nuevoPedido.setTotal(totalGeneralPedido);
-        nuevoPedido.setTotalCosto(costoTotalPedido);
+        double costoTotalCalculado = calcularTotalCosto(nuevoPedido);
+        nuevoPedido.setTotalCosto(costoTotalCalculado);
         logger.info("Pedido Final - Total: {}, TotalCosto: {}", nuevoPedido.getTotal(), nuevoPedido.getTotalCosto());
 
         logger.info("Iniciando Actualización de Stock en la Base de Datos...");
@@ -875,13 +878,7 @@ public class PedidoServiceImpl implements PedidoService {
             throw new AccessDeniedException("El usuario no está registrado como empleado.");
         }
 
-        // Si el empleado no es ADMIN, verificar que la sucursal del pedido coincida con la del empleado (si aplica)
-        // Por ahora, asumimos que todos los empleados de una empresa pueden ver todos los pedidos de sus sucursales.
-        // Si quieres restringir por sucursal específica del empleado, necesitarías un campo 'sucursal' en Empleado.
-        // Por la descripción del problema, no se especifica que el empleado esté atado a una única sucursal,
-        // pero sí que el cajero ve "todos los pedidos de la sucursal" (implica que opera en una sucursal dada).
-        // Si la relación Empleado-Sucursal fuera ManyToMany o OneToOne, habría que validarlo aquí.
-        // Para simplificar, asumiremos que se le pasa la sucursalId y se valida que el pedido le pertenezca.
+
 
         Pedido pedido = pedidoRepository.findByIdAndSucursalId(pedidoId, sucursalId)
                 .orElseThrow(() -> new Exception("Pedido " + pedidoId + " no encontrado en la sucursal " + sucursalId + "."));
@@ -1102,6 +1099,57 @@ public class PedidoServiceImpl implements PedidoService {
             }
         }
         logger.info("Restitución de stock completada para Pedido ID: {}", pedido.getId());
+    }
+
+    private double calcularTotalCosto(Pedido pedido) throws Exception {
+        double costoTotal = 0.0;
+
+        // Iteramos sobre cada detalle del pedido que se está creando.
+        for (DetallePedido detalle : pedido.getDetalles()) {
+            Articulo articuloDelDetalle = detalle.getArticulo();
+            double cantidadPedida = detalle.getCantidad();
+
+            // Intentamos obtener el artículo como un ArticuloManufacturado.
+            Optional<ArticuloManufacturado> optManuf = articuloManufacturadoRepository.findById(articuloDelDetalle.getId());
+
+            if (optManuf.isPresent()) {
+                // Si es un producto manufacturado, calculamos el costo de su receta.
+                ArticuloManufacturado manufacturado = optManuf.get();
+                double costoManufacturadoUnitario = 0.0;
+
+                // Forzamos la carga de los detalles de la receta para evitar errores.
+                List<ArticuloManufacturadoDetalle> detallesReceta = manufacturado.getManufacturadoDetalles();
+                if (detallesReceta.isEmpty()) {
+                    ArticuloManufacturado manufacturadoRecargado = articuloManufacturadoRepository.findById(manufacturado.getId())
+                            .orElseThrow(() -> new Exception("No se pudo recargar el manufacturado " + manufacturado.getDenominacion()));
+                    detallesReceta = manufacturadoRecargado.getManufacturadoDetalles();
+                }
+
+                if (detallesReceta.isEmpty()) {
+                    throw new Exception("El producto '" + manufacturado.getDenominacion() + "' no tiene una receta definida.");
+                }
+
+                for (ArticuloManufacturadoDetalle detalleReceta : detallesReceta) {
+                    ArticuloInsumo insumoComponente = detalleReceta.getArticuloInsumo();
+                    if (insumoComponente.getPrecioCompra() == null) {
+                        throw new Exception("El insumo '" + insumoComponente.getDenominacion() + "' no tiene un precio de compra definido.");
+                    }
+                    costoManufacturadoUnitario += detalleReceta.getCantidad() * insumoComponente.getPrecioCompra();
+                }
+                costoTotal += cantidadPedida * costoManufacturadoUnitario;
+
+            } else {
+                // Si no es manufacturado, debe ser un insumo de venta directa (ej. una bebida).
+                ArticuloInsumo insumoVendido = articuloInsumoRepository.findById(articuloDelDetalle.getId())
+                        .orElseThrow(() -> new Exception("Artículo con ID " + articuloDelDetalle.getId() + " no encontrado."));
+
+                if (insumoVendido.getPrecioCompra() == null) {
+                    throw new Exception("El insumo '" + insumoVendido.getDenominacion() + "' no tiene un precio de compra definido.");
+                }
+                costoTotal += cantidadPedida * insumoVendido.getPrecioCompra();
+            }
+        }
+        return costoTotal;
     }
 
     // --- MÉTODOS PARA ROLES (Implementación) ---

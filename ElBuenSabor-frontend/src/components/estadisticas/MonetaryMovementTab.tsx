@@ -1,53 +1,59 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {Container,Card,  Spinner,  Alert,  Form,  Row,  Col,  Button,Table,} from "react-bootstrap";
+import { Container, Card, Spinner, Alert, Form, Row, Col, Button, Table, } from "react-bootstrap";
 import { EstadisticaService } from "../../services/EstadisticaService";
 import type { MovimientosMonetarios } from "../../types/types";
-import {  BarChart,  Bar,  XAxis,  YAxis,  CartesianGrid,  Tooltip,  Legend,  ResponsiveContainer,} from "recharts";
+import { useSucursal } from "../../context/SucursalContext";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, } from "recharts";
 import { faFileExcel } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./MonetaryMovementTab.sass";
 
 const MonetaryMovementTab: React.FC = () => {
-  const [movimientos, setMovimientos] = useState<MovimientosMonetarios | null>(
-    null
-  );
+  const { selectedSucursal } = useSucursal();
+  const [movimientos, setMovimientos] = useState<MovimientosMonetarios | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fechaDesde, setFechaDesde] = useState<string>("");
   const [fechaHasta, setFechaHasta] = useState<string>("");
 
   const fetchMovimientos = useCallback(async () => {
+    if (!selectedSucursal) {
+      setError("Por favor, selecciona una sucursal.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
       const params = {
+        sucursalId: selectedSucursal.id, // <-- AÑADIR
         fechaDesde: fechaDesde || undefined,
         fechaHasta: fechaHasta || undefined,
       };
-      const fetchedMovimientos =
-        await EstadisticaService.getMovimientosMonetarios(params);
+      const fetchedMovimientos = await EstadisticaService.getMovimientosMonetarios(params);
       setMovimientos(fetchedMovimientos);
     } catch (err: any) {
       setError(err.message || "Error al cargar los movimientos monetarios.");
     } finally {
       setLoading(false);
     }
-  }, [fechaDesde, fechaHasta]);
-
+  }, [fechaDesde, fechaHasta, selectedSucursal]);
   useEffect(() => {
     fetchMovimientos();
   }, [fetchMovimientos]);
-  const handleExport = async () => {
+
+   const handleExport = async () => {
+    if (!selectedSucursal) return;
     try {
-      const excelBlob =
-        await EstadisticaService.exportMovimientosMonetariosExcel(
+      const excelBlob = await EstadisticaService.exportMovimientosMonetariosExcel(
+          selectedSucursal.id,
           fechaDesde,
           fechaHasta
         );
       const url = window.URL.createObjectURL(new Blob([excelBlob]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", "movimientos_monetarios.xlsx");
+      link.setAttribute("download", `movimientos_monetarios_${selectedSucursal.nombre}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -59,10 +65,10 @@ const MonetaryMovementTab: React.FC = () => {
 
   const chartData = movimientos
     ? [
-        { name: "Ingresos", value: movimientos.ingresosTotales },
-        { name: "Costos", value: movimientos.costosTotales },
-        { name: "Ganancias", value: movimientos.gananciasNetas },
-      ]
+      { name: "Ingresos", value: movimientos.ingresosTotales },
+      { name: "Costos", value: movimientos.costosTotales },
+      { name: "Ganancias", value: movimientos.gananciasNetas },
+    ]
     : [];
 
   return (

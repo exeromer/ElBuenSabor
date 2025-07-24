@@ -12,7 +12,6 @@ import jakarta.validation.Valid;
 import org.springframework.validation.annotation.Validated;
 
 import java.util.List;
-import java.util.Objects; // Para Objects.nonNull en el mapper de imagen
 import java.util.stream.Collectors;
 
 @Service

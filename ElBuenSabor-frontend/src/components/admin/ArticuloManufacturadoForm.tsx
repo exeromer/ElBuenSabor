@@ -29,7 +29,7 @@ import {
   Image,
 } from "react-bootstrap";
 import { useSucursal } from "../../context/SucursalContext";
-import { ArticuloManufacturadoService } from "../../services/ArticuloManufacturadoService";
+import { ArticuloManufacturadoService } from "../../services/articuloManufacturadoService";
 import { ArticuloInsumoService } from "../../services/articuloInsumoService";
 import { FileUploadService } from "../../services/fileUploadService";
 import { ImagenService } from "../../services/imagenService";

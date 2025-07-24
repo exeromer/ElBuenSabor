@@ -1,33 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
-import {
-  Container,
-  Card,
-  Spinner,
-  Alert,
-  Form,
-  Row,
-  Col,
-  Button,
-  Table,
-} from "react-bootstrap";
+import { Container, Card, Spinner, Alert, Form, Row, Col, Button, Table, } from "react-bootstrap";
 import { EstadisticaService } from "../../services/EstadisticaService";
-// <<-- CAMBIO REALIZADO: Importar el hook para usar la sucursal activa -->>
 import { useSucursal } from "../../context/SucursalContext";
-import type {
-  ArticuloManufacturadoRanking,
-  ArticuloInsumoRanking,
-} from "../../types/types";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import type { ArticuloManufacturadoRanking, ArticuloInsumoRanking, } from "../../types/types";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, } from "recharts";
 import { faFileExcel } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import "./ProductRankingTab.sass";
@@ -43,16 +19,10 @@ const generateRandomColor = () => {
 };
 
 const ProductRankingTab: React.FC = () => {
-  // <<-- CAMBIO REALIZADO: Obtener la sucursal seleccionada del contexto global -->>
   const { selectedSucursal } = useSucursal();
 
-  // <<-- CAMBIO REALIZADO: Dos estados separados para cada tipo de producto -->>
-  const [cocinaRanking, setCocinaRanking] = useState<
-    ArticuloManufacturadoRanking[]
-  >([]);
-  const [bebidasRanking, setBebidasRanking] = useState<ArticuloInsumoRanking[]>(
-    []
-  );
+  const [cocinaRanking, setCocinaRanking] = useState<ArticuloManufacturadoRanking[]>([]);
+  const [bebidasRanking, setBebidasRanking] = useState<ArticuloInsumoRanking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fechaDesde, setFechaDesde] = useState<string>("");
@@ -61,31 +31,25 @@ const ProductRankingTab: React.FC = () => {
   const [bebidasColors, setBebidasColors] = useState<string[]>([]);
 
   const fetchRankings = useCallback(async () => {
-    // <<-- CAMBIO REALIZADO: Validar que una sucursal esté seleccionada -->>
     if (!selectedSucursal) {
       setError("Por favor, selecciona una sucursal para ver las estadísticas.");
       setLoading(false);
       return;
     }
-
     setLoading(true);
     setError(null);
     try {
-      // <<-- CAMBIO REALIZADO: Usar el ID de la sucursal en los parámetros -->>
       const params = {
         sucursalId: selectedSucursal.id,
         fechaDesde: fechaDesde || undefined,
         fechaHasta: fechaHasta || undefined,
       };
-
-      // <<-- CAMBIO REALIZADO: Llamar a los dos servicios a la vez y actualizar los estados por separado -->>
       const [cocina, bebidas] = await Promise.all([
         EstadisticaService.getRankingProductosCocina(params),
         EstadisticaService.getRankingBebidas(params),
       ]);
       setCocinaRanking(cocina);
       setBebidasRanking(bebidas);
-      // <<-- CAMBIO: Generar array de colores al cargar los datos -->>
       setCocinaColors(cocina.map(() => generateRandomColor()));
       setBebidasColors(bebidas.map(() => generateRandomColor()));
     } catch (err: any) {
@@ -93,14 +57,13 @@ const ProductRankingTab: React.FC = () => {
     } finally {
       setLoading(false);
     }
-    // <<-- CAMBIO REALIZADO: Añadir sucursal como dependencia para que se recargue si cambia -->>
   }, [fechaDesde, fechaHasta, selectedSucursal]);
 
   useEffect(() => {
     fetchRankings();
   }, [fetchRankings]);
 
-  // <<-- CAMBIO REALIZADO: Nueva función para exportar solo productos de cocina -->>
+  //  función para exportar solo productos de cocina -->>
   const handleExportCocina = async () => {
     if (!selectedSucursal) return;
     try {
@@ -125,7 +88,7 @@ const ProductRankingTab: React.FC = () => {
     }
   };
 
-  // <<-- CAMBIO REALIZADO: Nueva función para exportar solo bebidas -->>
+  // función para exportar solo bebidas -->>
   const handleExportBebidas = async () => {
     if (!selectedSucursal) return;
     try {
@@ -179,13 +142,8 @@ const ProductRankingTab: React.FC = () => {
             </Row>
             <Button
               onClick={fetchRankings}
-              disabled={loading || !selectedSucursal}
-            >
-              {loading ? (
-                <Spinner as="span" animation="border" size="sm" />
-              ) : (
-                "Aplicar Filtro"
-              )}
+              disabled={loading || !selectedSucursal} >{loading ? (
+                <Spinner as="span" animation="border" size="sm" />) : ("Aplicar Filtro")}
             </Button>
           </Form>
         </Card.Body>
@@ -195,11 +153,9 @@ const ProductRankingTab: React.FC = () => {
         <div className="text-center my-3">
           <Spinner animation="border" /> <p>Cargando rankings...</p>
         </div>
-      ) : error ? (
-        <Alert variant="danger">{error}</Alert>
-      ) : (
+      ) : error ? (  <Alert variant="danger">{error}</Alert>) : (
         <Row>
-          {/* <<-- CAMBIO REALIZADO: Grilla separada para Productos de Cocina -->> */}
+          {/* Grilla separada para Productos de Cocina -->> */}
           <Col lg={6}>
             <Card className="shadow-sm mb-4">
               <Card.Header as="h5">
@@ -227,7 +183,7 @@ const ProductRankingTab: React.FC = () => {
                           maxBarSize={90}
                         >
                           {/* <<-- CAMBIO: Se usa el estado `cocinaColors` para asignar un color único a cada barra -->> */}
-                          {cocinaRanking.map((entry, index) => (
+                          {cocinaRanking.map((_,index) => (
                             <Cell
                               key={`cell-${index}`}
                               fill={cocinaColors[index % cocinaColors.length]}
@@ -264,7 +220,7 @@ const ProductRankingTab: React.FC = () => {
                       </thead>
                       <tbody>
                         {cocinaRanking.map((item) => (
-                          <tr key={item.id}>
+                          <tr key={item.articuloId}>
                             <td>{item.denominacion}</td>
                             <td>{item.cantidadVendida}</td>
                           </tr>
@@ -318,7 +274,7 @@ const ProductRankingTab: React.FC = () => {
                           maxBarSize={90}
                         >
                           {/* <<-- CAMBIO: Se usa el estado `bebidasColors` para asignar un color único a cada barra -->> */}
-                          {bebidasRanking.map((entry, index) => (
+                          {bebidasRanking.map((_, index) => (
                             <Cell
                               key={`cell-${index}`}
                               fill={bebidasColors[index % bebidasColors.length]}
@@ -356,18 +312,14 @@ const ProductRankingTab: React.FC = () => {
                       </thead>
                       <tbody>
                         {bebidasRanking.map((item) => (
-                          <tr key={item.id}>
+                          <tr key={item.articuloId}>
                             <td>{item.denominacion}</td>
                             <td>{item.cantidadVendida}</td>
                           </tr>
                         ))}
                       </tbody>
                     </Table>
-                    <Button
-                      variant="success"
-                      onClick={handleExportBebidas}
-                      className="mt-3"
-                    >
+                    <Button variant="success"onClick={handleExportBebidas}className="mt-3">
                       <FontAwesomeIcon icon={faFileExcel} className="me-2" />{" "}
                       Exportar a Excel
                     </Button>

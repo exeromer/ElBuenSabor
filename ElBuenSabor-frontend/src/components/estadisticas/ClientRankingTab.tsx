@@ -7,11 +7,13 @@ import { format } from "date-fns";
 import { faFileExcel, faEye } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { PedidoService } from "../../services/pedidoService";
+import { useSucursal } from "../../context/SucursalContext"
 import "./ClientRankingTab.sass";
 
 type SortBy = "cantidadPedidos" | "montoTotalComprado";
 
 const ClientRankingTab: React.FC = () => {
+    const { selectedSucursal } = useSucursal();
     const [clientRanking, setClientRanking] = useState<ClienteRanking[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -25,10 +27,17 @@ const ClientRankingTab: React.FC = () => {
     const [selectedClientName, setSelectedClientName] = useState<string>("");
 
     const fetchRankings = useCallback(async () => {
+        if (!selectedSucursal) {
+            setError("Por favor, selecciona una sucursal.");
+            setLoading(false);
+            setClientRanking([]); // Limpiamos los datos si no hay sucursal
+            return;
+        }
         setLoading(true);
         setError(null);
         try {
             const params = {
+                sucursalId: selectedSucursal.id,
                 fechaDesde: fechaDesde || undefined,
                 fechaHasta: fechaHasta || undefined,
             };
@@ -44,19 +53,21 @@ const ClientRankingTab: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [fechaDesde, fechaHasta, sortBy]);
+    }, [fechaDesde, fechaHasta, sortBy, selectedSucursal]);
 
+    // <<-- CORRECCIÓN: Añadir este useEffect -->>
     useEffect(() => {
         fetchRankings();
     }, [fetchRankings]);
 
     const handleExport = async () => {
+        if (!selectedSucursal) return;
         try {
-            const excelBlob = await EstadisticaService.exportRankingClientesExcel(fechaDesde, fechaHasta);
+            const excelBlob = await EstadisticaService.exportRankingClientesExcel(selectedSucursal.id, fechaDesde, fechaHasta);
             const url = window.URL.createObjectURL(new Blob([excelBlob]));
             const link = document.createElement("a");
             link.href = url;
-            link.setAttribute("download", "ranking_clientes.xlsx");
+            link.setAttribute("download", `ranking_clientes_${selectedSucursal.nombre}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -99,7 +110,8 @@ const ClientRankingTab: React.FC = () => {
                         <Row className="mt-3">
                              <Col className="d-flex justify-content-end">
                                 <Button onClick={fetchRankings} disabled={loading} className="me-2">{loading ? <Spinner as="span" animation="border" size="sm" /> : "Aplicar Filtros"}</Button>
-                                <Button variant="success" onClick={handleExport}><FontAwesomeIcon icon={faFileExcel} className="me-2" />Exportar</Button>
+                                {/* <<-- CORRECCIÓN: Deshabilitar el botón si no hay datos o está cargando -->> */}
+                                <Button variant="success" onClick={handleExport} disabled={loading || clientRanking.length === 0}><FontAwesomeIcon icon={faFileExcel} className="me-2" />Exportar</Button>
                             </Col>
                         </Row>
                     </Form>

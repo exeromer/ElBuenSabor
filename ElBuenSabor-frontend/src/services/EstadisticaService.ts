@@ -90,6 +90,23 @@ export class EstadisticaService {
   }
 
   // --- EXPORTACIÓN A EXCEL ---
+    static async exportRankingClientesExcel(
+    sucursalId: number,
+    fechaDesde?: string,
+    fechaHasta?: string
+  ): Promise<Blob> {
+    const params = new URLSearchParams();
+    if (fechaDesde) params.append("fechaDesde", fechaDesde);
+    if (fechaHasta) params.append("fechaHasta", fechaHasta);
+    const response = await apiClient.get(
+      `/estadisticas/sucursal/${sucursalId}/ranking-clientes/export/excel`,
+      {
+        params,
+        responseType: "blob",
+      }
+    );
+    return response.data;
+  }
 
   // <<-- CAMBIO REALIZADO: Nuevo método de exportación para productos de cocina -->>
   static async exportRankingProductosCocinaExcel(
@@ -120,7 +137,7 @@ export class EstadisticaService {
     if (fechaDesde) params.append("fechaDesde", fechaDesde);
     if (fechaHasta) params.append("fechaHasta", fechaHasta);
     const response = await apiClient.get(
-      `/estadisticas/sucursal/${sucursalId}/bebidas/export/excel`, // <-- Nueva URL
+      `/estadisticas/sucursal/${sucursalId}/bebidas/export/excel`, 
       {
         params,
         responseType: "blob",
@@ -128,4 +145,22 @@ export class EstadisticaService {
     );
     return response.data;
   }
+    static async exportMovimientosMonetariosExcel(
+    sucursalId: number,
+    fechaDesde?: string,
+    fechaHasta?: string
+  ): Promise<Blob> {
+    const params = new URLSearchParams();
+    if (fechaDesde) params.append("fechaDesde", fechaDesde);
+    if (fechaHasta) params.append("fechaHasta", fechaHasta);
+    const response = await apiClient.get(
+      `/estadisticas/sucursal/${sucursalId}/movimientos-monetarios/export/excel`,
+      {
+        params,
+        responseType: "blob",
+      }
+    );
+    return response.data;
+  }
+  
 }
