@@ -14,6 +14,9 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Integer> {
     Optional<Usuario> findByUsername(String username);
     Optional<Usuario> findByAuth0Id(String auth0Id);
 
+    @Query("SELECT u FROM Usuario u WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
+    List<Usuario> searchByUsername(@Param("searchTerm") String searchTerm); // Lo renombramos
+
     @Query("SELECT u FROM Usuario u WHERE LOWER(u.username) LIKE LOWER(CONCAT('%', :searchTerm, '%')) AND u.estadoActivo = true")
     List<Usuario> searchByUsernameActivos(@Param("searchTerm") String searchTerm);
 
