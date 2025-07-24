@@ -142,11 +142,11 @@ public class ClienteServiceImpl implements ClienteService {
     public List<ClienteResponseDTO> getAllClientes(String searchTerm) {
         List<Cliente> clientes;
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
-            clientes = clienteRepository.searchActivosByTerm(searchTerm.trim());
-            System.out.println("DEBUG: Buscando Clientes con término: '" + searchTerm.trim() + "', Encontrados: " + clientes.size());
+            clientes = clienteRepository.searchByTerm(searchTerm.trim());
+            System.out.println("DEBUG: Buscando en TODOS los Clientes con término: '" + searchTerm.trim() + "', Encontrados: " + clientes.size());
         } else {
-            clientes = clienteRepository.findByEstadoActivoTrue();
-            System.out.println("DEBUG: Obteniendo todos los Clientes activos, Encontrados: " + clientes.size());
+            clientes = clienteRepository.findAll();
+            System.out.println("DEBUG: Obteniendo TODOS los Clientes, Encontrados: " + clientes.size());
         }
         return clientes.stream()
                 .map(this::convertToResponseDto)

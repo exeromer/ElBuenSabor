@@ -30,6 +30,7 @@ public class UsuarioServiceImpl implements UsuarioService {
         if (usuario == null) return null;
         UsuarioResponseDTO dto = new UsuarioResponseDTO();
         dto.setId(usuario.getId());
+        dto.setAuth0Id(usuario.getAuth0Id());
         dto.setUsername(usuario.getUsername());
         dto.setRol(usuario.getRol());
         dto.setEstadoActivo(usuario.getEstadoActivo());
@@ -39,7 +40,7 @@ public class UsuarioServiceImpl implements UsuarioService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UsuarioResponseDTO> getAll(String searchTerm) { // Modificado
+    public List<UsuarioResponseDTO> getAll(String searchTerm) {
         List<Usuario> usuarios;
         if (searchTerm != null && !searchTerm.trim().isEmpty()) {
             usuarios = usuarioRepository.searchByUsernameActivos(searchTerm.trim());
@@ -49,7 +50,7 @@ public class UsuarioServiceImpl implements UsuarioService {
             System.out.println("DEBUG: Obteniendo todos los Usuarios activos, Encontrados: " + usuarios.size());
         }
         return usuarios.stream()
-                .map(this::convertToResponseDto) // Asumiendo que tienes convertToResponseDto para Usuario
+                .map(this::convertToResponseDto)
                 .collect(Collectors.toList());
     }
 
@@ -90,13 +91,12 @@ public class UsuarioServiceImpl implements UsuarioService {
         if (usuarioRepository.findByUsername(dto.getUsername()).isPresent()) {
             throw new Exception("El username '" + dto.getUsername() + "' ya está en uso.");
         }
-        // Asumiendo que el auth0Id debe ser único al crear directamente.
         if (dto.getAuth0Id() != null && usuarioRepository.findByAuth0Id(dto.getAuth0Id()).isPresent()) {
             throw new Exception("El Auth0 ID '" + dto.getAuth0Id() + "' ya está registrado.");
         }
 
         Usuario usuario = new Usuario();
-        usuario.setAuth0Id(dto.getAuth0Id()); // Puede ser nulo si la creación no siempre lo requiere aquí
+        usuario.setAuth0Id(dto.getAuth0Id());
         usuario.setUsername(dto.getUsername());
         usuario.setRol(dto.getRol());
         usuario.setEstadoActivo(dto.getEstadoActivo() != null ? dto.getEstadoActivo() : true);
@@ -118,19 +118,10 @@ public class UsuarioServiceImpl implements UsuarioService {
                 }
             });
         }
-        if (dto.getAuth0Id() != null && !dto.getAuth0Id().equals(usuarioExistente.getAuth0Id())) {
-            usuarioRepository.findByAuth0Id(dto.getAuth0Id()).ifPresent(u -> {
-                if (!u.getId().equals(id)) {
-                    throw new RuntimeException("El Auth0 ID '" + dto.getAuth0Id() + "' ya está registrado por otro usuario.");
-                }
-            });
-        }
 
-        usuarioExistente.setAuth0Id(dto.getAuth0Id());
         usuarioExistente.setUsername(dto.getUsername());
         usuarioExistente.setRol(dto.getRol());
         usuarioExistente.setEstadoActivo(dto.getEstadoActivo() != null ? dto.getEstadoActivo() : usuarioExistente.getEstadoActivo());
-        // No se actualiza fechaBaja aquí directamente, eso se maneja en softDelete.
 
         Usuario usuarioActualizado = usuarioRepository.save(usuarioExistente);
         return convertToResponseDto(usuarioActualizado);

@@ -5,15 +5,17 @@ import java.time.LocalDate; // Para fechaBaja
 
 public class UsuarioResponseDTO {
     private Integer id;
+    private String auth0Id;
     private String username;
     private Rol rol;
     private Boolean estadoActivo;
     private LocalDate fechaBaja; // Podría ser útil mostrarla
-    // Omitimos auth0Id por seguridad en respuestas generales
 
     // Getters y Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
+    public String getAuth0Id() { return auth0Id; }
+    public void setAuth0Id(String auth0Id) { this.auth0Id = auth0Id; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
     public Rol getRol() { return rol; }
