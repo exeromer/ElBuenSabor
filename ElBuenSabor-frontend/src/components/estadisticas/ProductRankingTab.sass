@@ -1,38 +1,36 @@
-@use "../../styles/vars" as *
-
+// Contenedor principal del tab
 .product-ranking-tab
-  .card-header
-    background-color: $color-clay
-    color: $color-grey
-    font-weight: bold
-    border-bottom: 1px solid $color-sand
-  
-  .card-body
-    padding: $p2
-    background-color: $color-clay
 
-  .form-label
-    color: $color-grey
-    font-weight: 500
+  // Se aplica el estilo directamente a las celdas del encabezado (th)
+  // dentro de la clase .table-header-custom para asegurar que se aplique
+  // correctamente sobre los estilos de Bootstrap.
+  .table-header-custom th
+    background-color: #343a40  !important // Fondo verde, !important es clave.
+    color: white !important
 
-  .table
-    color: $color-grey
-    background-color: white
-    border: 1px solid $color-sand
-    thead
-      th
-        background-color: $color-mist
-        color: white
-        border-color: $color-stone
-    tbody
-      tr
-        &:nth-of-type(odd)
-          background-color: $color-clay
-        &:nth-of-type(even)
-          background-color: $color-sand
-        td
-          border-color: $color-sand
+  // Estilos para el contenedor de la leyenda personalizada
+  .legend-container
+    display: flex
+    flex-direction: column
+    align-items: flex-start
+    gap: 0.5rem
+    margin-top: 1rem
+    padding-left: 2rem
 
-  .recharts-wrapper
-    font-family: $f-f-dos
-    font-size: $f-s-1
+    // Estilo para cada línea de la leyenda (color + texto)
+    .legend-item
+      display: flex
+      align-items: center
+      gap: 0.5rem
+
+      // El cuadradito de color
+      .legend-color
+        display: inline-block
+        width: 14px
+        height: 14px
+        border-radius: 3px
+        flex-shrink: 0
+
+      // El nombre del producto en la leyenda
+      .legend-label
+        font-size: 0.9rem

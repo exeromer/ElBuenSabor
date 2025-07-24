@@ -8,11 +8,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface EstadisticaService {
-    List<ClienteRankingDTO> getRankingClientesPorCantidadPedidos(LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception;
-    List<ClienteRankingDTO> getRankingClientesPorMontoTotal(LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception;
-    List<ArticuloManufacturadoRankingDTO> getRankingArticulosManufacturadosMasVendidos(LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception;
-    List<ArticuloInsumoRankingDTO> getRankingArticulosInsumosMasVendidos(LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception;
-    MovimientosMonetariosDTO getMovimientosMonetarios(LocalDate fechaDesde, LocalDate fechaHasta) throws Exception;
+    // MODIFICADOS: Añadido 'sucursalId' a todos los rankings
+    List<ClienteRankingDTO> getRankingClientesPorCantidadPedidos(Integer sucursalId, LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception;
+    List<ClienteRankingDTO> getRankingClientesPorMontoTotal(Integer sucursalId, LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception;
     
-    
+    // RENOMBRADOS Y MODIFICADOS
+    List<ArticuloManufacturadoRankingDTO> getRankingProductosCocina(Integer sucursalId, LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception;
+    List<ArticuloInsumoRankingDTO> getRankingBebidas(Integer sucursalId, LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception;
+
+    MovimientosMonetariosDTO getMovimientosMonetarios(Integer sucursalId, LocalDate fechaDesde, LocalDate fechaHasta) throws Exception;
+   
 }

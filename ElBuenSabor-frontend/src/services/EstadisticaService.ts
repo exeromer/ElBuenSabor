@@ -1,5 +1,4 @@
 import apiClient from "./apiClient";
-// **CÓDIGO MODIFICADO: Se añaden las importaciones de los nuevos tipos**
 import type {
   ClienteRanking,
   ArticuloManufacturadoRanking,
@@ -7,85 +6,94 @@ import type {
   MovimientosMonetarios,
 } from "../types/types";
 
+// <<-- CAMBIO REALIZADO: La interfaz ahora requiere sucursalId -->>
 interface RankingParams {
+  sucursalId: number;
   fechaDesde?: string; // Formato YYYY-MM-DD
   fechaHasta?: string; // Formato YYYY-MM-DD
   page?: number;
   size?: number;
 }
 
+// <<-- CAMBIO REALIZADO: Interfaz de movimientos también necesita sucursalId -->>
+interface MovimientosParams {
+  sucursalId: number;
+  fechaDesde?: string;
+  fechaHasta?: string;
+}
+
 export class EstadisticaService {
-  /**
-   * Obtiene el ranking de clientes por cantidad de pedidos.
-   */
+  // --- RANKING DE CLIENTES ---
+
+  // <<-- CAMBIO REALIZADO: Se actualizó la URL y la lógica para usar sucursalId -->>
   static async getRankingClientesPorCantidad(
-    params: RankingParams = {}
+    params: RankingParams
   ): Promise<ClienteRanking[]> {
+    const { sucursalId, ...queryParams } = params;
     const response = await apiClient.get<ClienteRanking[]>(
-      "/estadisticas/ranking-clientes/por-cantidad",
-      { params }
+      `/estadisticas/sucursal/${sucursalId}/ranking-clientes/por-cantidad`,
+      { params: queryParams }
     );
     return response.data;
   }
 
-  /**
-   * Obtiene el ranking de clientes por monto total comprado.
-   */
+  // <<-- CAMBIO REALIZADO: Se actualizó la URL y la lógica para usar sucursalId -->>
   static async getRankingClientesPorMonto(
-    params: RankingParams = {}
+    params: RankingParams
   ): Promise<ClienteRanking[]> {
+    const { sucursalId, ...queryParams } = params;
     const response = await apiClient.get<ClienteRanking[]>(
-      "/estadisticas/ranking-clientes/por-monto",
-      { params }
+      `/estadisticas/sucursal/${sucursalId}/ranking-clientes/por-monto`,
+      { params: queryParams }
     );
     return response.data;
   }
 
-  /**
-   * Obtiene el ranking de artículos manufacturados más vendidos.
-   * **CÓDIGO MODIFICADO: Nombre de la función cambiado de 'getRankingArticulosMasVendidos'**
-   */
-  static async getRankingArticulosManufacturadosMasVendidos(
-    params: RankingParams = {}
+  // --- RANKING DE PRODUCTOS ---
+
+  // <<-- CAMBIO REALIZADO: Nuevo método para productos de cocina -->>
+  static async getRankingProductosCocina(
+    params: RankingParams
   ): Promise<ArticuloManufacturadoRanking[]> {
+    const { sucursalId, ...queryParams } = params;
     const response = await apiClient.get<ArticuloManufacturadoRanking[]>(
-      "/estadisticas/articulos-manufacturados/ranking/mas-vendidos",
-      { params }
+      `/estadisticas/sucursal/${sucursalId}/productos-cocina/ranking`, // <-- Nueva URL
+      { params: queryParams }
     );
     return response.data;
   }
 
-  // **INICIO DE CÓDIGO NUEVO (Asegúrate de que estas funciones estén en tu archivo)**
-  /**
-   * Obtiene el ranking de artículos insumos (bebidas) más vendidos.
-   */
-  static async getRankingArticulosInsumosMasVendidos(
-    params: RankingParams = {}
+  // <<-- CAMBIO REALIZADO: Nuevo método para bebidas -->>
+  static async getRankingBebidas(
+    params: RankingParams
   ): Promise<ArticuloInsumoRanking[]> {
+    const { sucursalId, ...queryParams } = params;
     const response = await apiClient.get<ArticuloInsumoRanking[]>(
-      "/estadisticas/articulos-insumos/ranking/mas-vendidos",
-      { params }
+      `/estadisticas/sucursal/${sucursalId}/bebidas/ranking`, // <-- Nueva URL
+      { params: queryParams }
     );
     return response.data;
   }
 
-  /**
-   * Obtiene los movimientos monetarios (ingresos, costos, ganancias).
-   */
+  // --- MOVIMIENTOS MONETARIOS ---
+
+  // <<-- CAMBIO REALIZADO: Se actualizó la URL para usar sucursalId -->>
   static async getMovimientosMonetarios(
-    params: Omit<RankingParams, "page" | "size"> = {}
+    params: MovimientosParams
   ): Promise<MovimientosMonetarios> {
+    const { sucursalId, ...queryParams } = params;
     const response = await apiClient.get<MovimientosMonetarios>(
-      "/estadisticas/movimientos-monetarios",
-      { params }
+      `/estadisticas/sucursal/${sucursalId}/movimientos-monetarios`,
+      { params: queryParams }
     );
     return response.data;
   }
 
-  /**
-   * Exporta el ranking de clientes a Excel.
-   */
-  static async exportRankingClientesExcel(
+  // --- EXPORTACIÓN A EXCEL ---
+
+  // <<-- CAMBIO REALIZADO: Nuevo método de exportación para productos de cocina -->>
+  static async exportRankingProductosCocinaExcel(
+    sucursalId: number,
     fechaDesde?: string,
     fechaHasta?: string
   ): Promise<Blob> {
@@ -93,27 +101,7 @@ export class EstadisticaService {
     if (fechaDesde) params.append("fechaDesde", fechaDesde);
     if (fechaHasta) params.append("fechaHasta", fechaHasta);
     const response = await apiClient.get(
-      "/estadisticas/ranking-clientes/export/excel",
-      {
-        params,
-        responseType: "blob", // Importante para descargas de archivos
-      }
-    );
-    return response.data;
-  }
-
-  /**
-   * Exporta el ranking de artículos manufacturados a Excel.
-   */
-  static async exportRankingArticulosManufacturadosExcel(
-    fechaDesde?: string,
-    fechaHasta?: string
-  ): Promise<Blob> {
-    const params = new URLSearchParams();
-    if (fechaDesde) params.append("fechaDesde", fechaDesde);
-    if (fechaHasta) params.append("fechaHasta", fechaHasta);
-    const response = await apiClient.get(
-      "/estadisticas/articulos-manufacturados/export/excel",
+      `/estadisticas/sucursal/${sucursalId}/productos-cocina/export/excel`, // <-- Nueva URL
       {
         params,
         responseType: "blob",
@@ -122,10 +110,9 @@ export class EstadisticaService {
     return response.data;
   }
 
-  /**
-   * Exporta el ranking de artículos insumos a Excel.
-   */
-  static async exportRankingArticulosInsumosExcel(
+  // <<-- CAMBIO REALIZADO: Nuevo método de exportación para bebidas -->>
+  static async exportRankingBebidasExcel(
+    sucursalId: number,
     fechaDesde?: string,
     fechaHasta?: string
   ): Promise<Blob> {
@@ -133,7 +120,7 @@ export class EstadisticaService {
     if (fechaDesde) params.append("fechaDesde", fechaDesde);
     if (fechaHasta) params.append("fechaHasta", fechaHasta);
     const response = await apiClient.get(
-      "/estadisticas/articulos-insumos/export/excel",
+      `/estadisticas/sucursal/${sucursalId}/bebidas/export/excel`, // <-- Nueva URL
       {
         params,
         responseType: "blob",
@@ -141,25 +128,4 @@ export class EstadisticaService {
     );
     return response.data;
   }
-
-  /**
-   * Exporta los movimientos monetarios a Excel.
-   */
-  static async exportMovimientosMonetariosExcel(
-    fechaDesde?: string,
-    fechaHasta?: string
-  ): Promise<Blob> {
-    const params = new URLSearchParams();
-    if (fechaDesde) params.append("fechaDesde", fechaDesde);
-    if (fechaHasta) params.append("fechaHasta", fechaHasta);
-    const response = await apiClient.get(
-      "/estadisticas/movimientos-monetarios/export/excel",
-      {
-        params,
-        responseType: "blob",
-      }
-    );
-    return response.data;
-  }
-  // **FIN DE CÓDIGO NUEVO**
 }

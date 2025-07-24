@@ -25,24 +25,24 @@ public class EstadisticaServiceImpl implements EstadisticaService {
     @Autowired
     private DetallePedidoRepository detallePedidoRepository;
 
-    // Definimos una constante para el estado de los pedidos que cuentan para estadísticas.
     private final Estado ESTADO_PEDIDO_PARA_RANKING = Estado.ENTREGADO;
 
+    // <<-- MODIFICADO: Se agregó el parámetro 'sucursalId' a la firma del método.
     @Override
     @Transactional(readOnly = true)
-    public List<ClienteRankingDTO> getRankingClientesPorCantidadPedidos(LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception {
-        // Validación de fechas
+    public List<ClienteRankingDTO> getRankingClientesPorCantidadPedidos(Integer sucursalId, LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception {
         if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
             throw new Exception("La fecha 'desde' no puede ser posterior a la fecha 'hasta'.");
         }
         if (size <= 0) {
-            size = 10; // Valor por defecto si no se especifica un tamaño válido
+            size = 10;
         }
 
         Pageable pageable = PageRequest.of(page, size);
 
-        // Llamada al método del repositorio
+        // <<-- MODIFICADO: Se pasa 'sucursalId' a la consulta del repositorio.
         return pedidoRepository.findRankingClientesByCantidadPedidos(
+                sucursalId,
                 ESTADO_PEDIDO_PARA_RANKING,
                 fechaDesde,
                 fechaHasta,
@@ -50,9 +50,10 @@ public class EstadisticaServiceImpl implements EstadisticaService {
         );
     }
 
+    // <<-- MODIFICADO: Se agregó el parámetro 'sucursalId' a la firma del método.
     @Override
     @Transactional(readOnly = true)
-    public List<ClienteRankingDTO> getRankingClientesPorMontoTotal(LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception {
+    public List<ClienteRankingDTO> getRankingClientesPorMontoTotal(Integer sucursalId, LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception {
         if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
             throw new Exception("La fecha 'desde' no puede ser posterior a la fecha 'hasta'.");
         }
@@ -62,8 +63,9 @@ public class EstadisticaServiceImpl implements EstadisticaService {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        // Llamada al método del repositorio
+        // <<-- MODIFICADO: Se pasa 'sucursalId' a la consulta del repositorio.
         return pedidoRepository.findRankingClientesByMontoTotal(
+                sucursalId,
                 ESTADO_PEDIDO_PARA_RANKING,
                 fechaDesde,
                 fechaHasta,
@@ -71,9 +73,10 @@ public class EstadisticaServiceImpl implements EstadisticaService {
         );
     }
 
+    // <<-- MODIFICADO: Se renombró el método y se agregó 'sucursalId'.
     @Override
     @Transactional(readOnly = true)
-    public List<ArticuloManufacturadoRankingDTO> getRankingArticulosManufacturadosMasVendidos(LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception {
+    public List<ArticuloManufacturadoRankingDTO> getRankingProductosCocina(Integer sucursalId, LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception {
         if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
             throw new Exception("La fecha 'desde' no puede ser posterior a la fecha 'hasta'.");
         }
@@ -83,8 +86,9 @@ public class EstadisticaServiceImpl implements EstadisticaService {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        // Llamada al método del repositorio de detalles
-        return detallePedidoRepository.findRankingArticulosManufacturadosMasVendidos(
+        // <<-- MODIFICADO: Se llama al nuevo método del repositorio 'findRankingProductosCocina'.
+        return detallePedidoRepository.findRankingProductosCocina(
+                sucursalId,
                 ESTADO_PEDIDO_PARA_RANKING,
                 fechaDesde,
                 fechaHasta,
@@ -92,9 +96,10 @@ public class EstadisticaServiceImpl implements EstadisticaService {
         );
     }
     
-     @Override
+    // <<-- MODIFICADO: Se renombró el método y se agregó 'sucursalId'.
+    @Override
     @Transactional(readOnly = true)
-    public List<ArticuloInsumoRankingDTO> getRankingArticulosInsumosMasVendidos(LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception {
+    public List<ArticuloInsumoRankingDTO> getRankingBebidas(Integer sucursalId, LocalDate fechaDesde, LocalDate fechaHasta, int page, int size) throws Exception {
         if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
             throw new Exception("La fecha 'desde' no puede ser posterior a la fecha 'hasta'.");
         }
@@ -104,7 +109,9 @@ public class EstadisticaServiceImpl implements EstadisticaService {
 
         Pageable pageable = PageRequest.of(page, size);
 
-        return detallePedidoRepository.findRankingArticulosInsumosMasVendidos(
+        // <<-- MODIFICADO: Se llama al nuevo método del repositorio 'findRankingBebidas'.
+        return detallePedidoRepository.findRankingBebidas(
+                sucursalId,
                 ESTADO_PEDIDO_PARA_RANKING,
                 fechaDesde,
                 fechaHasta,
@@ -112,15 +119,17 @@ public class EstadisticaServiceImpl implements EstadisticaService {
         );
     }
 
+    // <<-- MODIFICADO: Se agregó el parámetro 'sucursalId' a la firma del método.
     @Override
     @Transactional(readOnly = true)
-    public MovimientosMonetariosDTO getMovimientosMonetarios(LocalDate fechaDesde, LocalDate fechaHasta) throws Exception {
+    public MovimientosMonetariosDTO getMovimientosMonetarios(Integer sucursalId, LocalDate fechaDesde, LocalDate fechaHasta) throws Exception {
         if (fechaDesde != null && fechaHasta != null && fechaDesde.isAfter(fechaHasta)) {
             throw new Exception("La fecha 'desde' no puede ser posterior a la fecha 'hasta'.");
         }
 
-        Double ingresos = pedidoRepository.sumTotalByEstadoAndFechaRange(fechaDesde, fechaHasta);
-        Double costos = pedidoRepository.sumTotalCostoByEstadoAndFechaRange(fechaDesde, fechaHasta);
+        // <<-- MODIFICADO: Se pasa 'sucursalId' a las consultas del repositorio.
+        Double ingresos = pedidoRepository.sumTotalByEstadoAndFechaRange(sucursalId, fechaDesde, fechaHasta);
+        Double costos = pedidoRepository.sumTotalCostoByEstadoAndFechaRange(sucursalId, fechaDesde, fechaHasta);
 
         ingresos = (ingresos != null) ? ingresos : 0.0;
         costos = (costos != null) ? costos : 0.0;

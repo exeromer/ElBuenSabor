@@ -23,13 +23,14 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
             "COUNT(p.id) AS cantidadPedidos, " +
             "SUM(p.total) AS montoTotalComprado) " +
             "FROM Pedido p JOIN p.cliente c " +
-            "WHERE p.estadoActivo = true " +
+            "WHERE p.sucursal.id = :sucursalId " +
             "AND p.estado = :estado " +
             "AND (:fechaDesde IS NULL OR p.fechaPedido >= :fechaDesde) " +
             "AND (:fechaHasta IS NULL OR p.fechaPedido <= :fechaHasta) " +
             "GROUP BY c.id, c.nombre, c.apellido, c.email " +
             "ORDER BY cantidadPedidos DESC, SUM(p.total) DESC, c.apellido ASC, c.nombre ASC")
     List<ClienteRankingDTO> findRankingClientesByCantidadPedidos(
+            @Param("sucursalId") Integer sucursalId,
             @Param("estado") Estado estado,
             @Param("fechaDesde") LocalDate fechaDesde,
             @Param("fechaHasta") LocalDate fechaHasta,
@@ -41,13 +42,14 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
             "COUNT(p.id) AS cantidadPedidos, " +
             "SUM(p.total) AS montoTotalComprado) " +
             "FROM Pedido p JOIN p.cliente c " +
-            "WHERE p.estadoActivo = true " +
+            "WHERE p.sucursal.id = :sucursalId " +
             "AND p.estado = :estado " +
             "AND (:fechaDesde IS NULL OR p.fechaPedido >= :fechaDesde) " +
             "AND (:fechaHasta IS NULL OR p.fechaPedido <= :fechaHasta) " +
             "GROUP BY c.id, c.nombre, c.apellido, c.email " +
             "ORDER BY montoTotalComprado DESC, COUNT(p.id) DESC, c.apellido ASC, c.nombre ASC")
     List<ClienteRankingDTO> findRankingClientesByMontoTotal(
+            @Param("sucursalId") Integer sucursalId,
             @Param("estado") Estado estado,
             @Param("fechaDesde") LocalDate fechaDesde,
             @Param("fechaHasta") LocalDate fechaHasta,
@@ -93,17 +95,19 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
     
    
     @Query("SELECT SUM(p.total) FROM Pedido p " +
-            "WHERE p.estadoActivo = true " +
+            "WHERE p.sucursal.id = :sucursalId " +
+            "AND p.estadoActivo = true " +
             "AND p.estado = 'ENTREGADO' " +
             "AND (:fechaDesde IS NULL OR p.fechaPedido >= :fechaDesde) " +
             "AND (:fechaHasta IS NULL OR p.fechaPedido <= :fechaHasta)")
-    Double sumTotalByEstadoAndFechaRange(@Param("fechaDesde") LocalDate fechaDesde, @Param("fechaHasta") LocalDate fechaHasta);
+    Double sumTotalByEstadoAndFechaRange(@Param("sucursalId") Integer sucursalId, @Param("fechaDesde") LocalDate fechaDesde, @Param("fechaHasta") LocalDate fechaHasta);
 
     @Query("SELECT SUM(p.totalCosto) FROM Pedido p " +
-            "WHERE p.estadoActivo = true " +
+            "WHERE p.sucursal.id = :sucursalId " +
+            "AND p.estadoActivo = true " +
             "AND p.estado = 'ENTREGADO' " +
             "AND (:fechaDesde IS NULL OR p.fechaPedido >= :fechaDesde) " +
             "AND (:fechaHasta IS NULL OR p.fechaPedido <= :fechaHasta)")
-    Double sumTotalCostoByEstadoAndFechaRange(@Param("fechaDesde") LocalDate fechaDesde, @Param("fechaHasta") LocalDate fechaHasta);
+    Double sumTotalCostoByEstadoAndFechaRange(@Param("sucursalId") Integer sucursalId, @Param("fechaDesde") LocalDate fechaDesde, @Param("fechaHasta") LocalDate fechaHasta);
     
 }

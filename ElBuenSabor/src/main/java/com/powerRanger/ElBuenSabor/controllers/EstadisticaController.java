@@ -25,17 +25,21 @@ public class EstadisticaController {
 
     @Autowired
     private EstadisticaService estadisticaService;
+    
     @Autowired
     private ExcelExportService excelExportService;
 
-    @GetMapping("/ranking-clientes/por-cantidad")
+    // MODIFICADO: Se añade {sucursalId} a la ruta
+    @GetMapping("/sucursal/{sucursalId}/ranking-clientes/por-cantidad")
     public ResponseEntity<?> getRankingClientesPorCantidad(
+            @PathVariable Integer sucursalId, // MODIFICADO: Se recibe el ID de la sucursal
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            List<ClienteRankingDTO> ranking = estadisticaService.getRankingClientesPorCantidadPedidos(fechaDesde, fechaHasta, page, size);
+            // MODIFICADO: Se pasa sucursalId al servicio
+            List<ClienteRankingDTO> ranking = estadisticaService.getRankingClientesPorCantidadPedidos(sucursalId, fechaDesde, fechaHasta, page, size);
             if (ranking.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -50,14 +54,17 @@ public class EstadisticaController {
         }
     }
 
-    @GetMapping("/ranking-clientes/por-monto")
+    // MODIFICADO: Se añade {sucursalId} a la ruta
+    @GetMapping("/sucursal/{sucursalId}/ranking-clientes/por-monto")
     public ResponseEntity<?> getRankingClientesPorMonto(
+            @PathVariable Integer sucursalId, // MODIFICADO: Se recibe el ID de la sucursal
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            List<ClienteRankingDTO> ranking = estadisticaService.getRankingClientesPorMontoTotal(fechaDesde, fechaHasta, page, size);
+            // MODIFICADO: Se pasa sucursalId al servicio
+            List<ClienteRankingDTO> ranking = estadisticaService.getRankingClientesPorMontoTotal(sucursalId, fechaDesde, fechaHasta, page, size);
             if (ranking.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -72,14 +79,17 @@ public class EstadisticaController {
         }
     }
 
-    @GetMapping("/articulos-manufacturados/ranking/mas-vendidos")
-    public ResponseEntity<?> getRankingArticulosManufacturadosMasVendidos(
+    // MODIFICADO: Ruta y nombre del método cambiados para "Productos de Cocina"
+    @GetMapping("/sucursal/{sucursalId}/productos-cocina/ranking")
+    public ResponseEntity<?> getRankingProductosCocina(
+            @PathVariable Integer sucursalId, // MODIFICADO: Se recibe el ID de la sucursal
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            List<ArticuloManufacturadoRankingDTO> ranking = estadisticaService.getRankingArticulosManufacturadosMasVendidos(fechaDesde, fechaHasta, page, size);
+            // MODIFICADO: Se llama al nuevo método del servicio
+            List<ArticuloManufacturadoRankingDTO> ranking = estadisticaService.getRankingProductosCocina(sucursalId, fechaDesde, fechaHasta, page, size);
             if (ranking.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -87,23 +97,24 @@ public class EstadisticaController {
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-            errorResponse.put("error", "Error al procesar la solicitud de ranking de artículos manufacturados.");
+            errorResponse.put("error", "Error al procesar el ranking de productos de cocina.");
             errorResponse.put("message", e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
     
-     // **INICIO DE CÓDIGO NUEVO**
-    // New endpoint for ranking insumo articles (bebidas)
-    @GetMapping("/articulos-insumos/ranking/mas-vendidos")
-    public ResponseEntity<?> getRankingArticulosInsumosMasVendidos(
+    // MODIFICADO: Ruta y nombre del método cambiados para "Bebidas"
+    @GetMapping("/sucursal/{sucursalId}/bebidas/ranking")
+    public ResponseEntity<?> getRankingBebidas(
+            @PathVariable Integer sucursalId, // MODIFICADO: Se recibe el ID de la sucursal
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         try {
-            List<ArticuloInsumoRankingDTO> ranking = estadisticaService.getRankingArticulosInsumosMasVendidos(fechaDesde, fechaHasta, page, size);
+            // MODIFICADO: Se llama al nuevo método del servicio
+            List<ArticuloInsumoRankingDTO> ranking = estadisticaService.getRankingBebidas(sucursalId, fechaDesde, fechaHasta, page, size);
             if (ranking.isEmpty()) {
                 return ResponseEntity.noContent().build();
             }
@@ -111,20 +122,22 @@ public class EstadisticaController {
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
             errorResponse.put("status", HttpStatus.INTERNAL_SERVER_ERROR.value());
-            errorResponse.put("error", "Error al procesar la solicitud de ranking de artículos insumos.");
+            errorResponse.put("error", "Error al procesar el ranking de bebidas.");
             errorResponse.put("message", e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(errorResponse);
         }
     }
 
-    // New endpoint for monetary movements
-    @GetMapping("/movimientos-monetarios")
+    // MODIFICADO: Se añade {sucursalId} a la ruta
+    @GetMapping("/sucursal/{sucursalId}/movimientos-monetarios")
     public ResponseEntity<?> getMovimientosMonetarios(
+            @PathVariable Integer sucursalId, // MODIFICADO: Se recibe el ID de la sucursal
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta) {
         try {
-            MovimientosMonetariosDTO movimientos = estadisticaService.getMovimientosMonetarios(fechaDesde, fechaHasta);
+            // MODIFICADO: Se pasa sucursalId al servicio
+            MovimientosMonetariosDTO movimientos = estadisticaService.getMovimientosMonetarios(sucursalId, fechaDesde, fechaHasta);
             return ResponseEntity.ok(movimientos);
         } catch (Exception e) {
             Map<String, Object> errorResponse = new HashMap<>();
@@ -136,13 +149,17 @@ public class EstadisticaController {
         }
     }
 
-    // New endpoint for exporting Client Ranking to Excel
-    @GetMapping("/ranking-clientes/export/excel")
+    // --- Endpoints de Exportación a Excel (también modificados) ---
+
+    // MODIFICADO: Se añade {sucursalId} a la ruta
+    @GetMapping("/sucursal/{sucursalId}/ranking-clientes/export/excel")
     public ResponseEntity<byte[]> exportClientesRankingExcel(
+            @PathVariable Integer sucursalId, // MODIFICADO: Se recibe el ID de la sucursal
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta) {
         try {
-            List<ClienteRankingDTO> ranking = estadisticaService.getRankingClientesPorCantidadPedidos(fechaDesde, fechaHasta, 0, Integer.MAX_VALUE); // Fetch all data
+            // MODIFICADO: Se pasa sucursalId al servicio
+            List<ClienteRankingDTO> ranking = estadisticaService.getRankingClientesPorCantidadPedidos(sucursalId, fechaDesde, fechaHasta, 0, Integer.MAX_VALUE);
             byte[] excelBytes = excelExportService.exportClientesRankingToExcel(ranking);
 
             HttpHeaders headers = new HttpHeaders();
@@ -155,18 +172,20 @@ public class EstadisticaController {
         }
     }
 
-    // New endpoint for exporting Manufactured Product Ranking to Excel
-    @GetMapping("/articulos-manufacturados/export/excel")
-    public ResponseEntity<byte[]> exportArticulosManufacturadosRankingExcel(
+    // MODIFICADO: Ruta y lógica para "Productos de Cocina"
+    @GetMapping("/sucursal/{sucursalId}/productos-cocina/export/excel")
+    public ResponseEntity<byte[]> exportProductosCocinaRankingExcel(
+            @PathVariable Integer sucursalId, // MODIFICADO: Se recibe el ID de la sucursal
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta) {
         try {
-            List<ArticuloManufacturadoRankingDTO> ranking = estadisticaService.getRankingArticulosManufacturadosMasVendidos(fechaDesde, fechaHasta, 0, Integer.MAX_VALUE); // Fetch all data
+            // MODIFICADO: Se llama al nuevo método del servicio
+            List<ArticuloManufacturadoRankingDTO> ranking = estadisticaService.getRankingProductosCocina(sucursalId, fechaDesde, fechaHasta, 0, Integer.MAX_VALUE);
             byte[] excelBytes = excelExportService.exportArticulosManufacturadosRankingToExcel(ranking);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDispositionFormData("attachment", "ranking_articulos_manufacturados.xlsx");
+            headers.setContentDispositionFormData("attachment", "ranking_productos_cocina.xlsx");
             return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
         } catch (Exception e) {
             e.printStackTrace();
@@ -174,18 +193,20 @@ public class EstadisticaController {
         }
     }
 
-    // New endpoint for exporting Insumo Product Ranking to Excel
-    @GetMapping("/articulos-insumos/export/excel")
-    public ResponseEntity<byte[]> exportArticulosInsumosRankingExcel(
+    // MODIFICADO: Ruta y lógica para "Bebidas"
+    @GetMapping("/sucursal/{sucursalId}/bebidas/export/excel")
+    public ResponseEntity<byte[]> exportBebidasRankingExcel(
+            @PathVariable Integer sucursalId, // MODIFICADO: Se recibe el ID de la sucursal
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta) {
         try {
-            List<ArticuloInsumoRankingDTO> ranking = estadisticaService.getRankingArticulosInsumosMasVendidos(fechaDesde, fechaHasta, 0, Integer.MAX_VALUE); // Fetch all data
+            // MODIFICADO: Se llama al nuevo método del servicio
+            List<ArticuloInsumoRankingDTO> ranking = estadisticaService.getRankingBebidas(sucursalId, fechaDesde, fechaHasta, 0, Integer.MAX_VALUE);
             byte[] excelBytes = excelExportService.exportArticulosInsumosRankingToExcel(ranking);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDispositionFormData("attachment", "ranking_articulos_insumos.xlsx");
+            headers.setContentDispositionFormData("attachment", "ranking_bebidas.xlsx");
             return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
         } catch (Exception e) {
             e.printStackTrace();
@@ -193,13 +214,15 @@ public class EstadisticaController {
         }
     }
 
-    // New endpoint for exporting Monetary Movements to Excel
-    @GetMapping("/movimientos-monetarios/export/excel")
+    // MODIFICADO: Se añade {sucursalId} a la ruta
+    @GetMapping("/sucursal/{sucursalId}/movimientos-monetarios/export/excel")
     public ResponseEntity<byte[]> exportMovimientosMonetariosExcel(
+            @PathVariable Integer sucursalId, // MODIFICADO: Se recibe el ID de la sucursal
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta) {
         try {
-            MovimientosMonetariosDTO movimientos = estadisticaService.getMovimientosMonetarios(fechaDesde, fechaHasta);
+            // MODIFICADO: Se pasa sucursalId al servicio
+            MovimientosMonetariosDTO movimientos = estadisticaService.getMovimientosMonetarios(sucursalId, fechaDesde, fechaHasta);
             byte[] excelBytes = excelExportService.exportMovimientosMonetariosToExcel(movimientos);
 
             HttpHeaders headers = new HttpHeaders();
@@ -211,5 +234,4 @@ public class EstadisticaController {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
-    // **FIN DE CÓDIGO NUEVO**
 }

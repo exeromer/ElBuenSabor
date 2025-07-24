@@ -14,19 +14,37 @@
  * formulario cuando el modal se abre o se cambia el artículo a editar.
  * @hook `useAuth0`: Obtiene el token de autenticación para las operaciones protegidas del API.
  */
-import React, { useState, useEffect } from 'react';
-import { Modal, Form, Button, Alert, Spinner, Row, Col, InputGroup, Card, ListGroup, Image } from 'react-bootstrap';
-import { useSucursal } from '../../context/SucursalContext';
+import React, { useState, useEffect } from "react";
+import {
+  Modal,
+  Form,
+  Button,
+  Alert,
+  Spinner,
+  Row,
+  Col,
+  InputGroup,
+  Card,
+  ListGroup,
+  Image,
+} from "react-bootstrap";
+import { useSucursal } from "../../context/SucursalContext";
+import { ArticuloManufacturadoService } from "../../services/ArticuloManufacturadoService";
+import { ArticuloInsumoService } from "../../services/articuloInsumoService";
+import { FileUploadService } from "../../services/fileUploadService";
+import { ImagenService } from "../../services/imagenService";
 
-import { ArticuloManufacturadoService } from '../../services/ArticuloManufacturadoService';
-import { ArticuloInsumoService } from '../../services/articuloInsumoService';
-import { FileUploadService } from '../../services/fileUploadService';
-import { ImagenService } from '../../services/imagenService';
-
-import type { ArticuloManufacturadoResponse, CategoriaResponse, ArticuloInsumoResponse, ArticuloManufacturadoRequest, ArticuloManufacturadoDetalleResponse, ImagenResponse } from '../../types/types';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlusCircle, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
-import apiClient from '../../services/apiClient';
+import type {
+  ArticuloManufacturadoResponse,
+  CategoriaResponse,
+  ArticuloInsumoResponse,
+  ArticuloManufacturadoRequest,
+  ArticuloManufacturadoDetalleResponse,
+  ImagenResponse,
+} from "../../types/types";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPlusCircle, faMinusCircle } from "@fortawesome/free-solid-svg-icons";
+import apiClient from "../../services/apiClient";
 
 interface ArticuloManufacturadoFormProps {
   show: boolean;
@@ -36,29 +54,34 @@ interface ArticuloManufacturadoFormProps {
 }
 
 const initialFormData: ArticuloManufacturadoRequest = {
-  denominacion: '',
+  denominacion: "",
   precioVenta: 0,
   unidadMedidaId: 4,
   categoriaId: 0,
   estadoActivo: true,
-  descripcion: '',
+  descripcion: "",
   tiempoEstimadoMinutos: 0,
-  preparacion: '',
+  preparacion: "",
   manufacturadoDetalles: [],
 };
 
-const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ show, handleClose, onSave, articuloToEdit }) => {
+const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({
+  show,
+  handleClose,
+  onSave,
+  articuloToEdit,
+}) => {
   const { selectedSucursal } = useSucursal();
 
   const [formData, setFormData] = useState<ArticuloManufacturadoRequest>({
-    denominacion: '',
+    denominacion: "",
     precioVenta: 0,
     unidadMedidaId: 0,
     categoriaId: 0,
     estadoActivo: true,
-    descripcion: '',
+    descripcion: "",
     tiempoEstimadoMinutos: 0,
-    preparacion: '',
+    preparacion: "",
     manufacturadoDetalles: [],
   });
   const [imagenes, setImagenes] = useState<ImagenResponse[]>([]);
@@ -85,12 +108,15 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
         // FIX: Las categorías ahora vienen directamente del contexto, no de una llamada a la API.
         const sucursalCategories = selectedSucursal.categorias || [];
         setCategories(
-          sucursalCategories.filter(c => c.estadoActivo && c.denominacion.toLowerCase() !== 'insumos'));
+          sucursalCategories.filter(
+            (c) => c.estadoActivo && c.denominacion.toLowerCase() !== "insumos"
+          )
+        );
 
         const fetchedInsumos = await ArticuloInsumoService.getAll();
         setInsumos(fetchedInsumos);
       } catch (err) {
-        setError('Error al cargar las opciones del formulario.');
+        setError("Error al cargar las opciones del formulario.");
       } finally {
         setLoadingOptions(false);
       }
@@ -116,11 +142,13 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
           descripcion: articuloToEdit.descripcion,
           tiempoEstimadoMinutos: articuloToEdit.tiempoEstimadoMinutos,
           preparacion: articuloToEdit.preparacion,
-          manufacturadoDetalles: articuloToEdit.manufacturadoDetalles.map((d: ArticuloManufacturadoDetalleResponse) => ({
-            articuloInsumoId: d.articuloInsumo.id,
-            cantidad: d.cantidad,
-            estadoActivo: true,
-          })),
+          manufacturadoDetalles: articuloToEdit.manufacturadoDetalles.map(
+            (d: ArticuloManufacturadoDetalleResponse) => ({
+              articuloInsumoId: d.articuloInsumo.id,
+              cantidad: d.cantidad,
+              estadoActivo: true,
+            })
+          ),
         });
         setImagenes(articuloToEdit.imagenes);
       } else {
@@ -140,12 +168,16 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
    */
   const handleChange = (e: React.ChangeEvent<any>) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : (type === 'number' ? parseFloat(value) || 0 : value),
+      [name]:
+        type === "checkbox"
+          ? checked
+          : type === "number"
+          ? parseFloat(value) || 0
+          : value,
     }));
   };
-
 
   /**
    * @function handleFileChange
@@ -163,9 +195,14 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
    * Inicializa el nuevo detalle con el primer insumo disponible y una cantidad de 1.
    */
   const handleAddDetalle = () => {
-    setFormData((prev) => ({ ...prev, manufacturadoDetalles: [...prev.manufacturadoDetalles, { articuloInsumoId: 0, cantidad: 1, estadoActivo: true }] }));
+    setFormData((prev) => ({
+      ...prev,
+      manufacturadoDetalles: [
+        ...prev.manufacturadoDetalles,
+        { articuloInsumoId: 0, cantidad: 1, estadoActivo: true },
+      ],
+    }));
   };
-
 
   /**
    * @function handleRemoveDetalle
@@ -173,9 +210,13 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
    * @param {number} index - El índice del detalle a eliminar en el array `manufacturadoDetalles`.
    */
   const handleRemoveDetalle = (index: number) => {
-    setFormData((prev) => ({ ...prev, manufacturadoDetalles: prev.manufacturadoDetalles.filter((_, i) => i !== index) }));
+    setFormData((prev) => ({
+      ...prev,
+      manufacturadoDetalles: prev.manufacturadoDetalles.filter(
+        (_, i) => i !== index
+      ),
+    }));
   };
-
 
   /**
    * @function handleDetalleChange
@@ -187,10 +228,12 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
    */
   const handleDetalleChange = (index: number, name: string, value: any) => {
     const newDetails = [...formData.manufacturadoDetalles];
-    newDetails[index] = { ...newDetails[index], [name]: name === 'cantidad' ? parseFloat(value) : Number(value) };
-    setFormData(prev => ({ ...prev, manufacturadoDetalles: newDetails }));
+    newDetails[index] = {
+      ...newDetails[index],
+      [name]: name === "cantidad" ? parseFloat(value) : Number(value),
+    };
+    setFormData((prev) => ({ ...prev, manufacturadoDetalles: newDetails }));
   };
-
 
   /**
    * @function handleSubmit
@@ -207,13 +250,16 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
     // Asignamos la unidad de medida por defecto
     const dataToSend: ArticuloManufacturadoRequest = {
       ...formData,
-      unidadMedidaId: 2 // Asumiendo que '2' es el ID para "Unidad"
+      unidadMedidaId: 2, // Asumiendo que '2' es el ID para "Unidad"
     };
 
     try {
       // 1. Guardamos el artículo y obtenemos el objeto guardado (con su ID)
       const savedArticulo = articuloToEdit
-        ? await ArticuloManufacturadoService.update(articuloToEdit.id, dataToSend)
+        ? await ArticuloManufacturadoService.update(
+            articuloToEdit.id,
+            dataToSend
+          )
         : await ArticuloManufacturadoService.create(dataToSend);
 
       // 2. FIX: Ahora usamos 'savedArticulo' para la lógica de la imagen
@@ -223,20 +269,27 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
           for (const oldImage of articuloToEdit.imagenes) {
             await ImagenService.delete(oldImage.id);
             // Extraemos el nombre del archivo de la URL para el borrado físico
-            const oldFilename = oldImage.denominacion.substring(oldImage.denominacion.lastIndexOf('/') + 1);
+            const oldFilename = oldImage.denominacion.substring(
+              oldImage.denominacion.lastIndexOf("/") + 1
+            );
             await FileUploadService.deleteFile(oldFilename);
           }
         }
         // Subimos la nueva imagen y la asociamos usando el ID del artículo guardado
-        await FileUploadService.uploadFile(selectedFile, { articuloId: savedArticulo.id });
+        await FileUploadService.uploadFile(selectedFile, {
+          articuloId: savedArticulo.id,
+        });
       }
 
-      alert(`Artículo Manufacturado ${articuloToEdit ? 'actualizado' : 'creado'} con éxito.`);
+      alert(
+        `Artículo Manufacturado ${
+          articuloToEdit ? "actualizado" : "creado"
+        } con éxito.`
+      );
       onSave(); // Esto recargará la tabla en la página principal
       handleClose(); // Cerramos el modal
-
     } catch (err: any) {
-      setError(err.message || 'Error al guardar.');
+      setError(err.message || "Error al guardar.");
     } finally {
       setSubmitting(false);
     }
@@ -245,12 +298,18 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
   return (
     <Modal show={show} onHide={handleClose} size="lg">
       <Modal.Header closeButton>
-        <Modal.Title>{articuloToEdit ? 'Editar Artículo Manufacturado' : 'Crear Artículo Manufacturado'}</Modal.Title>
+        <Modal.Title>
+          {articuloToEdit
+            ? "Editar Artículo Manufacturado"
+            : "Crear Artículo Manufacturado"}
+        </Modal.Title>
       </Modal.Header>
       <Form onSubmit={handleSubmit}>
         <Modal.Body>
           {loadingOptions ? (
-            <div className="text-center"><Spinner animation="border" /> Cargando opciones...</div>
+            <div className="text-center">
+              <Spinner animation="border" /> Cargando opciones...
+            </div>
           ) : error ? (
             <Alert variant="danger">{error}</Alert>
           ) : (
@@ -299,14 +358,16 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                 <Form.Label>Categoría</Form.Label>
                 <Form.Select
                   name="categoriaId"
-                  value={formData.categoriaId || ''}
+                  value={formData.categoriaId || ""}
                   onChange={handleChange}
                   required
                   disabled={categories.length === 0}
                 >
                   <option value="">Selecciona una Categoría</option>
                   {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>{cat.denominacion}</option>
+                    <option key={cat.id} value={cat.id}>
+                      {cat.denominacion}
+                    </option>
                   ))}
                 </Form.Select>
               </Form.Group>
@@ -346,9 +407,19 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
 
               <Form.Group className="mb-3">
                 <Form.Label>Imagen</Form.Label>
-                <Form.Control type="file" onChange={handleFileChange} accept="image/*" />
+                <Form.Control
+                  type="file"
+                  onChange={handleFileChange}
+                  accept="image/*"
+                />
                 {imagenes.length > 0 && !selectedFile && (
-                  <div className="mt-2"><Image src={`${apiClient.defaults.baseURL}/files/view/${imagenes[0].denominacion}`} thumbnail style={{ width: '100px' }} /></div>
+                  <div className="mt-2">
+                    <Image
+                      src={`${apiClient.defaults.baseURL}/files/view/${imagenes[0].denominacion}`}
+                      thumbnail
+                      style={{ width: "100px" }}
+                    />
+                  </div>
                 )}
               </Form.Group>
               <Form.Group className="mb-3">
@@ -359,46 +430,63 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                   onChange={(e) => {
                     setIsProductWrapper(e.target.checked);
                     if (e.target.checked) {
-                      setFormData(prev => ({
+                      setFormData((prev) => ({
                         ...prev,
-                        manufacturadoDetalles: prev.manufacturadoDetalles.length > 0 && !prev.manufacturadoDetalles[0].articuloInsumoId ? prev.manufacturadoDetalles : []
+                        manufacturadoDetalles:
+                          prev.manufacturadoDetalles.length > 0 &&
+                          !prev.manufacturadoDetalles[0].articuloInsumoId
+                            ? prev.manufacturadoDetalles
+                            : [],
                       }));
                     }
                   }}
                 />
-                {isProductWrapper && formData.manufacturadoDetalles.length > 1 && (
-                  <Alert variant="warning" className="mt-1">
-                    Para productos simples, solo se espera un ingrediente. Se considerará el primero.
-                  </Alert>
-                )}
+                {isProductWrapper &&
+                  formData.manufacturadoDetalles.length > 1 && (
+                    <Alert variant="warning" className="mt-1">
+                      Para productos simples, solo se espera un ingrediente. Se
+                      considerará el primero.
+                    </Alert>
+                  )}
               </Form.Group>
 
               <Card className="mt-4">
                 <Card.Header className="d-flex justify-content-between align-items-center">
                   <h6>Ingredientes y Cantidades</h6>
-                  <Button variant="outline-success" size="sm" onClick={handleAddDetalle} disabled={insumos.length === 0}>
+                  <Button
+                    variant="outline-success"
+                    size="sm"
+                    onClick={handleAddDetalle}
+                    disabled={insumos.length === 0}
+                  >
                     <FontAwesomeIcon icon={faPlusCircle} /> Añadir Ingrediente
                   </Button>
                 </Card.Header>
                 <ListGroup variant="flush">
                   {formData.manufacturadoDetalles.length === 0 ? (
                     <ListGroup.Item className="text-center text-muted">
-                      No hay ingredientes añadidos. Haz clic en "Añadir Ingrediente" para empezar.
+                      No hay ingredientes añadidos. Haz clic en "Añadir
+                      Ingrediente" para empezar.
                     </ListGroup.Item>
                   ) : (
                     formData.manufacturadoDetalles.map((detalle, index) => {
-                      const insumosYaEnOtrosDetalles = formData.manufacturadoDetalles
-                        .filter((_, i) => i !== index)
-                        .map(d => d.articuloInsumoId)
-                        .filter(id => id !== 0 && id !== undefined);
+                      const insumosYaEnOtrosDetalles =
+                        formData.manufacturadoDetalles
+                          .filter((_, i) => i !== index)
+                          .map((d) => d.articuloInsumoId)
+                          .filter((id) => id !== 0 && id !== undefined);
 
                       const opcionesDeInsumosDisponibles = insumos
-                        .filter(insumo =>
-                          isProductWrapper ? !insumo.esParaElaborar : insumo.esParaElaborar
+                        .filter((insumo) =>
+                          isProductWrapper
+                            ? !insumo.esParaElaborar
+                            : insumo.esParaElaborar
                         )
-                        .filter(insumoFiltrado =>
-                          !insumosYaEnOtrosDetalles.includes(insumoFiltrado.id!) ||
-                          insumoFiltrado.id === detalle.articuloInsumoId
+                        .filter(
+                          (insumoFiltrado) =>
+                            !insumosYaEnOtrosDetalles.includes(
+                              insumoFiltrado.id!
+                            ) || insumoFiltrado.id === detalle.articuloInsumoId
                         );
 
                       return (
@@ -408,15 +496,30 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                               <Form.Group className="mb-3 mb-md-0">
                                 <Form.Label>Insumo</Form.Label>
                                 <Form.Select
-                                  value={detalle.articuloInsumoId || ''}
-                                  onChange={(e) => handleDetalleChange(index, 'articuloInsumoId', Number(e.target.value))}
-                                  disabled={opcionesDeInsumosDisponibles.length === 0}
+                                  value={detalle.articuloInsumoId || ""}
+                                  onChange={(e) =>
+                                    handleDetalleChange(
+                                      index,
+                                      "articuloInsumoId",
+                                      Number(e.target.value)
+                                    )
+                                  }
+                                  disabled={
+                                    opcionesDeInsumosDisponibles.length === 0
+                                  }
                                   required
                                 >
                                   <option value="">Selecciona un insumo</option>
-                                  {opcionesDeInsumosDisponibles.map((insumoOpcion) => (
-                                    <option key={insumoOpcion.id} value={insumoOpcion.id}>{insumoOpcion.denominacion}</option>
-                                  ))}
+                                  {opcionesDeInsumosDisponibles.map(
+                                    (insumoOpcion) => (
+                                      <option
+                                        key={insumoOpcion.id}
+                                        value={insumoOpcion.id}
+                                      >
+                                        {insumoOpcion.denominacion}
+                                      </option>
+                                    )
+                                  )}
                                 </Form.Select>
                               </Form.Group>
                             </Col>
@@ -427,19 +530,36 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
                                   <Form.Control
                                     type="number"
                                     value={detalle.cantidad}
-                                    onChange={(e) => handleDetalleChange(index, 'cantidad', parseFloat(e.target.value))}
+                                    onChange={(e) =>
+                                      handleDetalleChange(
+                                        index,
+                                        "cantidad",
+                                        parseFloat(e.target.value)
+                                      )
+                                    }
                                     step="0.01"
                                     min="0.01"
                                     required
                                   />
                                   <InputGroup.Text>
-                                    {insumos.find(i => i.id === detalle.articuloInsumoId)?.unidadMedida.denominacion || 'Unidad'}
+                                    {insumos.find(
+                                      (i) => i.id === detalle.articuloInsumoId
+                                    )?.unidadMedida.denominacion || "Unidad"}
                                   </InputGroup.Text>
                                 </InputGroup>
                               </Form.Group>
                             </Col>
-                            <Col xs={4} md={2} className="d-flex justify-content-end align-items-end">
-                              <Button variant="danger" size="sm" onClick={() => handleRemoveDetalle(index)} className="mb-3 mb-md-0">
+                            <Col
+                              xs={4}
+                              md={2}
+                              className="d-flex justify-content-end align-items-end"
+                            >
+                              <Button
+                                variant="danger"
+                                size="sm"
+                                onClick={() => handleRemoveDetalle(index)}
+                                className="mb-3 mb-md-0"
+                              >
                                 <FontAwesomeIcon icon={faMinusCircle} />
                               </Button>
                             </Col>
@@ -454,12 +574,31 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({ s
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose} disabled={submitting}>
+          <Button
+            variant="secondary"
+            onClick={handleClose}
+            disabled={submitting}
+          >
             Cancelar
           </Button>
-          <Button variant="primary" type="submit" disabled={submitting || loadingOptions}>
-            {submitting ? <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" className="me-2" /> : ''}
-            {articuloToEdit ? 'Actualizar' : 'Crear'}
+          <Button
+            variant="primary"
+            type="submit"
+            disabled={submitting || loadingOptions}
+          >
+            {submitting ? (
+              <Spinner
+                as="span"
+                animation="border"
+                size="sm"
+                role="status"
+                aria-hidden="true"
+                className="me-2"
+              />
+            ) : (
+              ""
+            )}
+            {articuloToEdit ? "Actualizar" : "Crear"}
           </Button>
         </Modal.Footer>
       </Form>
