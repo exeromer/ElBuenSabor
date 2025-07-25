@@ -14,7 +14,7 @@
  * formulario cuando el modal se abre o se cambia el artículo a editar.
  * @hook `useAuth0`: Obtiene el token de autenticación para las operaciones protegidas del API.
  */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Modal,
   Form,
@@ -92,6 +92,17 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isProductWrapper, setIsProductWrapper] = useState<boolean>(false);
+
+  const costoTotalCalculado = useMemo(() => {
+    if (!formData.manufacturadoDetalles || insumos.length === 0) {
+      return 0;
+    }
+    return formData.manufacturadoDetalles.reduce((total, detalle) => {
+      const insumo = insumos.find(i => i.id === detalle.articuloInsumoId);
+      const precioCompra = insumo?.precioCompra ?? 0;
+      return total + (detalle.cantidad * precioCompra);
+    }, 0);
+  }, [formData.manufacturadoDetalles, insumos]);
 
   /**
    * @hook useEffect
@@ -174,8 +185,8 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({
         type === "checkbox"
           ? checked
           : type === "number"
-          ? parseFloat(value) || 0
-          : value,
+            ? parseFloat(value) || 0
+            : value,
     }));
   };
 
@@ -247,19 +258,24 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({
     setSubmitting(true);
     setError(null);
 
-    // Asignamos la unidad de medida por defecto
+    if (formData.precioVenta < costoTotalCalculado) {
+      setError(`El precio de venta ($${formData.precioVenta}) no puede ser menor que el costo total calculado de los ingredientes ($${costoTotalCalculado.toFixed(2)}).`);
+      setSubmitting(false);
+      return;
+    }
+
     const dataToSend: ArticuloManufacturadoRequest = {
       ...formData,
-      unidadMedidaId: 2, // Asumiendo que '2' es el ID para "Unidad"
+      unidadMedidaId: 2,
     };
 
     try {
       // 1. Guardamos el artículo y obtenemos el objeto guardado (con su ID)
       const savedArticulo = articuloToEdit
         ? await ArticuloManufacturadoService.update(
-            articuloToEdit.id,
-            dataToSend
-          )
+          articuloToEdit.id,
+          dataToSend
+        )
         : await ArticuloManufacturadoService.create(dataToSend);
 
       // 2. FIX: Ahora usamos 'savedArticulo' para la lógica de la imagen
@@ -282,8 +298,7 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({
       }
 
       alert(
-        `Artículo Manufacturado ${
-          articuloToEdit ? "actualizado" : "creado"
+        `Artículo Manufacturado ${articuloToEdit ? "actualizado" : "creado"
         } con éxito.`
       );
       onSave(); // Esto recargará la tabla en la página principal
@@ -338,6 +353,20 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({
                       min="0.01"
                       required
                     />
+                  </Form.Group>
+                </Col>
+                <Col>
+                  <Form.Group className="mb-3">
+                    <Form.Label>Costo Calculado</Form.Label>
+                    <Form.Control
+                      type="text"
+                      value={`$${costoTotalCalculado.toFixed(2)}`}
+                      readOnly
+                      disabled
+                    />
+                    <Form.Text className="text-muted">
+                      Costo total basado en los ingredientes.
+                    </Form.Text>
                   </Form.Group>
                 </Col>
                 <Col>
@@ -434,7 +463,7 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({
                         ...prev,
                         manufacturadoDetalles:
                           prev.manufacturadoDetalles.length > 0 &&
-                          !prev.manufacturadoDetalles[0].articuloInsumoId
+                            !prev.manufacturadoDetalles[0].articuloInsumoId
                             ? prev.manufacturadoDetalles
                             : [],
                       }));

@@ -6,7 +6,6 @@ import { faPlusCircle, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
 // Servicios
 import { PromocionService } from '../../services/PromocionService';
 import { SucursalService } from '../../services/sucursalService';
-import { ArticuloInsumoService } from '../../services/articuloInsumoService';
 import { ArticuloManufacturadoService } from '../../services/articuloManufacturadoService';
 import { FileUploadService } from '../../services/fileUploadService';
 import { ImagenService } from '../../services/imagenService';
@@ -59,13 +58,11 @@ const PromocionForm: React.FC<PromocionFormProps> = ({ show, handleClose, onSave
             setLoadingOptions(true);
             setError(null);
             try {
-                const [fetchedSucursales, fetchedInsumos, fetchedManufacturados] = await Promise.all([
+                const [fetchedSucursales, fetchedManufacturados] = await Promise.all([
                     SucursalService.getAll(),
-                    ArticuloInsumoService.getAll(),
                     ArticuloManufacturadoService.getAll(),
                 ]);
                 const allArticulos: ArticuloSimpleResponse[] = [
-                    ...fetchedInsumos.map(a => ({ id: a.id, denominacion: a.denominacion, precioVenta: a.precioVenta })),
                     ...fetchedManufacturados.map(a => ({ id: a.id, denominacion: a.denominacion, precioVenta: a.precioVenta })),
                 ];
                 setSucursales(fetchedSucursales.map(s => ({ id: s.id, nombre: s.nombre })));
