@@ -119,16 +119,16 @@ const ArticuloInsumoForm: React.FC<ArticuloInsumoFormProps> = ({ show, handleClo
   };
 
   const handleDeleteImage = async (imageId: number, filename: string) => {
-       if (!window.confirm(`¿Seguro que quieres eliminar la imagen: ${filename}?`)) return;
-    
+    if (!window.confirm(`¿Seguro que quieres eliminar la imagen: ${filename}?`)) return;
+
     try {
       // FIX: Ya no es necesario hacer el substring. Pasamos el nombre del archivo directamente.
       await ImagenService.delete(imageId);
-      await FileUploadService.deleteFile(filename); 
-      
+      await FileUploadService.deleteFile(filename);
+
       // Actualizamos el estado local para que la imagen desaparezca de la UI al instante
       setImagenes(prev => prev.filter(img => img.id !== imageId));
-      
+
       // No mostramos una alerta de éxito aquí, para no interrumpir el flujo de guardado principal.
       console.log(`Imagen ${filename} eliminada.`);
 
@@ -143,6 +143,11 @@ const ArticuloInsumoForm: React.FC<ArticuloInsumoFormProps> = ({ show, handleClo
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    if (formData.precioCompra && formData.precioVenta && formData.precioCompra > formData.precioVenta) {
+      setError(`El precio de compra ($${formData.precioCompra}) no puede ser mayor que el precio de venta ($${formData.precioVenta}).`);
+      setSubmitting(false); 
+      return; 
+    }
     const dataToSend: ArticuloInsumoRequest = {
       ...formData,
       categoriaId: 4 // ID para la categoría "Insumos"
@@ -175,21 +180,21 @@ const ArticuloInsumoForm: React.FC<ArticuloInsumoFormProps> = ({ show, handleClo
       }
 
       // 3. Manejamos la subida de imagen si hay una nueva
-              if (selectedFile) {
+      if (selectedFile) {
         // Si hay una imagen nueva, primero intentamos borrar las antiguas.
         if (imagenes.length > 0) {
-            console.log("Eliminando imágenes antiguas...");
-            // Usamos un for...of para asegurar que se borren secuencialmente
-            for (const img of imagenes) {
-                // El handleDeleteImage ahora es más simple
-                await handleDeleteImage(img.id, img.denominacion.substring(img.denominacion.lastIndexOf('/') + 1));
-            }
+          console.log("Eliminando imágenes antiguas...");
+          // Usamos un for...of para asegurar que se borren secuencialmente
+          for (const img of imagenes) {
+            // El handleDeleteImage ahora es más simple
+            await handleDeleteImage(img.id, img.denominacion.substring(img.denominacion.lastIndexOf('/') + 1));
+          }
         }
         // Luego, subimos la nueva imagen
         console.log("Subiendo nueva imagen...");
         await FileUploadService.uploadFile(selectedFile, { articuloId: savedArticulo.id });
       }
-      
+
       alert(`Artículo Insumo ${articuloToEdit ? 'actualizado' : 'creado'} con éxito.`);
       onSave();
       handleClose();

@@ -69,6 +69,25 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
         }
     }
 
+    private double calcularCostoProducto(ArticuloManufacturadoRequestDTO dto) throws Exception {
+        double costoTotal = 0.0;
+        if (dto.getManufacturadoDetalles() == null || dto.getManufacturadoDetalles().isEmpty()) {
+            throw new Exception("Un producto manufacturado debe tener al menos un ingrediente en su receta.");
+        }
+
+        for (ArticuloManufacturadoDetalleDTO detalleDto : dto.getManufacturadoDetalles()) {
+            ArticuloInsumo insumo = articuloInsumoRepository.findById(detalleDto.getArticuloInsumoId())
+                    .orElseThrow(() -> new Exception("Insumo con ID " + detalleDto.getArticuloInsumoId() + " no encontrado."));
+
+            if (insumo.getPrecioCompra() == null) {
+                throw new Exception("El insumo '" + insumo.getDenominacion() + "' no tiene un precio de compra definido y no se puede calcular el costo.");
+            }
+
+            costoTotal += detalleDto.getCantidad() * insumo.getPrecioCompra();
+        }
+        return costoTotal;
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<ArticuloManufacturadoResponseDTO> getAllArticuloManufacturados(String searchTerm, Boolean estadoActivo) {
@@ -110,6 +129,11 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
     @Override
     @Transactional
     public ArticuloManufacturadoResponseDTO createArticuloManufacturado(@Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
+        double costoCalculado = calcularCostoProducto(dto);
+        if (dto.getPrecioVenta() < costoCalculado) {
+            throw new Exception("El precio de venta ($" + dto.getPrecioVenta() + ") no puede ser menor que el costo total de los ingredientes ($" + String.format("%.2f", costoCalculado) + ").");
+        }
+
         ArticuloManufacturado am = new ArticuloManufacturado();
         am.setImagenes(new ArrayList<>());
         am.setManufacturadoDetalles(new ArrayList<>());
@@ -126,6 +150,10 @@ public class ArticuloManufacturadoServiceImpl implements ArticuloManufacturadoSe
     @Override
     @Transactional
     public ArticuloManufacturadoResponseDTO updateArticuloManufacturado(Integer id, @Valid ArticuloManufacturadoRequestDTO dto) throws Exception {
+        double costoCalculado = calcularCostoProducto(dto);
+        if (dto.getPrecioVenta() < costoCalculado) {
+            throw new Exception("El precio de venta ($" + dto.getPrecioVenta() + ") no puede ser menor que el costo total de los ingredientes ($" + String.format("%.2f", costoCalculado) + ").");
+        }
         ArticuloManufacturado amExistente = manufacturadoRepository.findById(id)
                 .orElseThrow(() -> new Exception("Artículo Manufacturado no encontrado con ID: " + id));
 

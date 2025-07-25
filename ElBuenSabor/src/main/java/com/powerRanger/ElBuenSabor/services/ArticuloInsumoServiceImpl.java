@@ -82,6 +82,7 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
     @Override
     @Transactional(readOnly = true)
     public ArticuloInsumoResponseDTO getArticuloInsumoById(Integer id) throws Exception {
+
         ArticuloInsumo insumo = articuloInsumoRepository.findById(id)
                 .orElseThrow(() -> new Exception("Artículo Insumo no encontrado con ID: " + id));
         ArticuloInsumoResponseDTO dto = (ArticuloInsumoResponseDTO) mappers.convertArticuloToResponseDto(insumo);
@@ -96,6 +97,7 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
     @Override
     @Transactional
     public ArticuloInsumoResponseDTO createArticuloInsumo(@Valid ArticuloInsumoRequestDTO dto) throws Exception {
+        validarPrecios(dto);
         ArticuloInsumo insumo = new ArticuloInsumo();
         insumo.setImagenes(new ArrayList<>()); // Inicializar la lista si la entidad la tiene
         mapDtoToEntity(dto, insumo); // Usar el helper para mapear los campos del insumo
@@ -111,6 +113,7 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
     @Override
     @Transactional
     public ArticuloInsumoResponseDTO updateArticuloInsumo(Integer id, @Valid ArticuloInsumoRequestDTO dto) throws Exception {
+        validarPrecios(dto);
         ArticuloInsumo insumoExistente = articuloInsumoRepository.findById(id)
                 .orElseThrow(() -> new Exception("Artículo Insumo no encontrado con ID: " + id));
         mapDtoToEntity(dto, insumoExistente); // Esto actualiza campos del insumo (denominación, precio, etc.)
@@ -135,4 +138,10 @@ public class ArticuloInsumoServiceImpl implements ArticuloInsumoService {
         // stockInsumoSucursalRepository.deleteByArticuloInsumo(insumo); // ELIMINADO
         articuloInsumoRepository.delete(insumo);
     }
+    private void validarPrecios(ArticuloInsumoRequestDTO dto) throws Exception {
+        if (dto.getPrecioCompra() != null && dto.getPrecioVenta() != null && dto.getPrecioCompra() > dto.getPrecioVenta()) {
+            throw new Exception("El precio de compra ($" + dto.getPrecioCompra() + ") no puede ser mayor que el precio de venta ($" + dto.getPrecioVenta() + ").");
+        }
+    }
+
 }

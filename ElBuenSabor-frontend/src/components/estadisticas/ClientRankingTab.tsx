@@ -55,7 +55,6 @@ const ClientRankingTab: React.FC = () => {
         }
     }, [fechaDesde, fechaHasta, sortBy, selectedSucursal]);
 
-    // <<-- CORRECCIÓN: Añadir este useEffect -->>
     useEffect(() => {
         fetchRankings();
     }, [fetchRankings]);
