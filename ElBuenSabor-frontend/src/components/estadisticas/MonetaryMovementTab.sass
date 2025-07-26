@@ -1,38 +1,33 @@
 @use "../../styles/vars" as *
 
 .monetary-movement-tab
-  .card-header
-    background-color: $color-clay
-    color: $color-grey
-    font-weight: bold
-    border-bottom: 1px solid $color-sand
-  
-  .card-body
-    padding: $p2
-    background-color: $color-clay
+  padding: 20px
 
-  .form-label
-    color: $color-grey
-    font-weight: 500
+  .date-filters
+    display: flex
+    gap: 20px
+    margin-bottom: 20px
+
+    label
+      display: flex
+      flex-direction: column
+
+  .chart-container
+    margin-bottom: 20px
 
   .table
-    color: $color-grey
-    background-color: white
-    border: 1px solid $color-sand
-    thead
-      th
-        background-color: $color-mist
-        color: white
-        border-color: $color-stone
-    tbody
-      tr
-        &:nth-of-type(odd)
-          background-color: $color-clay
-        &:nth-of-type(even)
-          background-color: $color-sand
-        td
-          border-color: $color-sand
+    th
+      width: 50%
+      
 
-  .recharts-wrapper
-    font-family: $f-f-dos
-    font-size: $f-s-1
+  .ingresos-color
+    color: #0088FE // Azul
+    font-weight: bold
+
+  .costos-color
+    color: #db1507 // Rojo
+    font-weight: bold
+
+  .ganancias-color
+    color: #07db0e// Verde
+    font-weight: bold
