@@ -1,8 +1,8 @@
-import React from "react";
-import { Navbar, Nav, Container, Button, Badge, Image } from "react-bootstrap";
-import { Link } from "react-router-dom";
-import { useAuth0 } from "@auth0/auth0-react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import React from 'react';
+import { Navbar, Nav, Container, Button, Badge, Image } from 'react-bootstrap';
+import { Link } from 'react-router-dom';
+import { useAuth0 } from '@auth0/auth0-react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faShoppingCart,
   faSignInAlt,
@@ -10,20 +10,23 @@ import {
   faClipboardList,
   faTachometerAlt,
   faChartBar,
-} from "@fortawesome/free-solid-svg-icons";
-import { useCart } from "../../../context/CartContext";
-import { useSucursal } from "../../../context/SucursalContext";
-import { useUser } from "../../../context/UserContext";
-import SucursalSelector from "../Sucursal/SucursalSelector";
-import CartModal from "../../cart/CartModal";
-import "./Header.sass";
+  faFireBurner,
+  faTruck,
+  faCashRegister,
+} from '@fortawesome/free-solid-svg-icons';
+import { useCart } from '../../../context/CartContext';
+import { useSucursal } from '../../../context/SucursalContext';
+import { useUser } from '../../../context/UserContext';
+import SucursalSelector from '../Sucursal/SucursalSelector';
+import CartModal from '../../cart/CartModal';
+import './Header.sass';
 
 const Header: React.FC = () => {
   const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
   const { totalItems, openCart } = useCart();
   const { sucursales } = useSucursal();
   // OBTENEMOS LOS ROLES
-  const { userRole, cliente } = useUser();
+  const { userRole, cliente, employeeRole } = useUser();
 
   return (
     <Navbar expand="lg">
@@ -41,28 +44,43 @@ const Header: React.FC = () => {
               Menú
             </Nav.Link>
             {/* Visible solo para Clientes */}
-            {userRole === "CLIENTE" && (
+            {userRole === 'CLIENTE' && (
               <Nav.Link as={Link} to="/mis-pedidos">
-                <FontAwesomeIcon icon={faClipboardList} className="me-1" /> Mis
-                Pedidos
+                <FontAwesomeIcon icon={faClipboardList} className="me-1" /> Mis Pedidos
               </Nav.Link>
             )}
 
             {/* Visible solo para Admin y Empleados */}
-            {(userRole === "ADMIN" || userRole === "EMPLEADO") && (
+            {(userRole === 'ADMIN' || userRole === 'EMPLEADO') && (
               <Nav.Link as={Link} to="/admin-dashboard">
-                <FontAwesomeIcon icon={faTachometerAlt} className="me-1" />{" "}
-                Administración
+                <FontAwesomeIcon icon={faTachometerAlt} className="me-1" /> Administración
               </Nav.Link>
             )}
             {/* Visible solo para Admin */}
-            {userRole === "ADMIN" && (
+            {userRole === 'ADMIN' && (
               <Nav.Link as={Link} to="/estadisticas">
-                <FontAwesomeIcon icon={faChartBar} className="me-1" />{" "}
-                Estadísticas
+                <FontAwesomeIcon icon={faChartBar} className="me-1" /> Estadísticas
               </Nav.Link>
             )}
           </Nav>
+          {/* Visible solo para Empleados de Cocina */}
+          {employeeRole === 'COCINA' && (
+            <Nav.Link as={Link} to="/cocina">
+              <FontAwesomeIcon icon={faFireBurner} className="me-1" /> Cocina
+            </Nav.Link>
+          )}
+          {/* Visible solo para Empleados de Delivery */}
+          {employeeRole === 'DELIVERY' && (
+            <Nav.Link as={Link} to="/delivery">
+              <FontAwesomeIcon icon={faTruck} className="me-1" /> Delivery
+            </Nav.Link>
+          )}
+          {/* Visible solo para Empleados de Caja */}
+          {employeeRole === 'CAJERO' && (
+            <Nav.Link as={Link} to="/cajero">
+              <FontAwesomeIcon icon={faCashRegister} className="me-1" /> Caja
+            </Nav.Link>
+          )}
 
           <div className="d-flex justify-content-center flex-grow-1">
             {sucursales.length > 1 && <SucursalSelector />}
@@ -70,12 +88,9 @@ const Header: React.FC = () => {
 
           <Nav>
             {/* El carrito solo es visible para clientes */}
-            {userRole === "CLIENTE" && (
-              <Nav.Link onClick={openCart} style={{ cursor: "pointer" }}>
-                <FontAwesomeIcon
-                  className="h mt-1 fs-4"
-                  icon={faShoppingCart}
-                />
+            {userRole === 'CLIENTE' && (
+              <Nav.Link onClick={openCart} style={{ cursor: 'pointer' }}>
+                <FontAwesomeIcon className="h mt-1 fs-4" icon={faShoppingCart} />
                 {totalItems > 0 && (
                   <Badge pill bg="danger" className="ms-2">
                     {totalItems}
@@ -86,8 +101,7 @@ const Header: React.FC = () => {
 
             {!isAuthenticated ? (
               <Button variant="secondary" onClick={() => loginWithRedirect()}>
-                <FontAwesomeIcon icon={faSignInAlt} className="me-1" /> Iniciar
-                Sesión
+                <FontAwesomeIcon icon={faSignInAlt} className="me-1" /> Iniciar Sesión
               </Button>
             ) : (
               <>
@@ -97,15 +111,11 @@ const Header: React.FC = () => {
                       src={user.picture}
                       alt="Perfil"
                       roundedCircle
-                      style={{ width: "30px", marginRight: "8px" }}
+                      style={{ width: '30px', marginRight: '8px' }}
                     />
                   )}
                   {/* Mostramos el nombre del cliente o un fallback */}
-                  <span>
-                    {cliente?.nombre !== "Nuevo"
-                      ? cliente?.nombre
-                      : user?.name || user?.nickname}
-                  </span>
+                  <span>{cliente?.nombre !== 'Nuevo' ? cliente?.nombre : user?.name || user?.nickname}</span>
                 </Nav.Link>
                 <Button
                   variant="secondary"
@@ -115,8 +125,7 @@ const Header: React.FC = () => {
                     })
                   }
                 >
-                  <FontAwesomeIcon icon={faSignOutAlt} className="me-1" />{" "}
-                  Cerrar Sesión
+                  <FontAwesomeIcon icon={faSignOutAlt} className="me-1" /> Cerrar Sesión
                 </Button>
               </>
             )}
