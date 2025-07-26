@@ -15,6 +15,7 @@ const MonetaryMovementTab: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [fechaDesde, setFechaDesde] = useState<string>('');
   const [fechaHasta, setFechaHasta] = useState<string>('');
+  const [isExporting, setIsExporting] = useState(false);
 
   const fetchMovimientos = useCallback(async () => {
     if (!selectedSucursal) {
@@ -43,23 +44,46 @@ const MonetaryMovementTab: React.FC = () => {
   }, [fetchMovimientos]);
 
   const handleExport = async () => {
-    if (!selectedSucursal) return;
+    if (!selectedSucursal) {
+      alert('Por favor, selecciona una sucursal.');
+      return;
+    }
+    setIsExporting(true);
+
     try {
-      const excelBlob = await EstadisticaService.exportMovimientosMonetariosExcel(
+      // 1. Llamar al servicio, que devuelve un ArrayBuffer
+      const excelArrayBuffer = await EstadisticaService.exportMovimientosMonetariosExcel(
         selectedSucursal.id,
         fechaDesde,
         fechaHasta,
       );
-      const url = window.URL.createObjectURL(new Blob([excelBlob]));
+
+      // 2. Crear un Blob desde el ArrayBuffer, especificando el tipo MIME de Excel.
+      // Este paso es crucial para que el navegador sepa qué tipo de archivo es.
+      const blob = new Blob([excelArrayBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      });
+
+      // 3. Crear una URL temporal para el Blob
+      const url = window.URL.createObjectURL(blob);
+
+      // 4. Crear un enlace <a> invisible para iniciar la descarga
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `movimientos_monetarios_${selectedSucursal.nombre}.xlsx`);
+
+      // 5. Añadir, hacer clic y remover el enlace
       document.body.appendChild(link);
       link.click();
-      link.remove();
+      document.body.removeChild(link);
+
+      // 6. Limpiar la URL temporal
+      window.URL.revokeObjectURL(url);
     } catch (err) {
-      alert('Error al exportar los movimientos monetarios a Excel.');
-      console.error(err);
+      console.error('Error al exportar a Excel:', err);
+      alert('Hubo un error al generar el archivo Excel.');
+    } finally {
+      setIsExporting(false); // <-- Desactiva el estado de carga (incluso si hay error)
     }
   };
 
@@ -135,8 +159,8 @@ const MonetaryMovementTab: React.FC = () => {
                       <XAxis dataKey="name" />
                       <YAxis />
                       <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
-                      <Legend />
-                      <Bar dataKey="value" name="Monto ($)">
+
+                      <Bar dataKey="value" name="Monto ($)" maxBarSize={90}>
                         {' '}
                         {chartData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -147,8 +171,17 @@ const MonetaryMovementTab: React.FC = () => {
                 </div>
 
                 {/* Botón de exportar a Excel** */}
-                <Button variant="success" onClick={handleExport} className="mt-3">
-                  <FontAwesomeIcon icon={faFileExcel} className="me-2" /> Exportar a Excel
+                <Button variant="success" onClick={handleExport} className="mt-3" disabled={isExporting}>
+                  {isExporting ? (
+                    <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                      <span className="ms-2">Exportando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faFileExcel} className="me-2" /> Exportar a Excel
+                    </>
+                  )}
                 </Button>
               </>
             ) : (

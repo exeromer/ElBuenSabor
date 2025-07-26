@@ -30,6 +30,7 @@ const ClientRankingTab: React.FC = () => {
   const [fechaHasta, setFechaHasta] = useState<string>('');
   const [sortBy, setSortBy] = useState<SortBy>('cantidadPedidos');
   const [clientColors, setClientColors] = useState<string[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [showPedidoModal, setShowPedidoModal] = useState(false);
   const [selectedClientOrders, setSelectedClientOrders] = useState<PedidoResponse[]>([]);
@@ -73,6 +74,7 @@ const ClientRankingTab: React.FC = () => {
 
   const handleExport = async () => {
     if (!selectedSucursal) return;
+    setIsExporting(true);
     try {
       const excelBlob = await EstadisticaService.exportRankingClientesExcel(
         selectedSucursal.id,
@@ -89,6 +91,8 @@ const ClientRankingTab: React.FC = () => {
     } catch (err) {
       alert('Error al exportar el ranking de clientes a Excel.');
       console.error(err);
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -146,9 +150,18 @@ const ClientRankingTab: React.FC = () => {
                   {loading ? <Spinner as="span" animation="border" size="sm" /> : 'Aplicar Filtros'}
                 </Button>
                 {/* <<-- CORRECCIÓN: Deshabilitar el botón si no hay datos o está cargando -->> */}
-                <Button variant="success" onClick={handleExport} disabled={loading || clientRanking.length === 0}>
-                  <FontAwesomeIcon icon={faFileExcel} className="me-2" />
-                  Exportar
+                <Button variant="success" onClick={handleExport} disabled={isExporting}>
+                  {isExporting ? (
+                    <>
+                      <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                      <span className="ms-2">Exportando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faFileExcel} className="me-2" />
+                      Exportar a Excel
+                    </>
+                  )}
                 </Button>
               </Col>
             </Row>

@@ -216,22 +216,30 @@ public class EstadisticaController {
 
     // MODIFICADO: Se añade {sucursalId} a la ruta
     @GetMapping("/sucursal/{sucursalId}/movimientos-monetarios/export/excel")
-    public ResponseEntity<byte[]> exportMovimientosMonetariosExcel(
-            @PathVariable Integer sucursalId, // MODIFICADO: Se recibe el ID de la sucursal
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta) {
-        try {
-            // MODIFICADO: Se pasa sucursalId al servicio
-            MovimientosMonetariosDTO movimientos = estadisticaService.getMovimientosMonetarios(sucursalId, fechaDesde, fechaHasta);
-            byte[] excelBytes = excelExportService.exportMovimientosMonetariosToExcel(movimientos);
+public ResponseEntity<byte[]> exportMovimientosMonetariosExcel(
+        @PathVariable Integer sucursalId,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaDesde,
+        @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fechaHasta) {
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDispositionFormData("attachment", "movimientos_monetarios.xlsx");
-            return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+    try {
+        // 1. Obtener los datos necesarios
+        MovimientosMonetariosDTO movimientos = estadisticaService.getMovimientosMonetarios(sucursalId, fechaDesde, fechaHasta);
+
+        // 2. Llamar al servicio de Excel para generar el archivo en bytes
+        byte[] excelBytes = excelExportService.exportMovimientosMonetariosToExcel(movimientos);
+
+        // 3. Preparar los encabezados de la respuesta HTTP
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM); // Tipo de contenido para descarga de archivo binario
+        headers.setContentDispositionFormData("attachment", "movimientos_monetarios.xlsx"); // Nombre del archivo
+
+        // 4. Devolver la respuesta con los bytes del archivo, los encabezados y el estado OK
+        return new ResponseEntity<>(excelBytes, headers, HttpStatus.OK);
+
+    } catch (Exception e) {
+        // En caso de error, devolver un error interno del servidor
+        e.printStackTrace();
+        return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
     }
+}
 }

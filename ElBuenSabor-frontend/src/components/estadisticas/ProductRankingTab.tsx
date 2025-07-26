@@ -29,6 +29,8 @@ const ProductRankingTab: React.FC = () => {
   const [fechaHasta, setFechaHasta] = useState<string>('');
   const [cocinaColors, setCocinaColors] = useState<string[]>([]);
   const [bebidasColors, setBebidasColors] = useState<string[]>([]);
+  const [isExportingCocina, setIsExportingCocina] = useState(false);
+  const [isExportingBebidas, setIsExportingBebidas] = useState(false);
 
   const fetchRankings = useCallback(async () => {
     if (!selectedSucursal) {
@@ -66,6 +68,8 @@ const ProductRankingTab: React.FC = () => {
   //  función para exportar solo productos de cocina -->>
   const handleExportCocina = async () => {
     if (!selectedSucursal) return;
+    setIsExportingCocina(true);
+
     try {
       const excelBlob = await EstadisticaService.exportRankingProductosCocinaExcel(
         selectedSucursal.id,
@@ -81,12 +85,15 @@ const ProductRankingTab: React.FC = () => {
       link.remove();
     } catch (err) {
       alert('Error al exportar el ranking de productos de cocina a Excel.');
+    } finally {
+      setIsExportingCocina(false); // Desactiva la carga
     }
   };
 
   // función para exportar solo bebidas -->>
   const handleExportBebidas = async () => {
     if (!selectedSucursal) return;
+    setIsExportingBebidas(true);
     try {
       const excelBlob = await EstadisticaService.exportRankingBebidasExcel(selectedSucursal.id, fechaDesde, fechaHasta);
       const url = window.URL.createObjectURL(new Blob([excelBlob]));
@@ -98,6 +105,8 @@ const ProductRankingTab: React.FC = () => {
       link.remove();
     } catch (err) {
       alert('Error al exportar el ranking de bebidas a Excel.');
+    } finally {
+      setIsExportingBebidas(false); // Desactiva la carga
     }
   };
 
@@ -186,8 +195,22 @@ const ProductRankingTab: React.FC = () => {
                         ))}
                       </tbody>
                     </Table>
-                    <Button variant="success" onClick={handleExportCocina} className="mt-3">
-                      <FontAwesomeIcon icon={faFileExcel} className="me-2" /> Exportar a Excel
+                    <Button
+                      variant="success"
+                      onClick={handleExportCocina}
+                      className="mt-3"
+                      disabled={isExportingCocina}
+                    >
+                      {isExportingCocina ? (
+                        <>
+                          <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                          <span className="ms-2">Exportando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faFileExcel} className="me-2" /> Exportar a Excel
+                        </>
+                      )}
                     </Button>
                   </>
                 ) : (
@@ -250,8 +273,22 @@ const ProductRankingTab: React.FC = () => {
                         ))}
                       </tbody>
                     </Table>
-                    <Button variant="success" onClick={handleExportBebidas} className="mt-3">
-                      <FontAwesomeIcon icon={faFileExcel} className="me-2" /> Exportar a Excel
+                    <Button
+                      variant="success"
+                      onClick={handleExportBebidas}
+                      className="mt-3"
+                      disabled={isExportingBebidas}
+                    >
+                      {isExportingBebidas ? (
+                        <>
+                          <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                          <span className="ms-2">Exportando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faFileExcel} className="me-2" /> Exportar a Excel
+                        </>
+                      )}
                     </Button>
                   </>
                 ) : (
