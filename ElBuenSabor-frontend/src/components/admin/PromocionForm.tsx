@@ -9,7 +9,6 @@ import { SucursalService } from '../../services/sucursalService';
 import { ArticuloManufacturadoService } from '../../services/articuloManufacturadoService';
 import { FileUploadService } from '../../services/fileUploadService';
 import { ImagenService } from '../../services/imagenService';
-import apiClient from '../../services/apiClient';
 
 // Tipos y Enums
 import type { PromocionResponse, PromocionRequest, ArticuloSimpleResponse, SucursalSimpleResponse, PromocionDetalleRequest, ImagenResponse } from '../../types/types';
@@ -216,7 +215,7 @@ const PromocionForm: React.FC<PromocionFormProps> = ({ show, handleClose, onSave
                                 <Form.Control type="file" onChange={handleFileChange} accept="image/*" />
                                 {currentImagenes.length > 0 && !selectedFile && (
                                     <div className="mt-2">
-                                        <Image src={`${apiClient.defaults.baseURL}/files/view/${currentImagenes[0].denominacion}`} thumbnail style={{ width: '100px' }} />
+                                        <Image src={currentImagenes[0].denominacion} thumbnail style={{ width: '100px' }} />
                                     </div>
                                 )}
                             </Form.Group>

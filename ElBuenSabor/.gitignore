@@ -12,7 +12,6 @@ logs/
 *.log
 
 # Directorio de subida de archivos
-/uploads/
 
 # Archivos del sistema operativo
 .DS_Store

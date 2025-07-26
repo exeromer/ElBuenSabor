@@ -44,7 +44,6 @@ import type {
 } from "../../types/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlusCircle, faMinusCircle } from "@fortawesome/free-solid-svg-icons";
-import apiClient from "../../services/apiClient";
 
 interface ArticuloManufacturadoFormProps {
   show: boolean;
@@ -444,7 +443,7 @@ const ArticuloManufacturadoForm: React.FC<ArticuloManufacturadoFormProps> = ({
                 {imagenes.length > 0 && !selectedFile && (
                   <div className="mt-2">
                     <Image
-                      src={`${apiClient.defaults.baseURL}/files/view/${imagenes[0].denominacion}`}
+                      src={imagenes[0].denominacion} // Usar la URL directamente
                       thumbnail
                       style={{ width: "100px" }}
                     />

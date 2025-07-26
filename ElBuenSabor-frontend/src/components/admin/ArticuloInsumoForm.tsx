@@ -32,7 +32,6 @@ const ArticuloInsumoForm: React.FC<ArticuloInsumoFormProps> = ({ show, handleClo
 
   const [formData, setFormData] = useState(initialFormData);
   const [imagenes, setImagenes] = useState<ImagenResponse[]>([]);
-  //const [categories, setCategories] = useState<CategoriaResponse[]>([]);
   const [unidadesMedida, setUnidadesMedida] = useState<UnidadMedidaResponse[]>([]);
   const [stockActual, setStockActual] = useState<number>(0);
   const [stockMinimo, setStockMinimo] = useState<number>(0);
@@ -50,7 +49,6 @@ const ArticuloInsumoForm: React.FC<ArticuloInsumoFormProps> = ({ show, handleClo
       setLoadingOptions(true);
       setError(null);
 
-      // Si no hay sucursal seleccionada, no se puede gestionar el stock.
       if (!selectedSucursal) {
         setError("Por favor, selecciona una sucursal para gestionar los artículos.");
         setLoadingOptions(false);
@@ -58,7 +56,6 @@ const ArticuloInsumoForm: React.FC<ArticuloInsumoFormProps> = ({ show, handleClo
       }
 
       try {
-        // Obtenemos las categorías las unidades de medida
         const fetchedUnidades = await UnidadMedidaService.getAll();
         setUnidadesMedida(fetchedUnidades);
 
