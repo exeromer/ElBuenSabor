@@ -32,7 +32,7 @@ export class EstadisticaService {
       `/estadisticas/sucursal/${sucursalId}/ranking-clientes/por-cantidad`,
       { params: queryParams },
     );
-    return response.data;
+    return response.data || [];
   }
 
   // <<-- CAMBIO REALIZADO: Se actualizó la URL y la lógica para usar sucursalId -->>
@@ -42,7 +42,7 @@ export class EstadisticaService {
       `/estadisticas/sucursal/${sucursalId}/ranking-clientes/por-monto`,
       { params: queryParams },
     );
-    return response.data;
+    return response.data || [];
   }
 
   // --- RANKING DE PRODUCTOS ---
@@ -54,7 +54,7 @@ export class EstadisticaService {
       `/estadisticas/sucursal/${sucursalId}/productos-cocina/ranking`, // <-- Nueva URL
       { params: queryParams },
     );
-    return response.data;
+    return response.data || [];
   }
 
   // <<-- CAMBIO REALIZADO: Nuevo método para bebidas -->>
@@ -64,7 +64,7 @@ export class EstadisticaService {
       `/estadisticas/sucursal/${sucursalId}/bebidas/ranking`, // <-- Nueva URL
       { params: queryParams },
     );
-    return response.data;
+    return response.data || [];
   }
 
   // --- MOVIMIENTOS MONETARIOS ---
@@ -76,7 +76,7 @@ export class EstadisticaService {
       `/estadisticas/sucursal/${sucursalId}/movimientos-monetarios`,
       { params: queryParams },
     );
-    return response.data;
+    return response.data || [];
   }
 
   // --- EXPORTACIÓN A EXCEL ---
@@ -88,7 +88,7 @@ export class EstadisticaService {
       params,
       responseType: 'blob',
     });
-    return response.data;
+    return response.data || [];
   }
 
   // <<-- CAMBIO REALIZADO: Nuevo método de exportación para productos de cocina -->>
@@ -107,7 +107,7 @@ export class EstadisticaService {
         responseType: 'blob',
       },
     );
-    return response.data;
+    return response.data || [];
   }
 
   // <<-- CAMBIO REALIZADO: Nuevo método de exportación para bebidas -->>
@@ -119,7 +119,7 @@ export class EstadisticaService {
       params,
       responseType: 'blob',
     });
-    return response.data;
+    return response.data || [];
   }
   static async exportMovimientosMonetariosExcel(
     sucursalId: number,
@@ -133,6 +133,6 @@ export class EstadisticaService {
       params,
       responseType: 'arraybuffer',
     });
-    return response.data;
+    return response.data || [];
   }
 }
