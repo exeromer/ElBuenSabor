@@ -1,4 +1,3 @@
-// src/components/promociones/Slider/PromocionesSlider.tsx
 import React from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination, Autoplay } from 'swiper/modules';
@@ -25,12 +24,10 @@ const PromocionesSlider: React.FC<PromocionesSliderProps> = ({ promociones }) =>
         disableOnInteraction: false,
       }}
       breakpoints={{
-        // Cuando el ancho de la pantalla es >= 768px
         768: {
           slidesPerView: 2,
           spaceBetween: 40,
         },
-        // Cuando el ancho de la pantalla es >= 1024px
         1024: {
           slidesPerView: 3,
           spaceBetween: 50,

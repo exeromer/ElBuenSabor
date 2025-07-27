@@ -1,12 +1,22 @@
-// src/components/promociones/Slider/PromocionesSlider.sass
 @use "../../../styles/vars" as *
 
 .promociones-slider
-  padding-bottom: 40px // Espacio para la paginación
+  padding-bottom: 40px
+  padding-left: 45px
+  padding-right: 45px
+  position: relative
+  margin: 0 auto
 
   .swiper-button-next,
   .swiper-button-prev
-    color: $color-mist // Usa un color de tus variables de SASS
+    color: $color-mist
+    --swiper-navigation-size: 28px
+
+  .swiper-button-next
+    right: 10px
+
+  .swiper-button-prev
+    left: 10px
 
   .swiper-pagination-bullet-active
-    background: $color-mist // Y aquí también
+    background: $color-mist

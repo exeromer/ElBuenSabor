@@ -22,8 +22,6 @@ const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDi
   const defaultImage = '/placeholder-food.png';
   const imageUrl = product.imagenes?.[0]?.denominacion || defaultImage;
 
-
-  // --- Funciones para manejar el carrito (idénticas a las de ProductCard) ---
   const handleAddToCart = () => {
     if (!isDisponible || !product.id) return;
     addToCart(product, 1);
@@ -98,7 +96,6 @@ const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDi
             </Button>
           </div>
         )}
-        <Button variant="secondary" onClick={onHide} className='detalle-modal-close-button'>Cerrar</Button>
       </Modal.Footer>
     </Modal>
   );

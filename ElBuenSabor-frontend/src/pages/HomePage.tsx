@@ -1,7 +1,5 @@
-// src/pages/HomePage.tsx
-
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Spinner, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Spinner, Alert, Button } from 'react-bootstrap';
 import Contenedor from '../components/utils/Contenedor/Contenedor';
 import Titulo from '../components/utils/Titulo/Titulo';
 import Nosotros from '../components/common/Nosotros/Nosotros';
@@ -11,7 +9,8 @@ import { ArticuloManufacturadoService } from '../services/ArticuloManufacturadoS
 import { useSucursal } from '../context/SucursalContext';
 import { PromocionService } from '../services/PromocionService';
 import type { ArticuloManufacturadoResponse, PromocionResponse, SucursalSimpleResponse } from '../types/types';
-
+import { useNavigate } from 'react-router-dom';
+import './HomePage.sass';
 
 const HomePage: React.FC = () => {
   const { selectedSucursal } = useSucursal();
@@ -20,7 +19,8 @@ const HomePage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-
+  const navigate = useNavigate();
+  
   useEffect(() => {
     const fetchHomePageData = async () => {
       if (!selectedSucursal) {
@@ -74,10 +74,15 @@ const HomePage: React.FC = () => {
 
   return (
     <Container className="my-5">
-      <Contenedor>
-        <div className="p-5 mb-4 rounded-3">
+      <Contenedor className='hero-banner mb-5'>
+        <div className="hero-content">
           <Titulo texto='Bienvenido a El Buen Sabor' nivel='titulo' />
           <p className="lead">Tu destino para las mejores comidas con entrega rápida.</p>
+          <hr className="my-4" />
+          <p>Explora nuestro menú y descubre sabores que te encantarán.</p>
+          <Button variant="primary" size="lg" onClick={() => navigate('/products')}>
+            Ver Menú
+          </Button>
         </div>
       </Contenedor>
 
@@ -90,7 +95,6 @@ const HomePage: React.FC = () => {
           {promociones.length > 0 && (
             <div className="mt-5">
               <Titulo texto="Nuestras Promociones" nivel="subtitulo" />
-              {/* ===== AQUÍ ESTÁ EL CAMBIO PRINCIPAL ===== */}
               <PromocionesSlider promociones={promociones} />
             </div>
           )}

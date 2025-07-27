@@ -25,11 +25,10 @@ const Header: React.FC = () => {
   const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
   const { totalItems, openCart } = useCart();
   const { sucursales } = useSucursal();
-  // OBTENEMOS LOS ROLES
   const { userRole, cliente, employeeRole } = useUser();
 
   return (
-    <Navbar expand="lg">
+    <Navbar expand="lg" className='header-navbar'>
       <Container>
         <Navbar.Brand as={Link} to="/">
           <img src="/logo.png" alt="logo de la página" className="logo" />

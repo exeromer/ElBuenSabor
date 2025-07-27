@@ -1,0 +1,63 @@
+@use '../styles/vars' as *
+
+@keyframes fadeIn
+  from
+    opacity: 0
+    transform: translateY(20px)
+  to
+    opacity: 1
+    transform: translateY(0)
+
+@keyframes fireAnimation
+  0%
+    background-position: 0% 50%
+  50%
+    background-position: 100% 50%
+  100%
+    background-position: 0% 50%
+
+.hero-banner
+  position: relative
+  padding: 4rem 2rem
+  margin-bottom: 3rem
+  background-color: $color-mist
+  background-size: cover
+  background-position: center
+  border-radius: $br2
+  color: $color-grey
+  text-align: center
+  overflow: hidden 
+  &::after
+    content: ''
+    position: absolute
+    top: -50%
+    left: -50%
+    right: -50%
+    bottom: -50%
+    background: linear-gradient(45deg, $color-clay, $color-ivory, $color-clay, transparent)
+    background-size: 400% 400% 
+    animation: fireAnimation 15s ease-in-out infinite both
+    z-index: 1
+
+  .hero-content
+    position: relative
+    z-index: 2
+    animation: fadeIn 1s ease-out forwards
+
+    .titulo-principal
+      color: $color-grey
+      font-size: $f-s-4
+      text-align: center
+    .lead
+      font-size: 1.25rem
+      font-weight: 300
+
+    .btn
+      background-color: $color-stone
+      border: none
+      transition: all 0.3s ease
+      font-weight: bold
+
+      &:hover
+        transform: translateY(-3px)
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2)
