@@ -38,7 +38,7 @@ const PedidoCard: React.FC<{ pedido: PedidoResponse; onMarcarListo: () => void; 
                         <FontAwesomeIcon icon={faClock} className="me-2" />Añadir Demora
                     </Button>
                     <Button variant="outline-secondary" size="sm" onClick={onVerDetalles}>
-                        <FontAwesomeIcon icon={faEye} className="me-2" />Ver Receta
+                        <FontAwesomeIcon icon={faEye} className="me-2" />Ver Detalle
                     </Button>
                     {pedido.estado === 'PREPARACION' && (
                         <Button variant="success" onClick={onMarcarListo}>

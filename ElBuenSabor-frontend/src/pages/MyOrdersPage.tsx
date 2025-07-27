@@ -147,7 +147,6 @@ const MyOrdersPage: React.FC = () => {
           </Table>
         )}
       </Container>
-      
       {/* Modales */}
       <PedidoDetailModal show={showPedidoModal} onHide={() => setShowPedidoModal(false)} pedido={selectedPedido} />
       <FacturaDetailModal show={showFacturaModal} onHide={() => setShowFacturaModal(false)} factura={selectedFactura} />
