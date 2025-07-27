@@ -1,9 +1,10 @@
 import React from 'react';
-import { Modal, Button, Image, Container, Row, Col, Badge } from 'react-bootstrap';
+import { Modal, Button, Image, Container, Row, Col, Badge, ListGroup } from 'react-bootstrap';
 import type { ArticuloManufacturadoResponse } from '../../../types/types';
 import { useCart } from '../../../context/CartContext';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faMinus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { useUser } from '../../../context/UserContext';
 import './DetalleModal.sass';
 
 interface DetalleModalProps {
@@ -15,7 +16,7 @@ interface DetalleModalProps {
 
 const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDisponible }) => {
   const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
-
+  const { userRole } = useUser();
   const cartItem = cart.find(item => item.articulo.id === product.id);
   const quantity = cartItem ? cartItem.quantity : 0;
 
@@ -63,14 +64,37 @@ const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDi
 
               <h5 className="detalle-modal-section-title">Precio:</h5>
               <p className="detalle-modal-price">${product.precioVenta.toFixed(2)}</p>
+              {(userRole === 'ADMIN' || userRole === 'EMPLEADO') && (
+                <>
+                  <h5 className="detalle-modal-section-title">Tiempo Estimado de Cocina:</h5>
+                  <p className="detalle-modal-time">{product.tiempoEstimadoMinutos} minutos</p>
 
-              <h5 className="detalle-modal-section-title">Tiempo Estimado de Cocina:</h5>
-              <p className="detalle-modal-time">{product.tiempoEstimadoMinutos} minutos</p>
-
-              <h5 className="detalle-modal-section-title">Preparación:</h5>
-              <p className="detalle-modal-preparacion">{product.preparacion}</p>
+                  <h5 className="detalle-modal-section-title">Preparación:</h5>
+                  <p className="detalle-modal-preparacion">{product.preparacion}</p>
+                </>
+              )}
             </Col>
           </Row>
+          {product.manufacturadoDetalles && product.manufacturadoDetalles.length > 0 && (
+            <Row className="mt-4">
+              <Col>
+                <h5 className="detalle-modal-section-title">Ingredientes:</h5>
+                <ListGroup variant="flush">
+                  {product.manufacturadoDetalles.map(detalle => (
+                    <ListGroup.Item key={detalle.id} className="bg-transparent px-0">
+                      - {detalle.articuloInsumo.denominacion}
+                      {/* Renderizado condicional de la cantidad */}
+                      {(userRole === 'ADMIN' || userRole === 'EMPLEADO') && (
+                        <span className="text-muted fst-italic ms-2">
+                          ({detalle.cantidad})
+                        </span>
+                      )}
+                    </ListGroup.Item>
+                  ))}
+                </ListGroup>
+              </Col>
+            </Row>
+          )}
         </Container>
       </Modal.Body>
       <Modal.Footer className="detalle-modal-footer">
