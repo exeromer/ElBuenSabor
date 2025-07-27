@@ -22,11 +22,11 @@ const Header: React.FC = () => {
     if (searchTerm.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
     } else {
-      navigate('/products'); // Si la búsqueda está vacía, va a la página de productos sin filtro
+      navigate('/products'); 
     }
   };
   return (
-    <Navbar expand="lg" className="px-3">
+    <Navbar expand="lg" className="px-3 header-navbar">
       <Container fluid>
         <Navbar.Brand as={Link} to="/">
           <img src="/logo.png" alt="logo de la página" className="logo" />
@@ -34,7 +34,6 @@ const Header: React.FC = () => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
-            {/* Se elimina el Nav.Link de "Inicio" */}
             <Nav.Link as={Link} to="/products">
               Menú
             </Nav.Link>
@@ -69,8 +68,6 @@ const Header: React.FC = () => {
               </Nav.Link>
             )}
           </Nav>
-
-          {/* Buscador centrado */}
           <div className="flex-grow-1 mx-lg-4" style={{ maxWidth: '500px' }}>
             <Form className="d-flex" onSubmit={handleSearch}>
               <Form.Control
@@ -84,7 +81,6 @@ const Header: React.FC = () => {
               <Button variant="outline-secondary" type="submit">Buscar</Button>
             </Form>
           </div>
-
           <Nav className="ms-auto align-items-center">
             {userRole === 'CLIENTE' && (
               <Nav.Link onClick={openCart} style={{ cursor: 'pointer' }} className="me-2">
@@ -96,7 +92,6 @@ const Header: React.FC = () => {
                 )}
               </Nav.Link>
             )}
-
             {!isAuthenticated ? (
               <Button variant="secondary" onClick={() => loginWithRedirect()}>
                 <FontAwesomeIcon icon={faSignInAlt} className="me-1" /> Iniciar Sesión
@@ -125,7 +120,6 @@ const Header: React.FC = () => {
                   <div className="px-3 py-2">
                     <SucursalSelector />
                   </div>
-
                   <Dropdown.Divider />
                   <Dropdown.Item onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>
                     <FontAwesomeIcon icon={faSignOutAlt} className="me-2" /> Cerrar Sesión
@@ -140,5 +134,6 @@ const Header: React.FC = () => {
     </Navbar>
   );
 };
+
 
 export default Header;
