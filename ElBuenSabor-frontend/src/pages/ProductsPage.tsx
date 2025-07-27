@@ -1,14 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Spinner, Alert, Form } from 'react-bootstrap';
+import { useLocation } from 'react-router-dom';
 import { useSucursal } from '../context/SucursalContext';
 import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService';
 import type { ArticuloManufacturadoResponse, CategoriaResponse } from '../types/types';
 import ProductCard from '../components/products/Card/ProductCard';
 import Titulo from '../components/utils/Titulo/Titulo';
 
+//Busqueda de productos
+function useQuery() {
+  return new URLSearchParams(useLocation().search);
+}
+
 const ProductsPage: React.FC = () => {
-  // FIX: Usamos el contexto para saber la sucursal actual
   const { selectedSucursal } = useSucursal();
+  const query = useQuery();
+  const searchTerm = query.get('search') || ''
 
   const [products, setProducts] = useState<ArticuloManufacturadoResponse[]>([]);
   const [categories, setCategories] = useState<CategoriaResponse[]>([]);
@@ -17,9 +24,7 @@ const ProductsPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<number | ''>('');
 
   useEffect(() => {
-    // La función ahora depende de la sucursal seleccionada
     const fetchProductsAndCategories = async () => {
-      // Si no hay sucursal seleccionada, no hacemos nada.
       if (!selectedSucursal) {
         setProducts([]);
         setCategories([]);
@@ -30,25 +35,19 @@ const ProductsPage: React.FC = () => {
       setLoading(true);
       setError(null);
 
-            try {
-        // 1. Obtenemos las categorías específicas de la sucursal.
+      try {
         const sucursalCategories = selectedSucursal.categorias || [];
         setCategories(sucursalCategories);
 
         if (sucursalCategories.length > 0) {
-            // 2. Obtenemos TODOS los productos manufacturados activos.
-            const allActiveProducts = (await ArticuloManufacturadoService.getAll()).filter(p => p.estadoActivo);
-
-            // 3. FIX: Filtramos los productos para quedarnos solo con los que pertenecen a las categorías de la sucursal.
-            const categoryIds = sucursalCategories.map(c => c.id);
-            const productosDeLaSucursal = allActiveProducts.filter(p => categoryIds.includes(p.categoria.id));
-            
-            setProducts(productosDeLaSucursal);
+          const allActiveProducts = (await ArticuloManufacturadoService.getAll(searchTerm)).filter(p => p.estadoActivo);
+          const categoryIds = sucursalCategories.map(c => c.id);
+          const productosDeLaSucursal = allActiveProducts.filter(p => categoryIds.includes(p.categoria.id));
+          setProducts(productosDeLaSucursal);
         } else {
-            // Si la sucursal no tiene categorías, no tendrá productos.
-            setProducts([]);
+          // Si la sucursal no tiene categorías, no tendrá productos.
+          setProducts([]);
         }
-
       } catch (err) {
         console.error('Error al cargar productos o categorías:', err);
         setError("No se pudieron cargar los datos del menú. Intenta de nuevo más tarde.");
@@ -58,8 +57,8 @@ const ProductsPage: React.FC = () => {
     };
 
     fetchProductsAndCategories();
-  }, [selectedSucursal]);
-  
+  }, [selectedSucursal, searchTerm]);
+
   const filteredProducts = selectedCategory
     ? products.filter((product) => product.categoria.id === selectedCategory)
     : products;
@@ -73,7 +72,6 @@ const ProductsPage: React.FC = () => {
     );
   }
 
-  // Si no hay sucursal seleccionada, mostramos un mensaje amigable
   if (!selectedSucursal) {
     return (
       <Container className="my-5">
@@ -81,12 +79,17 @@ const ProductsPage: React.FC = () => {
       </Container>
     )
   }
-
-  if (error) { /* ... manejo de error ... */ }
+  if (error) {
+    return (
+      <Container className="my-5">
+        <Alert variant="danger" className="text-center">{error}</Alert>
+      </Container>
+    );
+  }
 
   return (
     <Container className="my-4">
-      <Titulo texto="Nuestros productos" nivel="titulo" />
+      <Titulo texto={searchTerm ? `Resultados para: "${searchTerm}"` : "Nuestros productos"} nivel="titulo" />
       <Row className="mb-4 justify-content-center">
         <Col md={4}>
           <Form.Group controlId="categorySelect">
@@ -97,7 +100,6 @@ const ProductsPage: React.FC = () => {
               disabled={categories.length === 0}
             >
               <option value="">Todas las Categorías</option>
-              {/* Ahora las categorías son específicas de la sucursal */}
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.denominacion}
@@ -107,7 +109,6 @@ const ProductsPage: React.FC = () => {
           </Form.Group>
         </Col>
       </Row>
-
       <Row xs={1} sm={2} md={3} lg={4} xl={4} className="g-4">
         {filteredProducts.length > 0 ? (
           filteredProducts.map((product) => (
@@ -118,7 +119,10 @@ const ProductsPage: React.FC = () => {
         ) : (
           <Col xs={12}>
             <Alert variant="info" className="text-center">
-              No se encontraron productos para esta sucursal o categoría.
+              {searchTerm
+                ? `No se encontraron productos que coincidan con "${searchTerm}".`
+                : "No hay productos disponibles para esta sucursal o categoría."
+              }
             </Alert>
           </Col>
         )}

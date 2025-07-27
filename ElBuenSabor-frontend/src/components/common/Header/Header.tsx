@@ -1,21 +1,10 @@
-import React from 'react';
-import { Navbar, Nav, Container, Button, Badge, Image } from 'react-bootstrap';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Navbar, Nav, Container, Button, Badge, Image, Form, Dropdown } from 'react-bootstrap';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faShoppingCart,
-  faSignInAlt,
-  faSignOutAlt,
-  faClipboardList,
-  faTachometerAlt,
-  faChartBar,
-  faFireBurner,
-  faTruck,
-  faCashRegister,
-} from '@fortawesome/free-solid-svg-icons';
+import { faShoppingCart, faSignInAlt, faSignOutAlt, faClipboardList, faTachometerAlt, faChartBar, faFireBurner, faTruck, faCashRegister, faUserCircle } from '@fortawesome/free-solid-svg-icons';
 import { useCart } from '../../../context/CartContext';
-import { useSucursal } from '../../../context/SucursalContext';
 import { useUser } from '../../../context/UserContext';
 import SucursalSelector from '../Sucursal/SucursalSelector';
 import CartModal from '../../cart/CartModal';
@@ -24,74 +13,84 @@ import './Header.sass';
 const Header: React.FC = () => {
   const { isAuthenticated, loginWithRedirect, logout, user } = useAuth0();
   const { totalItems, openCart } = useCart();
-  const { sucursales } = useSucursal();
   const { userRole, cliente, employeeRole } = useUser();
+  const [searchTerm, setSearchTerm] = useState('');
+  const navigate = useNavigate();
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchTerm.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
+    } else {
+      navigate('/products'); // Si la búsqueda está vacía, va a la página de productos sin filtro
+    }
+  };
   return (
-    <Navbar expand="lg" className='header-navbar'>
-      <Container>
+    <Navbar expand="lg" className="px-3">
+      <Container fluid>
         <Navbar.Brand as={Link} to="/">
           <img src="/logo.png" alt="logo de la página" className="logo" />
         </Navbar.Brand>
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
           <Nav className="me-auto">
-            <Nav.Link as={Link} to="/">
-              Inicio
-            </Nav.Link>
+            {/* Se elimina el Nav.Link de "Inicio" */}
             <Nav.Link as={Link} to="/products">
               Menú
             </Nav.Link>
-            {/* Visible solo para Clientes */}
             {userRole === 'CLIENTE' && (
               <Nav.Link as={Link} to="/mis-pedidos">
                 <FontAwesomeIcon icon={faClipboardList} className="me-1" /> Mis Pedidos
               </Nav.Link>
             )}
-
-            {/* Visible solo para Admin y Empleados */}
             {(userRole === 'ADMIN' || userRole === 'EMPLEADO') && (
               <Nav.Link as={Link} to="/admin-dashboard">
                 <FontAwesomeIcon icon={faTachometerAlt} className="me-1" /> Administración
               </Nav.Link>
             )}
-            {/* Visible solo para Admin */}
             {userRole === 'ADMIN' && (
               <Nav.Link as={Link} to="/estadisticas">
                 <FontAwesomeIcon icon={faChartBar} className="me-1" /> Estadísticas
               </Nav.Link>
             )}
+            {employeeRole === 'COCINA' && (
+              <Nav.Link as={Link} to="/cocina">
+                <FontAwesomeIcon icon={faFireBurner} className="me-1" /> Cocina
+              </Nav.Link>
+            )}
+            {employeeRole === 'DELIVERY' && (
+              <Nav.Link as={Link} to="/delivery">
+                <FontAwesomeIcon icon={faTruck} className="me-1" /> Delivery
+              </Nav.Link>
+            )}
+            {employeeRole === 'CAJERO' && (
+              <Nav.Link as={Link} to="/cajero">
+                <FontAwesomeIcon icon={faCashRegister} className="me-1" /> Caja
+              </Nav.Link>
+            )}
           </Nav>
-          {/* Visible solo para Empleados de Cocina */}
-          {employeeRole === 'COCINA' && (
-            <Nav.Link as={Link} to="/cocina">
-              <FontAwesomeIcon icon={faFireBurner} className="me-1" /> Cocina
-            </Nav.Link>
-          )}
-          {/* Visible solo para Empleados de Delivery */}
-          {employeeRole === 'DELIVERY' && (
-            <Nav.Link as={Link} to="/delivery">
-              <FontAwesomeIcon icon={faTruck} className="me-1" /> Delivery
-            </Nav.Link>
-          )}
-          {/* Visible solo para Empleados de Caja */}
-          {employeeRole === 'CAJERO' && (
-            <Nav.Link as={Link} to="/cajero">
-              <FontAwesomeIcon icon={faCashRegister} className="me-1" /> Caja
-            </Nav.Link>
-          )}
 
-          <div className="d-flex justify-content-center flex-grow-1">
-            {sucursales.length > 1 && <SucursalSelector />}
+          {/* Buscador centrado */}
+          <div className="flex-grow-1 mx-lg-4" style={{ maxWidth: '500px' }}>
+            <Form className="d-flex" onSubmit={handleSearch}>
+              <Form.Control
+                type="search"
+                placeholder="Buscar comidas, bebidas..."
+                className="me-2"
+                aria-label="Search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <Button variant="outline-secondary" type="submit">Buscar</Button>
+            </Form>
           </div>
 
-          <Nav>
-            {/* El carrito solo es visible para clientes */}
+          <Nav className="ms-auto align-items-center">
             {userRole === 'CLIENTE' && (
-              <Nav.Link onClick={openCart} style={{ cursor: 'pointer' }}>
+              <Nav.Link onClick={openCart} style={{ cursor: 'pointer' }} className="me-2">
                 <FontAwesomeIcon className="h mt-1 fs-4" icon={faShoppingCart} />
                 {totalItems > 0 && (
-                  <Badge pill bg="danger" className="ms-2">
+                  <Badge pill bg="danger" className="ms-1">
                     {totalItems}
                   </Badge>
                 )}
@@ -103,30 +102,36 @@ const Header: React.FC = () => {
                 <FontAwesomeIcon icon={faSignInAlt} className="me-1" /> Iniciar Sesión
               </Button>
             ) : (
-              <>
-                <Nav.Link as={Link} to="/profile">
-                  {user?.picture && (
+              <Dropdown as={Nav.Item}>
+                <Dropdown.Toggle as={Nav.Link} className="d-flex align-items-center">
+                  {user?.picture ? (
                     <Image
                       src={user.picture}
                       alt="Perfil"
                       roundedCircle
-                      style={{ width: '30px', marginRight: '8px' }}
+                      style={{ width: '30px', height: '30px', marginRight: '8px' }}
                     />
+                  ) : (
+                    <FontAwesomeIcon icon={faUserCircle} className="fs-4 me-2" />
                   )}
-                  {/* Mostramos el nombre del cliente o un fallback */}
                   <span>{cliente?.nombre !== 'Nuevo' ? cliente?.nombre : user?.name || user?.nickname}</span>
-                </Nav.Link>
-                <Button
-                  variant="secondary"
-                  onClick={() =>
-                    logout({
-                      logoutParams: { returnTo: window.location.origin },
-                    })
-                  }
-                >
-                  <FontAwesomeIcon icon={faSignOutAlt} className="me-1" /> Cerrar Sesión
-                </Button>
-              </>
+                </Dropdown.Toggle>
+                <Dropdown.Menu align="end">
+                  <Dropdown.Item as={Link} to="/profile">Mi Perfil</Dropdown.Item>
+                  {userRole === 'CLIENTE' && (
+                    <Dropdown.Item as={Link} to="/mis-pedidos">Mis Pedidos</Dropdown.Item>
+                  )}
+                  <Dropdown.Divider />
+                  <div className="px-3 py-2">
+                    <SucursalSelector />
+                  </div>
+
+                  <Dropdown.Divider />
+                  <Dropdown.Item onClick={() => logout({ logoutParams: { returnTo: window.location.origin } })}>
+                    <FontAwesomeIcon icon={faSignOutAlt} className="me-2" /> Cerrar Sesión
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
             )}
           </Nav>
         </Navbar.Collapse>

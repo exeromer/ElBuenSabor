@@ -3,7 +3,7 @@ import { Container, Card, Spinner, Alert, Form, Row, Col, Button, Table } from '
 import { EstadisticaService } from '../../services/EstadisticaService';
 import type { MovimientosMonetarios } from '../../types/types';
 import { useSucursal } from '../../context/SucursalContext';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { faFileExcel } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import './MonetaryMovementTab.sass';
@@ -162,7 +162,7 @@ const MonetaryMovementTab: React.FC = () => {
 
                       <Bar dataKey="value" name="Monto ($)" maxBarSize={90}>
                         {' '}
-                        {chartData.map((entry, index) => (
+                        {chartData.map((_, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Bar>
