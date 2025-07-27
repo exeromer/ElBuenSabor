@@ -2,19 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Form, Button, Alert, Spinner, Row, Col, Card, ListGroup, Image } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlusCircle, faMinusCircle } from '@fortawesome/free-solid-svg-icons';
-
-// Servicios
 import { PromocionService } from '../../services/PromocionService';
 import { SucursalService } from '../../services/sucursalService';
-import { ArticuloManufacturadoService } from '../../services/articuloManufacturadoService';
+import { ArticuloManufacturadoService } from '../../services/ArticuloManufacturadoService';
 import { FileUploadService } from '../../services/fileUploadService';
 import { ImagenService } from '../../services/imagenService';
-
-// Tipos y Enums
 import type { PromocionResponse, PromocionRequest, ArticuloSimpleResponse, SucursalSimpleResponse, PromocionDetalleRequest, ImagenResponse } from '../../types/types';
 import { type TipoPromocion } from '../../types/enums';
 
-// Props del componente
 interface PromocionFormProps {
     show: boolean;
     handleClose: () => void;
@@ -23,8 +18,6 @@ interface PromocionFormProps {
 }
 
 const tipoPromocionOptions: TipoPromocion[] = ['PORCENTAJE', 'CANTIDAD', 'COMBO'];
-
-// Estado inicial para el formulario de creación
 const initialFormData: PromocionRequest = {
     denominacion: '',
     fechaDesde: '',

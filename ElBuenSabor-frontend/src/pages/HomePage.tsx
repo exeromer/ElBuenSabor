@@ -1,11 +1,13 @@
+// src/pages/HomePage.tsx
+
 import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Spinner, Alert } from 'react-bootstrap';
 import Contenedor from '../components/utils/Contenedor/Contenedor';
 import Titulo from '../components/utils/Titulo/Titulo';
 import Nosotros from '../components/common/Nosotros/Nosotros';
 import ProductCard from '../components/products/Card/ProductCard';
-import PromotionCard from '../components/promociones/Card/PromotionCard';
-import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService';
+import PromocionesSlider from '../components/promociones/Slider/PromocionesSlider';
+import { ArticuloManufacturadoService } from '../services/ArticuloManufacturadoService';
 import { useSucursal } from '../context/SucursalContext';
 import { PromocionService } from '../services/PromocionService';
 import type { ArticuloManufacturadoResponse, PromocionResponse, SucursalSimpleResponse } from '../types/types';
@@ -88,13 +90,8 @@ const HomePage: React.FC = () => {
           {promociones.length > 0 && (
             <div className="mt-5">
               <Titulo texto="Nuestras Promociones" nivel="subtitulo" />
-              <Row xs={1} md={2} lg={3} className="g-4 mb-5">
-                {promociones.map(promo => (
-                  <Col key={promo.id}>
-                    <PromotionCard promocion={promo} />
-                  </Col>
-                ))}
-              </Row>
+              {/* ===== AQUÍ ESTÁ EL CAMBIO PRINCIPAL ===== */}
+              <PromocionesSlider promociones={promociones} />
             </div>
           )}
 

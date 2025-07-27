@@ -1,8 +1,49 @@
 @use "../../../../src/styles/vars" as *
 
 .promocion-card
-    border: none
-    border-radius: $br2
+  border: none
+  border-radius: $br2
+  overflow: hidden
+  // quitamos cursor: pointer porque el botón será el clickeable
+  box-shadow: $shadow
+  // Agregamos una transición para un efecto suave al pasar el mouse
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out
+
+  &:hover
+    transform: translateY(-5px)
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15)
+
+  // Cuerpo de la card con altura fija
+  .card-body
+    display: flex
+    flex-direction: column
+    // ¡Ajusta esta altura si tus textos son más largos o cortos!
+    height: 180px 
+
+  .card-title
+    // Título con altura mínima y posible elipsis si es muy largo
+    min-height: 48px
+    display: -webkit-box
+    -webkit-line-clamp: 2
+    -webkit-box-orient: vertical
     overflow: hidden
-    cursor: pointer
-    box-shadow: $shadow 
+
+  .card-text
+    // El texto descriptivo tomará el espacio restante
+    flex-grow: 1
+    overflow: auto // Scroll si el texto no cabe (opcional)
+
+  // Footer con el texto de validez más visible
+  .card-footer
+    background-color: $color-ivory // Usamos un color de tu paleta
+    color: $color-clay // Texto claro sobre fondo oscuro
+    font-weight: bold
+    text-align: center
+
+  // Botón de compra
+  .btn-comprar-promo
+    width: 100%
+    background-color: $color-stone
+    border: none
+    &:hover
+      background-color: $color-stone

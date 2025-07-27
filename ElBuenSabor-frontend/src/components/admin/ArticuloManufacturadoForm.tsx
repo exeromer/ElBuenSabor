@@ -15,33 +15,13 @@
  * @hook `useAuth0`: Obtiene el token de autenticación para las operaciones protegidas del API.
  */
 import React, { useState, useEffect, useMemo } from "react";
-import {
-  Modal,
-  Form,
-  Button,
-  Alert,
-  Spinner,
-  Row,
-  Col,
-  InputGroup,
-  Card,
-  ListGroup,
-  Image,
-} from "react-bootstrap";
+import { Modal, Form, Button, Alert, Spinner, Row, Col, InputGroup, Card, ListGroup, Image } from "react-bootstrap";
 import { useSucursal } from "../../context/SucursalContext";
-import { ArticuloManufacturadoService } from "../../services/articuloManufacturadoService";
+import { ArticuloManufacturadoService } from "../../services/ArticuloManufacturadoService";
 import { ArticuloInsumoService } from "../../services/articuloInsumoService";
 import { FileUploadService } from "../../services/fileUploadService";
 import { ImagenService } from "../../services/imagenService";
-
-import type {
-  ArticuloManufacturadoResponse,
-  CategoriaResponse,
-  ArticuloInsumoResponse,
-  ArticuloManufacturadoRequest,
-  ArticuloManufacturadoDetalleResponse,
-  ImagenResponse,
-} from "../../types/types";
+import type { ArticuloManufacturadoResponse, CategoriaResponse, ArticuloInsumoResponse, ArticuloManufacturadoRequest, ArticuloManufacturadoDetalleResponse, ImagenResponse } from "../../types/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlusCircle, faMinusCircle } from "@fortawesome/free-solid-svg-icons";
 
