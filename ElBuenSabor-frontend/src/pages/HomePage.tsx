@@ -5,7 +5,7 @@ import Titulo from '../components/utils/Titulo/Titulo';
 import Nosotros from '../components/common/Nosotros/Nosotros';
 import ProductCard from '../components/products/Card/ProductCard';
 import PromocionesSlider from '../components/promociones/Slider/PromocionesSlider';
-import { ArticuloManufacturadoService } from '../services/ArticuloManufacturadoService';
+import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService';
 import { useSucursal } from '../context/SucursalContext';
 import { PromocionService } from '../services/PromocionService';
 import type { ArticuloManufacturadoResponse, PromocionResponse, SucursalSimpleResponse } from '../types/types';
@@ -100,9 +100,9 @@ const HomePage: React.FC = () => {
           )}
 
           <div className="mt-5">
-            <Titulo texto="Nuestro Menú" nivel="subtitulo" />
+            <Titulo texto="Productos Destacados" nivel="subtitulo" />
             <Row xs={1} md={2} lg={3} xl={4} className="g-4">
-              {productos.map(producto => (
+              {productos.slice(0, 4).map(producto => (
                 <Col key={producto.id}>
                   <ProductCard product={producto} />
                 </Col>
