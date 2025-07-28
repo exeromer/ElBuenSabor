@@ -6,24 +6,24 @@ import './SucursalSelector.sass';
 
 const SucursalSelector: React.FC = () => {
   const { sucursales, selectedSucursal, selectSucursal, loading } = useSucursal();
-  const { clearCart, isCartOpen } = useCart(); 
+  const { clearCart, isCartOpen } = useCart();
 
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const sucursalId = Number(event.target.value);
 
-        if (selectedSucursal && sucursalId !== selectedSucursal.id) {
-        const userConfirmation = window.confirm(
-            "Al cambiar de sucursal, tu carrito de compras se vaciará. ¿Deseas continuar?"
-        );
+    if (selectedSucursal && sucursalId !== selectedSucursal.id) {
+      const userConfirmation = window.confirm(
+        "Al cambiar de sucursal, tu carrito de compras se vaciará. ¿Deseas continuar?"
+      );
 
-        if (userConfirmation) {
-            selectSucursal(sucursalId);
-            clearCart(); 
-        } else {
-            event.target.value = String(selectedSucursal.id);
-        }
-    } else if (!selectedSucursal) {
+      if (userConfirmation) {
         selectSucursal(sucursalId);
+        clearCart();
+      } else {
+        event.target.value = String(selectedSucursal.id);
+      }
+    } else if (!selectedSucursal) {
+      selectSucursal(sucursalId);
     }
   };
 
@@ -36,6 +36,7 @@ const SucursalSelector: React.FC = () => {
         disabled={loading || isCartOpen}
         aria-label="Selector de sucursal"
         className="sucursal-selector-select"
+        style={{ minWidth: 'max-content' }}
       >
         {loading ? (
           <option>Cargando sucursales...</option>

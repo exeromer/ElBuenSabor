@@ -22,7 +22,7 @@ const Header: React.FC = () => {
     if (searchTerm.trim()) {
       navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
     } else {
-      navigate('/products'); 
+      navigate('/products');
     }
   };
   return (
@@ -117,7 +117,7 @@ const Header: React.FC = () => {
                     <Dropdown.Item as={Link} to="/mis-pedidos">Mis Pedidos</Dropdown.Item>
                   )}
                   <Dropdown.Divider />
-                  <div className="px-3 py-2">
+                  <div className="px-3 py-2" style={{ minWidth: '300px' }}>
                     <SucursalSelector />
                   </div>
                   <Dropdown.Divider />

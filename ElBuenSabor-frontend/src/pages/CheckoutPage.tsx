@@ -2,20 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, ListGroup, Button, Form, Spinner, Alert, Image } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
-
 // Hooks de Contexto
 import { useUser } from '../context/UserContext';
 import { useCart } from '../context/CartContext';
 import { useSucursal } from '../context/SucursalContext';
-
 // Servicios
-import apiClient, { setAuthToken } from '../services/apiClient';
+import  { setAuthToken } from '../services/apiClient';
 import { PedidoService } from '../services/pedidoService';
-
 // Tipos y Enums
-import type { TipoEnvio, FormaPago } from '../types/enums';
+import type { TipoEnvio } from '../types/enums';
 import type { ArticuloManufacturadoResponse, PedidoResponse, PedidoRequest } from '../types/types';
-
 // Iconos
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTruck, faStore, faMoneyBillWave, faCreditCard } from '@fortawesome/free-solid-svg-icons';
@@ -27,17 +23,14 @@ declare global {
 }
 
 const CheckoutPage: React.FC = () => {
-  // --- CONTEXTOS ---
   const { getAccessTokenSilently, isLoading: authLoading } = useAuth0();
   const { cliente, isLoading: userLoading } = useUser();
-  const { cart, subtotal, descuento, totalFinal, clearCart, aplicarDescuentosAdicionales } = useCart();
+  const { cart, subtotal, descuento, totalFinal, clearCart, tipoEnvio, formaPago, setTipoEnvio, setFormaPago } = useCart();
   const { selectedSucursal, loading: sucursalLoading } = useSucursal();
   const navigate = useNavigate();
 
   // --- ESTADOS LOCALES ---
   const [selectedDomicilioId, setSelectedDomicilioId] = useState<number | ''>('');
-  const [tipoEnvio, setTipoEnvio] = useState<TipoEnvio>('DELIVERY');
-  const [formaPago, setFormaPago] = useState<FormaPago>('MERCADO_PAGO');
   const [submittingOrder, setSubmittingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -52,10 +45,9 @@ const CheckoutPage: React.FC = () => {
     }
   }, [cliente]);
 
-  useEffect(() => {
-    // Le pedimos al contexto que recalcule los totales con las opciones actuales
-    aplicarDescuentosAdicionales(tipoEnvio, formaPago);
-  }, [tipoEnvio, formaPago, aplicarDescuentosAdicionales]);
+  //useEffect(() => {
+  //  aplicarDescuentosAdicionales(tipoEnvio, formaPago);
+  // }, [tipoEnvio, formaPago, aplicarDescuentosAdicionales]);
 
   useEffect(() => {
     if (preferenceId) {
@@ -74,9 +66,7 @@ const CheckoutPage: React.FC = () => {
     }
   }, [preferenceId]);
 
-    useEffect(() => {
-    // Si no hay mensaje de éxito (es decir, no acabamos de completar un pedido)
-    // y el carrito está vacío, redirigimos al menú.
+  useEffect(() => {
     if (cart.length === 0 && !successMessage) {
       navigate('/products');
     }
@@ -144,11 +134,8 @@ const CheckoutPage: React.FC = () => {
     try {
       const token = await getAccessTokenSilently();
       setAuthToken(token);
-
-      // FIX: Ahora pasamos el ID del cliente y el DTO correcto.
       const response: PedidoResponse = await PedidoService.create(cliente.id, pedidoData);
 
-      // La lógica de respuesta (MP o Efectivo) se mantiene igual
       if (formaPago === 'MERCADO_PAGO' && response.mpPreferenceId) {
         setSuccessMessage(`Pedido #${response.id} generado. Por favor, completa el pago.`);
         setPreferenceId(response.mpPreferenceId);
@@ -175,12 +162,6 @@ const CheckoutPage: React.FC = () => {
     return <Container className="my-5"><Alert variant="warning">Por favor, selecciona una sucursal para continuar.</Alert></Container>;
   }
 
-  /** if (cart.length === 0 && !successMessage) {
-    navigate('/products');
-    return null;
-  } */
-
-
   return (
     <Container className="my-4">
       <h1 className="text-center mb-4">Finalizar Compra</h1>
@@ -197,8 +178,7 @@ const CheckoutPage: React.FC = () => {
                   <ListGroup.Item key={item.id} className="d-flex justify-content-between align-items-center py-2">
                     <div className="d-flex align-items-center">
                       <Image
-                        // FIX: Construimos la URL de la imagen correctamente
-                        src={item.articulo.imagenes?.[0] ? `${apiClient.defaults.baseURL}/files/download/${item.articulo.imagenes[0].denominacion}` : defaultImage}
+                        src={item.articulo.imagenes?.[0]?.denominacion || defaultImage}
                         thumbnail
                         style={{ width: '50px', height: '50px', objectFit: 'cover' }}
                         className="me-2"
@@ -214,11 +194,9 @@ const CheckoutPage: React.FC = () => {
             <Card.Footer className="bg-light">
               <div className="d-flex justify-content-between">
                 <h5 className="mb-0">Subtotal:</h5>
-                {/* Usamos el subtotal bruto del contexto */}
                 <h5 className="mb-0"><span className="text-dark">${subtotal.toFixed(2)}</span></h5>
               </div>
 
-              {/* Usamos el descuento total del contexto */}
               {descuento > 0 && (
                 <div className="d-flex justify-content-between text-danger">
                   <h5 className="mb-0">Descuentos:</h5>
@@ -228,7 +206,6 @@ const CheckoutPage: React.FC = () => {
               <hr />
               <div className="d-flex justify-content-between align-items-center mt-2">
                 <h5 className="mb-0">Total a Pagar:</h5>
-                {/* Usamos el total final del contexto */}
                 <h5 className="mb-0"><span className="text-success">${totalFinal.toFixed(2)}</span></h5>
               </div>
             </Card.Footer>
@@ -238,7 +215,6 @@ const CheckoutPage: React.FC = () => {
           <Card className="shadow-sm">
             <Card.Header as="h5">Detalles de Entrega y Pago</Card.Header>
             <Card.Body>
-              {/* FIX: Reemplazamos el selector de sucursal por un campo de solo lectura */}
               <Form.Group className="mb-3">
                 <Form.Label>Pedido para la Sucursal:</Form.Label>
                 <Form.Control
@@ -289,7 +265,6 @@ const CheckoutPage: React.FC = () => {
                 <Button
                   variant="primary"
                   onClick={handlePlaceOrder}
-                  // FIX: La lógica 'disabled' ahora usa los contextos
                   disabled={submittingOrder || cart.length === 0 || !cliente || !selectedSucursal || (tipoEnvio === 'DELIVERY' && !selectedDomicilioId)}
                   className="w-100 mt-3"
                 >
