@@ -1,21 +1,9 @@
-/**
- * @file Footer.tsx
- * @description Componente de pie de página (footer) de la aplicación.
- * Muestra información de derechos de autor, dirección y contacto, y enlaces de navegación.
- * Se adhiere a la parte inferior de la página gracias a `mt-auto` y `shadow-top` de Bootstrap.
- * Utiliza componentes de `react-bootstrap` para el layout.
- */
 import React from 'react';
 import { Container, Row, Col } from 'react-bootstrap';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faLocationDot, faMobile } from '@fortawesome/free-solid-svg-icons';
 import './Footer.sass';
 
-/**
- * @interface FooterProps
- * @description No se requieren propiedades (`props`) para este componente de pie de página,
- * por lo que se define una interfaz vacía para claridad.
- */
 interface FooterProps {}
 
 const Footer: React.FC<FooterProps> = () => {
@@ -40,9 +28,9 @@ const Footer: React.FC<FooterProps> = () => {
           <Col md={2} className="mb-4 mb-md-0 footer-col footer-col-links">
             <h5 className="footer-heading">Enlaces Rápidos</h5>
             <ul className="list-unstyled footer-list">
-              <li className="footer-list-item"><a href="/home" className="footer-link">Inicio</a></li>
+              <li className="footer-list-item"><a href="/" className="footer-link">Inicio</a></li>
               <li className="footer-list-item"><a href="/products" className="footer-link">Productos</a></li>
-              <li className="footer-list-item"><a href="#about" className="footer-link">Acerca de</a></li>
+              <li className="footer-list-item"><a href="/#nosotros" className="footer-link">Acerca de</a></li>
             </ul>
           </Col>
 

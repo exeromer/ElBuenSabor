@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Container, Alert, Card, Button } from 'react-bootstrap';
 import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
-
 import { useUser } from '../context/UserContext';
 import Titulo from '../components/utils/Titulo/Titulo';
 import ClientForm from '../components/admin/ClientForm';

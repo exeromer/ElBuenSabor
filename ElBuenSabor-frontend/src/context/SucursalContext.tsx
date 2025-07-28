@@ -3,19 +3,16 @@ import type { SucursalResponse } from '../types/types';
 import { SucursalService } from '../services/sucursalService';
 
 
-// 1. Definición del tipo para el contexto
 interface SucursalContextType {
-  sucursales: SucursalResponse[]; // CAMBIO: Usamos SucursalResponse
-  selectedSucursal: SucursalResponse | null; // CAMBIO: Usamos SucursalResponse
+  sucursales: SucursalResponse[];
+  selectedSucursal: SucursalResponse | null;
   selectSucursal: (sucursalId: number) => void;
   loading: boolean;
   reloadSucursales: () => void;
 }
 
-// 2. Creación del Contexto
 export const SucursalContext = createContext<SucursalContextType | undefined>(undefined);
 
-// 3. Creación del Proveedor del Contexto (Provider)
 interface SucursalProviderProps {
   children: ReactNode;
 }
@@ -31,9 +28,7 @@ export const SucursalProvider: React.FC<SucursalProviderProps> = ({ children }) 
     try {
       const data = await SucursalService.getAll();
       setSucursales(data);
-      // Mantenemos la lógica de selección, pero con cuidado
       if (data.length > 0) {
-        // Si ya hay una sucursal seleccionada, la mantenemos, si no, seleccionamos la primera
         setSelectedSucursal(prev => data.find(s => s.id === prev?.id) || data[0]);
       }
     } catch (error) {
@@ -47,11 +42,9 @@ export const SucursalProvider: React.FC<SucursalProviderProps> = ({ children }) 
     fetchSucursales();
   }, [fetchSucursales]);
 
-  // Función para cambiar la sucursal seleccionada
   const selectSucursal = (sucursalId: number) => {
     const nuevaSucursal = sucursales.find(s => s.id === sucursalId);
 
-    // Verificamos si la sucursal existe y es diferente a la actual
     if (nuevaSucursal) {
       setSelectedSucursal(nuevaSucursal);
     }
@@ -72,7 +65,6 @@ export const SucursalProvider: React.FC<SucursalProviderProps> = ({ children }) 
   );
 };
 
-// 4. Hook personalizado para usar el contexto fácilmente
 export const useSucursal = () => {
   const context = useContext(SucursalContext);
   if (context === undefined) {

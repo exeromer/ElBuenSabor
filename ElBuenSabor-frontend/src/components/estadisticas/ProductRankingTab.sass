@@ -1,14 +1,8 @@
-// Contenedor principal del tab
 .product-ranking-tab
-
-  // Se aplica el estilo directamente a las celdas del encabezado (th)
-  // dentro de la clase .table-header-custom para asegurar que se aplique
-  // correctamente sobre los estilos de Bootstrap.
   .table-header-custom th
-    background-color: #343a40  !important // Fondo verde, !important es clave.
+    background-color: #343a40  !important
     color: white !important
 
-  // Estilos para el contenedor de la leyenda personalizada
   .legend-container
     display: flex
     flex-direction: column
@@ -17,13 +11,11 @@
     margin-top: 1rem
     padding-left: 2rem
 
-    // Estilo para cada línea de la leyenda (color + texto)
     .legend-item
       display: flex
       align-items: center
       gap: 0.5rem
 
-      // El cuadradito de color
       .legend-color
         display: inline-block
         width: 14px
@@ -31,6 +23,5 @@
         border-radius: 3px
         flex-shrink: 0
 
-      // El nombre del producto en la leyenda
       .legend-label
         font-size: 0.9rem

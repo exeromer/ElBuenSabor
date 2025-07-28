@@ -31,17 +31,15 @@ const ClientRankingTab: React.FC = () => {
   const [sortBy, setSortBy] = useState<SortBy>('cantidadPedidos');
   const [clientColors, setClientColors] = useState<string[]>([]);
   const [isExporting, setIsExporting] = useState(false);
-
   const [showPedidoModal, setShowPedidoModal] = useState(false);
   const [selectedClientOrders, setSelectedClientOrders] = useState<PedidoResponse[]>([]);
   const [loadingClientOrders, setLoadingClientOrders] = useState(false);
   const [selectedClientName, setSelectedClientName] = useState<string>('');
-
   const fetchRankings = useCallback(async () => {
     if (!selectedSucursal) {
       setError('Por favor, selecciona una sucursal.');
       setLoading(false);
-      setClientRanking([]); // Limpiamos los datos si no hay sucursal
+      setClientRanking([]);
       return;
     }
     setLoading(true);
@@ -67,7 +65,6 @@ const ClientRankingTab: React.FC = () => {
     }
   }, [fechaDesde, fechaHasta, sortBy, selectedSucursal]);
 
-  // <<-- CORRECCIÓN: Añadir este useEffect -->>
   useEffect(() => {
     fetchRankings();
   }, [fetchRankings]);
@@ -149,7 +146,6 @@ const ClientRankingTab: React.FC = () => {
                 <Button onClick={fetchRankings} disabled={loading} className="me-2">
                   {loading ? <Spinner as="span" animation="border" size="sm" /> : 'Aplicar Filtros'}
                 </Button>
-                {/* <<-- CORRECCIÓN: Deshabilitar el botón si no hay datos o está cargando -->> */}
                 <Button variant="success" onClick={handleExport} disabled={isExporting}>
                   {isExporting ? (
                     <>

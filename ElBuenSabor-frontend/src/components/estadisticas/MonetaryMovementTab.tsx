@@ -27,7 +27,7 @@ const MonetaryMovementTab: React.FC = () => {
     setError(null);
     try {
       const params = {
-        sucursalId: selectedSucursal.id, // <-- AÑADIR
+        sucursalId: selectedSucursal.id,
         fechaDesde: fechaDesde || undefined,
         fechaHasta: fechaHasta || undefined,
       };
@@ -51,39 +51,32 @@ const MonetaryMovementTab: React.FC = () => {
     setIsExporting(true);
 
     try {
-      // 1. Llamar al servicio, que devuelve un ArrayBuffer
       const excelArrayBuffer = await EstadisticaService.exportMovimientosMonetariosExcel(
         selectedSucursal.id,
         fechaDesde,
         fechaHasta,
       );
 
-      // 2. Crear un Blob desde el ArrayBuffer, especificando el tipo MIME de Excel.
-      // Este paso es crucial para que el navegador sepa qué tipo de archivo es.
       const blob = new Blob([excelArrayBuffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
 
-      // 3. Crear una URL temporal para el Blob
       const url = window.URL.createObjectURL(blob);
 
-      // 4. Crear un enlace <a> invisible para iniciar la descarga
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `movimientos_monetarios_${selectedSucursal.nombre}.xlsx`);
 
-      // 5. Añadir, hacer clic y remover el enlace
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
 
-      // 6. Limpiar la URL temporal
       window.URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Error al exportar a Excel:', err);
       alert('Hubo un error al generar el archivo Excel.');
     } finally {
-      setIsExporting(false); // <-- Desactiva el estado de carga (incluso si hay error)
+      setIsExporting(false);
     }
   };
 
@@ -170,7 +163,6 @@ const MonetaryMovementTab: React.FC = () => {
                   </ResponsiveContainer>
                 </div>
 
-                {/* Botón de exportar a Excel** */}
                 <Button variant="success" onClick={handleExport} className="mt-3" disabled={isExporting}>
                   {isExporting ? (
                     <>

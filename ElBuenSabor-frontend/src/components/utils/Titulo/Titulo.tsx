@@ -1,7 +1,7 @@
 import React, { type JSX } from 'react';
 import './Titulo.sass'; 
 
-type TitleLevel = 'titulo' | 'subtitulo' | 'encabezado'; // Definimos los 3 niveles semánticos
+type TitleLevel = 'titulo' | 'subtitulo' | 'encabezado';
 
 type Props = {
   texto: string;

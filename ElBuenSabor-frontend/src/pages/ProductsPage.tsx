@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Spinner, Alert, Form } from 'react-bootstrap';
 import { useLocation } from 'react-router-dom';
 import { useSucursal } from '../context/SucursalContext';
-import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService';
+import { ArticuloManufacturadoService } from '../services/ArticuloManufacturadoService';
 import type { ArticuloManufacturadoResponse, CategoriaResponse } from '../types/types';
 import ProductCard from '../components/products/Card/ProductCard';
 import Titulo from '../components/utils/Titulo/Titulo';
+import PaginationControls from '../components/common/Tables/PaginationControls'; 
 
-//Busqueda de productos
+const ITEMS_PER_PAGE = 8;
+
 function useQuery() {
   return new URLSearchParams(useLocation().search);
 }
@@ -15,13 +17,14 @@ function useQuery() {
 const ProductsPage: React.FC = () => {
   const { selectedSucursal } = useSucursal();
   const query = useQuery();
-  const searchTerm = query.get('search') || ''
+  const searchTerm = query.get('search') || '';
 
   const [products, setProducts] = useState<ArticuloManufacturadoResponse[]>([]);
   const [categories, setCategories] = useState<CategoriaResponse[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<number | ''>('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const fetchProductsAndCategories = async () => {
@@ -45,7 +48,6 @@ const ProductsPage: React.FC = () => {
           const productosDeLaSucursal = allActiveProducts.filter(p => categoryIds.includes(p.categoria.id));
           setProducts(productosDeLaSucursal);
         } else {
-          // Si la sucursal no tiene categorías, no tendrá productos.
           setProducts([]);
         }
       } catch (err) {
@@ -59,9 +61,19 @@ const ProductsPage: React.FC = () => {
     fetchProductsAndCategories();
   }, [selectedSucursal, searchTerm]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchTerm]);
+
   const filteredProducts = selectedCategory
     ? products.filter((product) => product.categoria.id === selectedCategory)
     : products;
+
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const currentProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   if (loading) {
     return (
@@ -110,8 +122,8 @@ const ProductsPage: React.FC = () => {
         </Col>
       </Row>
       <Row xs={1} sm={2} md={3} lg={4} xl={4} className="g-4">
-        {filteredProducts.length > 0 ? (
-          filteredProducts.map((product) => (
+        {currentProducts.length > 0 ? (
+          currentProducts.map((product) => (
             <Col key={product.id}>
               <ProductCard product={product} />
             </Col>
@@ -127,6 +139,14 @@ const ProductsPage: React.FC = () => {
           </Col>
         )}
       </Row>
+
+      {filteredProducts.length > 0 && (
+         <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+        />
+      )}
     </Container>
   );
 };

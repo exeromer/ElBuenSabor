@@ -7,8 +7,6 @@ import { useSearchableData } from '../hooks/useSearchableData';
 import type { PedidoResponse } from '../types/types';
 import type { Estado } from '../types/enums';
 import toast from 'react-hot-toast';
-
-// Componente de tabla reutilizable que ya tienes
 import { SearchableTable, type ColumnDefinition } from '../components/common/Tables/SearchableTable';
 import { faEye } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -25,49 +23,33 @@ const CajeroPage: React.FC = () => {
     const fetchPedidos = useCallback(async () => {
         if (!selectedSucursal) return [];
 
-        // Convertimos el string de búsqueda a número, o undefined si está vacío.
         const id = pedidoIdSearch ? parseInt(pedidoIdSearch, 10) : undefined;
 
-        // Llamamos al servicio con todos los filtros.
         return PedidoService.getPedidosCajero(selectedSucursal.id, activeTab, id);
     }, [selectedSucursal, activeTab, pedidoIdSearch]);
 
-    // --- Hook de Datos ---
     const {
         items: pedidos,
         isLoading,
         error,
-        reload, // Función para recargar los datos manualmente.
+        reload,
         requestSort,
         sortConfig
     } = useSearchableData({ fetchData: fetchPedidos });
 
-
-    // =================================================================================
-    // PASO 3: LÓGICA EN TIEMPO REAL (WEBSOCKETS)
-    // =================================================================================
-
-    // --- Manejador de Mensajes ---
     const handleWebSocketMessage = useCallback((pedido: PedidoResponse) => {
         if (pedido.estado === activeTab) {
             reload();
         }
     }, [activeTab, reload]);
 
-    // --- Conexión WebSocket ---
-    // Definimos el "tema" (topic) al que nos suscribimos, basado en la sucursal.
     const cajeroTopic = selectedSucursal ? `/topic/pedidos/sucursal/${selectedSucursal.id}/cajero` : '';
-    // Usamos el hook para conectarnos y le pasamos nuestro manejador.
-    // La lógica de notificación ahora está dentro del hook, así que no se necesita más.
+
     useWebSocket(cajeroTopic, handleWebSocketMessage);
 
-
-    // =================================================================================
-    // PASO 4: MANEJADORES DE ACCIONES DEL USUARIO
-    // =================================================================================
     const handleTabSelect = (k: string | null) => {
         if (k) {
-            setPedidoIdSearch(''); // Limpiamos la búsqueda anterior.
+            setPedidoIdSearch('');
             setActiveTab(k as Estado);
         }
     };
@@ -84,9 +66,9 @@ const CajeroPage: React.FC = () => {
 
         try {
             await promise;
-            reload(); // Al tener éxito, recargamos los datos para que el pedido desaparezca de la pestaña actual.
+            reload();
         } catch (err) {
-            console.error(err); // El toast ya muestra el error, aquí solo lo registramos en consola.
+            console.error(err);
         }
     };
     const handleViewDetails = (pedido: PedidoResponse) => {
@@ -94,10 +76,6 @@ const CajeroPage: React.FC = () => {
         setShowDetailModal(true);
     };
 
-
-    // =================================================================================
-    // PASO 5: DEFINICIÓN DE LA ESTRUCTURA DE LA TABLA
-    // =================================================================================
     const columns: ColumnDefinition<PedidoResponse>[] = [
         { key: 'id', header: 'ID', renderCell: (p) => p.id, sortable: true },
         { key: 'cliente.nombre', header: 'Cliente', renderCell: (p) => `${p.cliente.nombre} ${p.cliente.apellido}` },

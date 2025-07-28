@@ -2,17 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { Container, Row, Col, Card, ListGroup, Button, Form, Spinner, Alert, Image } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
-// Hooks de Contexto
 import { useUser } from '../context/UserContext';
 import { useCart } from '../context/CartContext';
 import { useSucursal } from '../context/SucursalContext';
-// Servicios
 import  { setAuthToken } from '../services/apiClient';
 import { PedidoService } from '../services/pedidoService';
-// Tipos y Enums
 import type { TipoEnvio } from '../types/enums';
 import type { ArticuloManufacturadoResponse, PedidoResponse, PedidoRequest } from '../types/types';
-// Iconos
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faTruck, faStore, faMoneyBillWave, faCreditCard } from '@fortawesome/free-solid-svg-icons';
 
@@ -28,26 +24,18 @@ const CheckoutPage: React.FC = () => {
   const { cart, subtotal, descuento, totalFinal, clearCart, tipoEnvio, formaPago, setTipoEnvio, setFormaPago } = useCart();
   const { selectedSucursal, loading: sucursalLoading } = useSucursal();
   const navigate = useNavigate();
-
-  // --- ESTADOS LOCALES ---
   const [selectedDomicilioId, setSelectedDomicilioId] = useState<number | ''>('');
   const [submittingOrder, setSubmittingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [preferenceId, setPreferenceId] = useState<string | null>(null);
-
   const defaultImage = '/placeholder-food.png';
 
-  // --- EFECTOS ---
   useEffect(() => {
     if (cliente && cliente.domicilios.length > 0 && selectedDomicilioId === '') {
       setSelectedDomicilioId(cliente.domicilios[0].id);
     }
   }, [cliente]);
-
-  //useEffect(() => {
-  //  aplicarDescuentosAdicionales(tipoEnvio, formaPago);
-  // }, [tipoEnvio, formaPago, aplicarDescuentosAdicionales]);
 
   useEffect(() => {
     if (preferenceId) {
@@ -72,7 +60,6 @@ const CheckoutPage: React.FC = () => {
     }
   }, [cart, successMessage, navigate]);
 
-  // --- MANEJADORES ---
 
   const handleTipoEnvioChange = (nuevoTipoEnvio: TipoEnvio) => {
     setTipoEnvio(nuevoTipoEnvio);
@@ -116,13 +103,11 @@ const CheckoutPage: React.FC = () => {
       })),
       horaEstimadaFinalizacion,
       ...(tipoEnvio === 'DELIVERY' && domicilioSeleccionado ? {
-        // Si es Delivery, usamos el domicilio del cliente
         calleDomicilio: domicilioSeleccionado.calle,
         numeroDomicilio: domicilioSeleccionado.numero,
         cpDomicilio: domicilioSeleccionado.cp,
         localidadIdDomicilio: domicilioSeleccionado.localidad.id,
       } : {
-        // Si es Take Away, usamos el domicilio de la SUCURSAL como placeholder
         calleDomicilio: selectedSucursal.domicilio.calle,
         numeroDomicilio: selectedSucursal.domicilio.numero,
         cpDomicilio: selectedSucursal.domicilio.cp,

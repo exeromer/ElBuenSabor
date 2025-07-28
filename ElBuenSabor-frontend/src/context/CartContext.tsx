@@ -4,12 +4,10 @@ import { useUser } from './UserContext';
 import { CarritoService } from '../services/carritoService';
 import { ArticuloService } from '../services/ArticuloService';
 import { useSucursal } from './SucursalContext';
-import { PromocionService } from '../services/PromocionService'; // <-- 2. Importamos el servicio de promociones
+import { PromocionService } from '../services/PromocionService';
 import type { ArticuloResponse, CarritoResponse, PromocionResponse, SucursalSimpleResponse } from '../types/types';
 import type { TipoEnvio, FormaPago } from '../types/enums';
 
-
-// Tipo enriquecido para el estado local
 export interface EnrichedCartItem {
   id: number;
   articulo: ArticuloResponse;
@@ -17,22 +15,19 @@ export interface EnrichedCartItem {
   subtotal: number;
 }
 
-// Interfaz del Contexto
 interface CartContextType {
   cart: EnrichedCartItem[];
-  subtotal: number; // El subtotal bruto (suma de precios de venta)
-  descuento: number; // La suma de TODOS los descuentos aplicados
+  subtotal: number;
+  descuento: number;
   totalFinal: number;
   totalItems: number;
   isLoading: boolean;
   error: string | null;
   isCartOpen: boolean;
-
   tipoEnvio: TipoEnvio;
   formaPago: FormaPago;
   setTipoEnvio: (tipo: TipoEnvio) => void;
   setFormaPago: (forma: FormaPago) => void;
-
   openCart: () => void;
   closeCart: () => void;
   addToCart: (articulo: ArticuloResponse, quantity?: number) => Promise<void>;
@@ -47,7 +42,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const { isAuthenticated } = useAuth0();
   const { cliente, isLoading: isUserLoading } = useUser();
   const { selectedSucursal } = useSucursal();
-
   const [cart, setCart] = useState<EnrichedCartItem[]>([]);
   const [promocionesActivas, setPromocionesActivas] = useState<PromocionResponse[]>([]);
   const [subtotal, setSubtotal] = useState<number>(0);
@@ -70,13 +64,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const subtotalBruto = currentCart.reduce((sum, item) => sum + (item.articulo.precioVenta * item.quantity), 0);
     let descuentoPromociones = 0;
 
-    // Clonamos el carrito 
     const itemsParaDescuento = new Map(currentCart.map(item => [item.articulo.id, item.quantity]));
     promos.forEach(promo => {
       let seAplicaPromo = true;
       let costoOriginalCombo = 0;
 
-      // 1. Verificar si tenemos todos los artículos para la promoción (especialmente para combos)
       for (const detalle of promo.detallesPromocion) {
         const cantidadEnCarrito = itemsParaDescuento.get(detalle.articulo.id) || 0;
         if (cantidadEnCarrito < detalle.cantidad) {
@@ -86,7 +78,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       if (seAplicaPromo) {
-        // Determinamos cuántas veces se puede aplicar la promoción
         let vecesAplicable = Infinity;
         promo.detallesPromocion.forEach(detalle => {
           const cantidadEnCarrito = itemsParaDescuento.get(detalle.articulo.id) || 0;
@@ -94,13 +85,11 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         });
 
         if (vecesAplicable > 0 && vecesAplicable !== Infinity) {
-          // "Consumimos" los artículos del mapa
           promo.detallesPromocion.forEach(detalle => {
             itemsParaDescuento.set(detalle.articulo.id, (itemsParaDescuento.get(detalle.articulo.id)!) - (detalle.cantidad * vecesAplicable));
             costoOriginalCombo += detalle.articulo.precioVenta * detalle.cantidad;
           });
 
-          // 2. Calcular descuento según el tipo de promoción
           if (promo.tipoPromocion === 'CANTIDAD' || promo.tipoPromocion === 'COMBO') {
             if (promo.precioPromocional) {
               descuentoPromociones += (costoOriginalCombo - promo.precioPromocional) * vecesAplicable;
@@ -117,12 +106,10 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const subtotalConPromos = subtotalBruto - descuentoPromociones;
     let descuentoAdicional = 0;
 
-    // 3. Aplicar descuento por pago en efectivo
     if (currentTipoEnvio === 'TAKEAWAY' && currentFormaPago === 'EFECTIVO') {
       descuentoAdicional = subtotalConPromos * 0.10;
     }
 
-    // 4. Actualizar estados
     setSubtotal(subtotalBruto);
     setDescuento(descuentoPromociones + descuentoAdicional);
     setTotalFinal(subtotalConPromos - descuentoAdicional);
@@ -187,10 +174,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const richItems = await enrichCartItems(updatedBackendCart);
     setCart(richItems);
   }, [enrichCartItems]);
-
-  //const aplicarDescuentosAdicionales = (tipoEnvio: TipoEnvio, formaPago: FormaPago) => {
-  //  calcularTotales(cart, promocionesActivas, tipoEnvio, formaPago);
-  //};
 
   const fetchCart = useCallback(async () => {
     if (!isAuthenticated || !cliente?.id) {
@@ -260,7 +243,6 @@ export const CartProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     await executeCartAction(() => CarritoService.clear(cliente.id!));
   };
 
-  // Funciones para controlar el modal
   const openCart = () => setIsCartOpen(true);
   const closeCart = () => setIsCartOpen(false);
 

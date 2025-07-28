@@ -27,7 +27,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const [showDetailModal, setShowDetailModal] = useState(false);
 
   useEffect(() => {
-    // Solo verificar si hay una sucursal y un cliente logueado.
     if (selectedSucursal && product.estadoActivo && cliente) {
       setIsLoading(true);
       StockInsumoSucursalService.checkDisponibilidadManufacturado(product, selectedSucursal.id)
@@ -86,7 +85,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
       variant="success"
       onClick={handleAddToCart}
       className="product-card-add-button"
-      disabled={!isDisponible || isLoading || !isAuthenticated} // Se deshabilita si no está autenticado
+      disabled={!isDisponible || isLoading || !isAuthenticated}
     >
       {isLoading ? <Spinner as="span" animation="border" size="sm" /> : 'Agregar'}
     </Button>
@@ -113,7 +112,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
           <div className="product-card-buttons-group">
             {quantity === 0 ? (
-              // Renderizamos el botón dentro de un Tooltip si no está autenticado
               !isAuthenticated ? (
                 <OverlayTrigger
                   placement="top"

@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { Table, Form, Spinner, Alert, Button } from 'react-bootstrap';
 import type { SortConfig } from '../../../hooks/useSearchableData';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSort, faSortUp, faSortDown, faPlus } from '@fortawesome/free-solid-svg-icons';
-
+import PaginationControls from './PaginationControls';
+import './SearchableTable.sass';
 
 export interface ColumnDefinition<T> {
   key: (keyof T) | string;
@@ -29,6 +30,8 @@ interface SearchableTableProps<T extends { id: number | string }> {
   onCreate?: () => void;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export function SearchableTable<T extends { id: number | string }>({
   items,
   searchTerm,
@@ -44,6 +47,21 @@ export function SearchableTable<T extends { id: number | string }>({
   createButtonText,
   onCreate,
 }: SearchableTableProps<T>) {
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const totalPages = Math.ceil(items.length / ITEMS_PER_PAGE);
+  const currentItems = items.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [items]);
+
+  const emptyRowsCount = ITEMS_PER_PAGE - currentItems.length;
+
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
   };
@@ -83,7 +101,7 @@ export function SearchableTable<T extends { id: number | string }>({
 
       {!isLoading && !error && items.length > 0 && (
         <>
-          <Table striped bordered hover responsive className="text-center align-middle">
+          <Table striped bordered hover responsive className="searchable-table text-center align-middle">
             <thead>
               <tr>
                 {columns.map(col => (
@@ -102,7 +120,7 @@ export function SearchableTable<T extends { id: number | string }>({
               </tr>
             </thead>
             <tbody>
-              {items.map(item => (
+              {currentItems.map(item => (
                 <tr key={item.id}>
                   {columns.map(col => (
                     <td key={`${item.id}-${col.key as string}`}>{col.renderCell(item)}</td>
@@ -110,8 +128,20 @@ export function SearchableTable<T extends { id: number | string }>({
                   {renderRowActions && <td>{renderRowActions(item, reload)}</td>}
                 </tr>
               ))}
+              
+              {emptyRowsCount > 0 && Array.from({ length: emptyRowsCount }).map((_, index) => (
+                <tr key={`empty-${index}`} className="empty-row">
+                  <td colSpan={columns.length + (renderRowActions ? 1 : 0)}>&nbsp;</td>
+                </tr>
+              ))}
             </tbody>
           </Table>
+
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
         </>
       )}
     </div>

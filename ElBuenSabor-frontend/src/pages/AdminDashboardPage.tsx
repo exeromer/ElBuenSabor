@@ -2,12 +2,7 @@ import React from 'react';
 import { Container, Card, Row, Col, Button } from 'react-bootstrap';
 import { Link } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faBoxOpen,
-  faClipboardList,
-  faUsers,
-  faStore,
-} from '@fortawesome/free-solid-svg-icons';
+import { faBoxOpen, faClipboardList, faUsers, faStore } from '@fortawesome/free-solid-svg-icons';
 import { useUser } from '../context/UserContext'; 
 
 const AdminDashboardPage: React.FC = () => {
@@ -15,7 +10,7 @@ const AdminDashboardPage: React.FC = () => {
     const { userRole, employeeRole } = useUser();
 
     // LÓGICA PARA DETERMINAR LA RUTA DE GESTIÓN DE PEDIDOS
-    let pedidosPath = '/'; // Ruta por defecto
+    let pedidosPath = '/';
     if (userRole === 'ADMIN' || employeeRole === 'CAJERO') {
         pedidosPath = '/cajero';
     } else if (employeeRole === 'COCINA') {

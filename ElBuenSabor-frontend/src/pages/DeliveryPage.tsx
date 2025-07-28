@@ -25,7 +25,6 @@ const DeliveryPage: React.FC = () => {
         reload,
     } = useSearchableData({ fetchData: fetchPedidosDelivery });
 
-    // WebSocket para recibir actualizaciones en tiempo real
     const deliveryTopic = selectedSucursal ? `/topic/pedidos/sucursal/${selectedSucursal.id}/delivery` : '';
     useWebSocket(deliveryTopic, reload);
 
@@ -42,7 +41,7 @@ const DeliveryPage: React.FC = () => {
 
         try {
             await promise;
-            reload(); // Recarga la lista para que el pedido desaparezca
+            reload();
         } catch (err) {
             console.error(err);
         }

@@ -1,0 +1,82 @@
+@use '../../../styles/vars' as *
+
+@keyframes bobbing
+  0%
+    transform: translateY(0px)
+  50%
+    transform: translateY(-5px)
+  100%
+    transform: translateY(0px)
+
+.aside-interactivo
+  position: fixed
+  bottom: 50%
+  right: 12px
+  z-index: 1050
+  transition: all 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55)
+  width: 70px
+  height: 70px
+  background: $color-clay
+  border-radius: 50%
+  cursor: pointer
+  box-shadow: $shadow
+  display: flex
+  align-items: center
+  justify-content: center
+
+  .aside-handle
+    font-size: 2.5rem
+    animation: bobbing 3s infinite ease-in-out
+    transition: all 0.3s ease
+
+  .aside-content
+    opacity: 0
+    visibility: hidden
+    transform: scale(0.8)
+    transition: all 0.3s ease
+    position: absolute
+
+  &.open
+    width: 280px
+    height: 220px
+    border-radius: $br2
+    background-color: $color-clay
+    padding: 1.5rem
+    align-items: center
+    justify-content: center
+
+    .aside-handle
+      opacity: 0
+      transform: scale(0)
+
+    .aside-content
+      position: relative
+      opacity: 1
+      visibility: visible
+      transform: scale(1)
+      transition-delay: 0.1s
+      width: 100%
+      height: 100%
+      display: flex
+      flex-direction: column
+      align-items: center
+      justify-content: center
+      gap: 1rem
+      text-align: center
+      
+      .lead
+        color: $color-grey
+        font-size: 1rem
+        margin: 0
+
+      .btn
+        border: none
+        padding: 0.5rem 1rem
+        border-radius: 20px
+        font-weight: bold
+        background-color: $color-stone
+        color: $color-clay
+
+        &:hover
+            background-color: $color-ivory
+            

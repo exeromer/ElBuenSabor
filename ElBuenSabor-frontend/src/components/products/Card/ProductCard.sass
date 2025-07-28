@@ -1,5 +1,5 @@
 @use "../../../styles/vars" as *
-
+@use '../../../styles/mixins' as *
 .product-card
   border: 1px solid $color-clay
   border-radius: $br1
@@ -12,8 +12,9 @@
 
   .product-card-img
     height: 180px
-    object-fit: cover
     width: 100%
+    object-fit: contain
+    padding: 0.5rem
 
   .product-card-body
     padding: $p2
@@ -52,7 +53,7 @@
       padding-top: $p1
 
       .product-card-price-display 
-        font-size: $f-s-4 
+        font-size: $f-s-3 
         font-weight: bold
         color: $color-grey
         margin-bottom: $m2 
@@ -63,16 +64,12 @@
         display: flex
         flex-direction: column
         width: 100% 
-        gap: $m2
+        gap: 6px
 
         .product-card-add-button
-          background-color: $color-grey
-          border-color: $color-clay
-          padding: $p1 $p2
-          font-size: $f-s-1
-          font-weight: 500
-          border-radius: $br1
+          +boton-base
           width: 100% 
+          background-color: $color-grey
 
           &:hover
             background-color: $color-ivory
@@ -129,16 +126,10 @@
             text-align: center
 
         .product-card-details-button
+          +boton-base
           width: 100% 
-          background-color: $color-stone
-          border: none
-          color: $color-clay
-          font-size: $f-s-1
-          border-radius: $br1
+          background-color: $color-mist
           padding: 0.6rem 1rem
-          display: flex
-          align-items: center
-          justify-content: center
 
           &:hover
             background-color: $color-ivory
@@ -179,6 +170,3 @@
             font-size: 0.75rem
             min-width: 30px
             height: 30px
-
-
-  

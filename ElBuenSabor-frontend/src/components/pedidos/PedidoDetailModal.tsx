@@ -3,7 +3,7 @@ import { Modal, Button, ListGroup, Badge, Row, Col, Spinner } from 'react-bootst
 import type { PedidoResponse, ArticuloManufacturadoResponse} from '../../types/types';
 import { useUser } from '../../context/UserContext';
 import ArticuloManufacturadoDetailModal from '../admin/ArticuloManufacturadoDetailModal';
-import { ArticuloManufacturadoService } from '../../services/articuloManufacturadoService';
+import { ArticuloManufacturadoService } from '../../services/ArticuloManufacturadoService';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUser, faTruck, faStore, faMoneyBillWave, faCreditCard, faReceipt, faEye } from '@fortawesome/free-solid-svg-icons';
 
@@ -22,10 +22,9 @@ const PedidoDetailModal: React.FC<PedidoDetailModalProps> = ({ show, onHide, ped
   const handleViewRecipe = async (articuloId: number) => {
     setLoadingRecipe(true);
     try {
-      // Buscamos los detalles completos del artículo manufacturado
       const fullProductData = await ArticuloManufacturadoService.getById(articuloId);
       setSelectedProduct(fullProductData);
-      setShowRecipeModal(true); // Abrimos el segundo modal con la receta
+      setShowRecipeModal(true);
     } catch (error) {
       console.error("Error al cargar la receta:", error);
       alert("No se pudo cargar el detalle del producto.");
@@ -46,7 +45,6 @@ const PedidoDetailModal: React.FC<PedidoDetailModalProps> = ({ show, onHide, ped
         </Modal.Header>
         <Modal.Body>
           <Row>
-              {/* Columna de Cliente y Entrega (sin cambios) */}
               <Col md={6}>
                   <h5><FontAwesomeIcon icon={faUser} className="me-2" />Cliente</h5>
                   <p className="ms-4">
@@ -70,7 +68,6 @@ const PedidoDetailModal: React.FC<PedidoDetailModalProps> = ({ show, onHide, ped
                   </p>
               </Col>
 
-              {/* Columna del Detalle de Artículos */}
               <Col md={6}>
                   <h5><FontAwesomeIcon icon={faReceipt} className="me-2" />Artículos Pedidos</h5>
                   {loadingRecipe && <div className="text-center"><Spinner size="sm" /> Cargando receta...</div>}
@@ -83,7 +80,6 @@ const PedidoDetailModal: React.FC<PedidoDetailModalProps> = ({ show, onHide, ped
                         <div className="d-flex align-items-center">
                           <Badge pill bg="secondary" className="me-3">${detalle.subTotal.toFixed(2)}</Badge>
                           
-                          {/* --- BOTÓN CONDICIONAL PARA VER RECETA --- */}
                           {(userRole === 'ADMIN' || userRole === 'EMPLEADO') && (
                             <Button
                               variant="outline-info"
@@ -113,7 +109,6 @@ const PedidoDetailModal: React.FC<PedidoDetailModalProps> = ({ show, onHide, ped
         </Modal.Footer>
       </Modal>
 
-      {/* --- MODAL PARA LA RECETA --- */}
       {selectedProduct && (
         <ArticuloManufacturadoDetailModal
             show={showRecipeModal}

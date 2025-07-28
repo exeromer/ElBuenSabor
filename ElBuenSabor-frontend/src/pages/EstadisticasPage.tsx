@@ -4,13 +4,12 @@ import Titulo from '../components/utils/Titulo/Titulo';
 import ProductRankingTab from '../components/estadisticas/ProductRankingTab'; 
 import ClientRankingTab from '../components/estadisticas/ClientRankingTab'; 
 import MonetaryMovementTab from '../components/estadisticas/MonetaryMovementTab'; 
-import { useSucursal } from '../context/SucursalContext'; // Para asegurar que una sucursal esté seleccionada
+import { useSucursal } from '../context/SucursalContext';
 
 const EstadisticasPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('productRanking');
   const { selectedSucursal } = useSucursal();
 
-  // Comprobación básica si una sucursal está seleccionada, ya que algunos informes pueden depender de ello.
   if (!selectedSucursal) {
     return (
       <Container className="my-5">
@@ -32,7 +31,6 @@ const EstadisticasPage: React.FC = () => {
         className="mb-3 justify-content-center"
         fill
       >
-        {/* **INICIO DE CÓDIGO NUEVO** */}
         <Tab eventKey="productRanking" title="Ranking de Productos">
           <ProductRankingTab />
         </Tab>
@@ -42,7 +40,6 @@ const EstadisticasPage: React.FC = () => {
         <Tab eventKey="monetaryMovements" title="Movimientos Monetarios">
           <MonetaryMovementTab />
         </Tab>
-        {/* **FIN DE CÓDIGO NUEVO** */}
       </Tabs>
     </Container>
   );

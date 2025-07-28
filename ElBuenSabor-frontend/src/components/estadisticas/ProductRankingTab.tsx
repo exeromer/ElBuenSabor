@@ -8,7 +8,6 @@ import { faFileExcel } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import './ProductRankingTab.sass';
 
-//Funcion de colores aleatorios
 const generateRandomColor = () => {
   const letters = '0123456789ABCDEF';
   let color = '#';
@@ -65,7 +64,6 @@ const ProductRankingTab: React.FC = () => {
     fetchRankings();
   }, [fetchRankings]);
 
-  //  función para exportar solo productos de cocina -->>
   const handleExportCocina = async () => {
     if (!selectedSucursal) return;
     setIsExportingCocina(true);
@@ -86,11 +84,10 @@ const ProductRankingTab: React.FC = () => {
     } catch (err) {
       alert('Error al exportar el ranking de productos de cocina a Excel.');
     } finally {
-      setIsExportingCocina(false); // Desactiva la carga
+      setIsExportingCocina(false);
     }
   };
 
-  // función para exportar solo bebidas -->>
   const handleExportBebidas = async () => {
     if (!selectedSucursal) return;
     setIsExportingBebidas(true);
@@ -106,7 +103,7 @@ const ProductRankingTab: React.FC = () => {
     } catch (err) {
       alert('Error al exportar el ranking de bebidas a Excel.');
     } finally {
-      setIsExportingBebidas(false); // Desactiva la carga
+      setIsExportingBebidas(false);
     }
   };
 
@@ -145,7 +142,6 @@ const ProductRankingTab: React.FC = () => {
         <Alert variant="danger">{error}</Alert>
       ) : (
         <Row>
-          {/* Grilla separada para Productos de Cocina -->> */}
           <Col lg={6}>
             <Card className="shadow-sm mb-4">
               <Card.Header as="h5">Productos de Cocina Más Vendidos</Card.Header>
@@ -159,7 +155,6 @@ const ProductRankingTab: React.FC = () => {
                         <YAxis allowDecimals={false} />
                         <Tooltip />
                         <Bar dataKey="cantidadVendida" name="Cantidad Vendida" maxBarSize={90}>
-                          {/* <<-- CAMBIO: Se usa el estado `cocinaColors` para asignar un color único a cada barra -->> */}
                           {cocinaRanking.map((_, index) => (
                             <Cell key={`cell-${index}`} fill={cocinaColors[index % cocinaColors.length]} />
                           ))}
@@ -220,7 +215,6 @@ const ProductRankingTab: React.FC = () => {
             </Card>
           </Col>
 
-          {/* <<-- CAMBIO REALIZADO: Grilla separada para Bebidas -->> */}
           <Col lg={6}>
             <Card className="shadow-sm mb-4">
               <Card.Header as="h5">Bebidas Más Vendidas</Card.Header>
@@ -230,20 +224,17 @@ const ProductRankingTab: React.FC = () => {
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={bebidasRanking} margin={{ top: 5, right: 30, left: 20, bottom: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" />
-                        {/* <<-- CAMBIO: Se oculta el eje X para usar la leyenda en su lugar -->> */}
                         <XAxis dataKey="denominacion" tick={false} axisLine={false} />
                         <YAxis allowDecimals={false} />
                         <Tooltip />
 
                         <Bar dataKey="cantidadVendida" name="Cantidad Vendida" maxBarSize={90}>
-                          {/* <<-- CAMBIO: Se usa el estado `bebidasColors` para asignar un color único a cada barra -->> */}
                           {bebidasRanking.map((_, index) => (
                             <Cell key={`cell-${index}`} fill={bebidasColors[index % bebidasColors.length]} />
                           ))}
                         </Bar>
                       </BarChart>
                     </ResponsiveContainer>
-                    {/* <<-- CAMBIO: Contenedor de la leyenda personalizada -->> */}
                     <div className="legend-container mt-3">
                       {bebidasRanking.map((item, index) => (
                         <div key={`legend-bebidas-${index}`} className="legend-item">

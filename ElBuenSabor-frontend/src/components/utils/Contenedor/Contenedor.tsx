@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'; // <--- CORRECCIÓN AQUÍ
+import type { ReactNode } from 'react';
 import './Contenedor.sass';
 
 interface ContenedorProps {

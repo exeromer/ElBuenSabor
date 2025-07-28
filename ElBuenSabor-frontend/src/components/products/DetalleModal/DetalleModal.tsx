@@ -19,7 +19,6 @@ const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDi
   const { userRole } = useUser();
   const cartItem = cart.find(item => item.articulo.id === product.id);
   const quantity = cartItem ? cartItem.quantity : 0;
-
   const defaultImage = '/placeholder-food.png';
   const imageUrl = product.imagenes?.[0]?.denominacion || defaultImage;
 
@@ -61,7 +60,6 @@ const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDi
             <Col md={6}>
               <h5 className="detalle-modal-section-title">Descripción:</h5>
               <p className="detalle-modal-description">{product.descripcion}</p>
-
               <h5 className="detalle-modal-section-title">Precio:</h5>
               <p className="detalle-modal-price">${product.precioVenta.toFixed(2)}</p>
               {(userRole === 'ADMIN' || userRole === 'EMPLEADO') && (
@@ -83,7 +81,6 @@ const DetalleModal: React.FC<DetalleModalProps> = ({ product, show, onHide, isDi
                   {product.manufacturadoDetalles.map(detalle => (
                     <ListGroup.Item key={detalle.id} className="bg-transparent px-0">
                       - {detalle.articuloInsumo.denominacion}
-                      {/* Renderizado condicional de la cantidad */}
                       {(userRole === 'ADMIN' || userRole === 'EMPLEADO') && (
                         <span className="text-muted fst-italic ms-2">
                           ({detalle.cantidad})

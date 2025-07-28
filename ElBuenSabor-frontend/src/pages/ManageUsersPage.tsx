@@ -95,7 +95,6 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
         setShowClientForm(true);
     };
 
-    // FUNCIÓN ACTUALIZADA PARA MANEJAR EL ESTADO DEL CLIENTE
     const handleUpdateClientState = async (client: ClienteResponse, newStatus: boolean) => {
         try {
             const token = await getAccessTokenSilently();
@@ -209,7 +208,6 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
                                             </td>
                                             <td>
                                                 <Button variant="info" size="sm" className="me-2" onClick={() => handleEditClient(client)} title="Editar Cliente"><FontAwesomeIcon icon={faEdit} /></Button>
-                                                {/* CAMBIO FINAL: Menú desplegable para el estado del cliente */}
                                                 <DropdownButton
                                                     id={`dropdown-estado-cliente-${client.id}`}
                                                     title={<FontAwesomeIcon icon={client.estadoActivo ? faToggleOn : faToggleOff} />}

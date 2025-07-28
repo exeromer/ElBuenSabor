@@ -5,7 +5,6 @@ import apiClient from '../services/apiClient';
 import toast from 'react-hot-toast';
 import type { PedidoResponse } from '../types/types'; 
 
-// El callback recibirá el cuerpo del mensaje, que esperamos sea un objeto (ej. PedidoResponse)
 type MessageCallback = (message: any) => void;
 
 export const useWebSocket = (topic: string, onMessageReceived: MessageCallback) => {
@@ -27,8 +26,6 @@ export const useWebSocket = (topic: string, onMessageReceived: MessageCallback) 
             stompClient.subscribe(topic, (message) => {
                 const pedido: PedidoResponse = JSON.parse(message.body);
 
-                // --- LÓGICA DE NOTIFICACIÓN REFINADA ---
-                // Solo notificar si es un pedido nuevo (PENDIENTE) y no ha sido notificado antes.
                 if (pedido.estado === 'PENDIENTE' && !processedMessageIds.current.has(pedido.id)) {
                     processedMessageIds.current.add(pedido.id);
                     toast.success(`¡Nuevo pedido! #${pedido.id} de ${pedido.cliente.nombre}`, {
@@ -38,7 +35,6 @@ export const useWebSocket = (topic: string, onMessageReceived: MessageCallback) 
                     });
                 }
                 
-                // Siempre llamar al callback para que el componente decida si actualizar la tabla.
                 onMessageReceived(pedido);
             });
         }, (error) => {

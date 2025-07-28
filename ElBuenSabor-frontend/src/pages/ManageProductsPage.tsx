@@ -1,23 +1,3 @@
-/**
- * @file ManageProductsPage.tsx
- * @description Página de administración para la gestión de Artículos (Artículos Manufacturados y Artículos Insumo).
- * Permite a los usuarios (administradores/empleados) ver un listado de ambos tipos de artículos
- * en pestañas separadas, y realizar operaciones de Creación, Edición, Visualización y Eliminación (CRUD).
- * Utiliza modales de formulario (`ArticuloInsumoForm`, `ArticuloManufacturadoForm`) para las operaciones de C/E
- * y modales de detalle (`ArticuloInsumoDetailModal`, `ArticuloManufacturadoDetailModal`) para la visualización.
- *
- * @hook `useState`: Gestiona los listados de artículos, estados de carga/error, la pestaña activa,
- * términos de búsqueda, y la visibilidad/modo de los modales.
- * @hook `useEffect`: Carga los artículos correspondientes a la pestaña activa o cuando cambia el término de búsqueda.
- * @hook `useCallback`: Para memoizar las funciones de carga de datos y debounce.
- * @hook `useAuth0`: Para obtener el token de autenticación necesario para las operaciones protegidas del API.
- *
- * @service `ArticuloInsumoService`: Servicios para Artículos Insumo.
- * @service `ArticuloManufacturadoService`: Servicios para Artículos Manufacturados.
- *
- * @component `ArticuloInsumoForm`, `ArticuloManufacturadoForm`: Modales de formulario.
- * @component `ArticuloInsumoDetailModal`, `ArticuloManufacturadoDetailModal`: Modales de detalle.
- */
 import React, { useState, useCallback, useEffect } from 'react';
 import { Container, Tabs, Tab, Button, Badge, Card, Form, Row, Col } from 'react-bootstrap';
 import { ArticuloInsumoService } from '../services/articuloInsumoService';
@@ -136,21 +116,8 @@ const ManageProductsPage: React.FC = () => {
     else if (activeTab === 'promociones') promocionesData.reload();
   }, [selectedSucursal, activeTab]);
 
-  // MANEJADORES DE ACCIONES
-  /**
-   * @function handleOpenInsumoForm
-   * @description Abre el modal de formulario para ArticuloInsumo.
-   */
   const handleOpenInsumoForm = (insumo: ArticuloInsumoResponse | null) => { setEditingInsumo(insumo); setShowInsumoForm(true); };
-  /**
-   * @function handleViewInsumo
-   * @description Abre el modal para ver los detalles de un ArticuloInsumo.
-   */
   const handleViewInsumo = (insumo: ArticuloInsumoResponse) => { setSelectedInsumoForDetail(insumo); setShowInsumoDetailModal(true); };
-  /**
-   * @function handleDeleteInsumo
-   * @description Maneja la eliminación de un ArticuloInsumo.
-   */
   const handleDeleteInsumo = async (id: number) => {
     if (window.confirm(`¿Seguro que quieres eliminar el insumo ID ${id}?`)) {
       try {
@@ -159,21 +126,8 @@ const ManageProductsPage: React.FC = () => {
       } catch (err) { alert(`Error al eliminar: ${err}`); }
     }
   };
-
-  /**
-   * @function handleOpenManufacturadoForm
-   * @description Abre el modal de formulario para ArticuloManufacturado.
-   */
   const handleOpenManufacturadoForm = (mf: ArticuloManufacturadoResponse | null) => { setEditingManufacturado(mf); setShowManufacturadoForm(true); };
-  /**
-   * @function handleViewManufacturado
-   * @description Abre el modal para ver los detalles de un ArticuloManufacturado.
-   */
   const handleViewManufacturado = (mf: ArticuloManufacturadoResponse) => { setSelectedManufacturadoForDetail(mf); setShowManufacturadoDetailModal(true); };
-  /**
- * @function handleDeleteManufacturado
- * @description Maneja la eliminación de un ArticuloManufacturado.
- */
   const handleDeleteManufacturado = async (id: number) => {
     if (window.confirm(`¿Seguro que quieres eliminar el manufacturado ID ${id}?`)) {
       try {
@@ -182,11 +136,6 @@ const ManageProductsPage: React.FC = () => {
       } catch (err) { alert(`Error al eliminar: ${err}`); }
     }
   };
-
-  /**
- * @function handleFormSubmit
- * @description Callback para cuando un formulario se guarda.
- */
   const handleFormSubmit = () => {
     setShowInsumoForm(false);
     setShowManufacturadoForm(false);
@@ -251,7 +200,6 @@ const ManageProductsPage: React.FC = () => {
     const action = promocion.estadoActivo ? 'desactivar' : 'activar';
     if (window.confirm(`¿Seguro que quieres ${action} la promoción "${promocion.denominacion}"?`)) {
       try {
-        // Creamos el objeto de actualización con todos los datos requeridos
         const promocionRequest: any = {
           denominacion: promocion.denominacion,
           fechaDesde: promocion.fechaDesde,
@@ -268,19 +216,17 @@ const ManageProductsPage: React.FC = () => {
             cantidad: d.cantidad,
           })),
           sucursalIds: promocion.sucursales.map(s => s.id),
-          estadoActivo: !promocion.estadoActivo, // Invertimos el estado
+          estadoActivo: !promocion.estadoActivo,
         };
 
         await PromocionService.update(promocion.id, promocionRequest);
         alert(`Promoción ${action} con éxito.`);
-        promocionesData.reload(); // ¡El paso clave para refrescar la tabla!
+        promocionesData.reload();
       } catch (err: any) {
         alert(`Error al ${action} la promoción: ${err.message}`);
       }
     }
   };
-
-
 
   // Columnas para la tabla de Artículos Insumo
   const insumoColumns: ColumnDefinition<InsumoConStock>[] = [
@@ -339,10 +285,6 @@ const ManageProductsPage: React.FC = () => {
     { key: 'estadoActivo', header: 'Estado', renderCell: (p) => <Badge bg={p.estadoActivo ? 'success' : 'danger'}>{p.estadoActivo ? 'Activa' : 'Inactiva'}</Badge> },
   ];
 
-  /**
-     * @function renderInsumoActions
-     * @description Renderiza los botones de acción para cada fila de la tabla de insumos.
-     */
   const renderInsumoActions = (insumo: InsumoConStock, reloadData: () => void) => (
     <>
       <Button variant="secondary" size="sm" className="me-1" onClick={() => handleViewInsumo(insumo)} title="Ver Detalles"><FontAwesomeIcon icon={faEye} /></Button>

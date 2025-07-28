@@ -5,12 +5,13 @@ import Titulo from '../components/utils/Titulo/Titulo';
 import Nosotros from '../components/common/Nosotros/Nosotros';
 import ProductCard from '../components/products/Card/ProductCard';
 import PromocionesSlider from '../components/promociones/Slider/PromocionesSlider';
-import { ArticuloManufacturadoService } from '../services/articuloManufacturadoService';
+import { ArticuloManufacturadoService } from '../services/ArticuloManufacturadoService';
 import { useSucursal } from '../context/SucursalContext';
 import { PromocionService } from '../services/PromocionService';
 import type { ArticuloManufacturadoResponse, PromocionResponse, SucursalSimpleResponse } from '../types/types';
 import { useNavigate } from 'react-router-dom';
 import './HomePage.sass';
+import AsideInteractivo from '../components/common/AsideInteractivo/AsideInteractivo';
 
 const HomePage: React.FC = () => {
   const { selectedSucursal } = useSucursal();
@@ -78,11 +79,6 @@ const HomePage: React.FC = () => {
         <div className="hero-content">
           <Titulo texto='Bienvenido a El Buen Sabor' nivel='titulo' />
           <p className="lead">Tu destino para las mejores comidas con entrega rápida.</p>
-          <hr className="my-4" />
-          <p>Explora nuestro menú y descubre sabores que te encantarán.</p>
-          <Button variant="primary" size="lg" onClick={() => navigate('/products')}>
-            Ver Menú
-          </Button>
         </div>
       </Contenedor>
 
@@ -115,9 +111,22 @@ const HomePage: React.FC = () => {
         </>
       )}
 
+      <Contenedor className='hero-banner mb-5'>
+        <div className="hero-content">
+          <Titulo texto='Podes ver nuestra variedad de comidas' nivel='titulo' />
+          <hr className="my-4" />
+          <p>Explora nuestro menú y descubre sabores que te encantarán.</p>
+          <Button variant="primary" size="lg" onClick={() => navigate('/products')}>
+            Ver Menú
+          </Button>
+        </div>
+      </Contenedor>
+
       <div className="mt-5">
         <Nosotros />
       </div>
+
+      <AsideInteractivo />
     </Container>
   );
 };

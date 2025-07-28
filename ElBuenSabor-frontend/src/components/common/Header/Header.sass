@@ -3,6 +3,32 @@
 
 .logo
     width: 150px
+    transition: all 0.3s ease-in-out
 
 .header-navbar
     background-color: $color-clay
+    transition: all 0.3s ease-in-out
+    padding: 1rem 1rem
+
+    &.scrolled
+        position: fixed
+        top: 0
+        left: 0
+        width: 100%
+        z-index: 1030
+        padding: 0.5rem 1rem
+        box-shadow: $shadow
+
+        .logo
+            width: 0
+            opacity: 0
+            margin-right: 0
+
+        .container-fluid
+            justify-content: center
+
+        .navbar-collapse
+            flex-grow: 0
+            
+.header-placeholder
+    height: 72px 

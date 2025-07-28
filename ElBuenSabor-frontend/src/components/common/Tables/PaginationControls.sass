@@ -1,0 +1,31 @@
+@use "../../../styles/vars" as *
+
+.custom-pagination
+  --bs-pagination-margin-x: 0.5rem
+
+  .page-link
+    background-color: $color-clay
+    color: $color-grey
+    border: 1px solid $color-sand
+    border-radius: 6px
+    font-weight: 500
+    transition: all 0.2s ease-in-out
+
+    &:focus
+      box-shadow: 0 0 0 0.2rem rgba($color-ivory, 0.25)
+
+  .page-item:not(.active) .page-link:hover
+    background-color: $color-sand
+    color: $color-stone
+
+  .page-item.active .page-link
+    background-color: $color-stone
+    border-color: $color-stone
+    color: $color-clay
+    font-weight: bold
+
+  .page-item.disabled .page-link
+    background-color: $color-sand
+    border-color: $color-sand
+    color: $color-sand
+    opacity: 0.7

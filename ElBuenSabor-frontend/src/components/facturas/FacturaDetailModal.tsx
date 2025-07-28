@@ -1,6 +1,6 @@
 import React from 'react';
 import { Modal, Button, Badge, ListGroup, Row, Col } from 'react-bootstrap';
-import type { FacturaResponse } from '../../types/types'; // Asegúrate que el tipo FacturaResponse esté bien definido
+import type { FacturaResponse } from '../../types/types';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileInvoiceDollar, faTimesCircle } from '@fortawesome/free-solid-svg-icons';
 
@@ -12,10 +12,9 @@ interface FacturaDetailModalProps {
 
 const FacturaDetailModal: React.FC<FacturaDetailModalProps> = ({ show, onHide, factura }) => {
   if (!factura) {
-    return null; // No renderizar nada si no hay factura
+    return null;
   }
 
-  // Determina el color y texto del estado de la factura
   const isAnulada = factura.estadoFactura === 'ANULADA';
 
   return (
@@ -60,7 +59,6 @@ const FacturaDetailModal: React.FC<FacturaDetailModalProps> = ({ show, onHide, f
         </ListGroup>
                 <hr />
         <div className="text-end">
-            {/* ===== DESGLOSE DE PRECIOS ===== */}
             {factura.subtotal !== undefined && factura.totalDescuentos !== undefined && factura.subtotal > factura.totalVenta && (
                 <>
                     <p className="mb-1">

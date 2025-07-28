@@ -14,8 +14,13 @@
 
 // boton color
 =boton-variant($bg-color, $color)
-    background-color: $bg-color
-    color: $color
-    &:hover
-        background-color: $color
-        color: $bg-color
+  background-color: $bg-color
+  color: $color
+
+  &:hover
+    background-color: $color
+    color: $bg-color
+
+  &:active
+    background-color: $color
+    border-color: $bg-color

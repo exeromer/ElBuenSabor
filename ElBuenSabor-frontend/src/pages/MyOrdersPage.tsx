@@ -2,16 +2,13 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { Container, Table, Spinner, Alert, Button, Badge } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Link } from 'react-router-dom';
-
 import { PedidoService } from '../services/pedidoService';
 import type { PedidoResponse, FacturaResponse } from '../types/types';
 import type { Estado } from '../types/enums';
-
 import Titulo from '../components/utils/Titulo/Titulo';
 import PedidoDetailModal from '../components/pedidos/PedidoDetailModal'; 
 import FacturaDetailModal from '../components/facturas/FacturaDetailModal'; 
 import { FacturaService } from '../services/FacturaService'; 
-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faEye, faFileInvoiceDollar, faCheckCircle, faTimesCircle, faCog, faTruck, faClock } from '@fortawesome/free-solid-svg-icons';
 
@@ -20,8 +17,6 @@ const MyOrdersPage: React.FC = () => {
   const [pedidos, setPedidos] = useState<PedidoResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Estados para los modales
   const [showPedidoModal, setShowPedidoModal] = useState(false);
   const [showFacturaModal, setShowFacturaModal] = useState(false);
   const [selectedPedido, setSelectedPedido] = useState<PedidoResponse | null>(null);
@@ -147,7 +142,6 @@ const MyOrdersPage: React.FC = () => {
           </Table>
         )}
       </Container>
-      {/* Modales */}
       <PedidoDetailModal show={showPedidoModal} onHide={() => setShowPedidoModal(false)} pedido={selectedPedido} />
       <FacturaDetailModal show={showFacturaModal} onHide={() => setShowFacturaModal(false)} factura={selectedFactura} />
     </>

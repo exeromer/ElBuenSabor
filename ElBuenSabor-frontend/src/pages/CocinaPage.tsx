@@ -13,7 +13,6 @@ import { faEye, faCheck, faClock, faExclamationTriangle } from '@fortawesome/fre
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { isPast, parse } from 'date-fns';
 
-// Componente interno para renderizar cada tarjeta de pedido
 const PedidoCard: React.FC<{ pedido: PedidoResponse; onMarcarListo: () => void; onVerDetalles: () => void; onAbrirDemora: () => void; isDemorado: boolean }> = 
 ({ pedido, onMarcarListo, onVerDetalles, onAbrirDemora, isDemorado }) => (
     <Col>
@@ -57,15 +56,12 @@ const PedidoCard: React.FC<{ pedido: PedidoResponse; onMarcarListo: () => void; 
 const CocinaPage: React.FC = () => {
     const { selectedSucursal } = useSucursal();
     const [activeTab, setActiveTab] = useState<'enCocina' | 'demorados' | 'listos'>('enCocina');
-    
-    // Estados para los modales
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [selectedPedido, setSelectedPedido] = useState<PedidoResponse | null>(null);
     const [showDelayModal, setShowDelayModal] = useState(false);
     const [delayMinutes, setDelayMinutes] = useState<number>(10);
     const [delayingPedidoId, setDelayingPedidoId] = useState<number | null>(null);
 
-    // --- Hooks de datos ---
     const fetchEnPreparacion = useCallback(async () => {
         if (!selectedSucursal) return [];
         return PedidoService.getPedidosCocina(selectedSucursal.id);
@@ -79,13 +75,11 @@ const CocinaPage: React.FC = () => {
     const { items: pedidosEnPreparacion, isLoading: loadingPreparacion, error: errorPreparacion, reload: reloadPreparacion } = useSearchableData({ fetchData: fetchEnPreparacion });
     const { items: pedidosListos, isLoading: loadingListos, error: errorListos, reload: reloadListos } = useSearchableData({ fetchData: fetchListos });
 
-    // --- Lógica para separar demorados ---
     const [pedidosEnTiempo, pedidosDemorados] = useMemo(() => {
         const enTiempo: PedidoResponse[] = [];
         const demorados: PedidoResponse[] = [];
 
         pedidosEnPreparacion.forEach(pedido => {
-            // Se combina la fecha del pedido con la hora estimada para una comparación precisa
             const horaEstimadaCompleta = parse(pedido.horaEstimadaFinalizacion, 'HH:mm:ss', new Date(pedido.fechaPedido));
             if (isPast(horaEstimadaCompleta)) {
                 demorados.push(pedido);
@@ -96,14 +90,12 @@ const CocinaPage: React.FC = () => {
         return [enTiempo, demorados];
     }, [pedidosEnPreparacion]);
 
-    // --- WebSocket ---
     const cocinaTopic = selectedSucursal ? `/topic/pedidos/sucursal/${selectedSucursal.id}/cocina` : '';
     useWebSocket(cocinaTopic, () => {
         reloadPreparacion();
         reloadListos();
     });
 
-    // --- MANEJADORES DE ACCIONES ---
     const handleUpdateEstado = async (pedidoId: number, nuevoEstado: Estado) => {
         if (!selectedSucursal) return;
         const promise = PedidoService.updateEstadoEmpleado(pedidoId, selectedSucursal.id, nuevoEstado);

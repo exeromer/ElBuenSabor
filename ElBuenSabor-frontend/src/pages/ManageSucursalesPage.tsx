@@ -11,7 +11,6 @@ import SucursalForm from '../components/admin/SucursalForm';
 
 const ManageSucursalesPage: React.FC = () => {
 
-    // Hook para la data y la búsqueda
     const {
         items: sucursales,
         isLoading,
@@ -22,35 +21,29 @@ const ManageSucursalesPage: React.FC = () => {
         fetchData: SucursalService.getAll
     });
 
-    // Estados para el modal del formulario
     const [showForm, setShowForm] = useState(false);
     const [editingSucursal, setEditingSucursal] = useState<SucursalResponse | null>(null);
 
-    // Abre el formulario para editar una sucursal
     const handleEdit = (sucursal: SucursalResponse) => {
         setEditingSucursal(sucursal);
         setShowForm(true);
     };
 
-    // Abre el formulario para crear una nueva sucursal
     const handleCreate = () => {
         setEditingSucursal(null);
         setShowForm(true);
     };
 
-    // Cierra el formulario y recarga la tabla
     const handleSave = () => {
         setShowForm(false);
         reload();
     };
 
-    // Maneja la baja/alta lógica de una sucursal
 const handleToggleActive = async (sucursal: SucursalResponse) => {
         const action = sucursal.estadoActivo ? 'dar de baja' : 'reactivar';
         if (window.confirm(`¿Estás seguro de que quieres ${action} la sucursal "${sucursal.nombre}"?`)) {
             try {
                 if (sucursal.estadoActivo) {
-                    // Si está activa, usamos el servicio de DELETE para la baja lógica
                     await SucursalService.delete(sucursal.id);
                     alert(`Sucursal ${sucursal.nombre} dada de baja correctamente.`);
                 } else {
@@ -80,7 +73,6 @@ const handleToggleActive = async (sucursal: SucursalResponse) => {
         }
     };
 
-    // Definición de las columnas para la tabla
     const columns: ColumnDefinition<SucursalResponse>[] = [
         { key: 'id', header: 'ID', renderCell: (s) => s.id, sortable: true },
         { key: 'nombre', header: 'Nombre', renderCell: (s) => s.nombre, sortable: true },
@@ -105,7 +97,6 @@ const handleToggleActive = async (sucursal: SucursalResponse) => {
         },
     ];
 
-    // Renderiza los botones de acción para cada fila
     const renderRowActions = (sucursal: SucursalResponse) => (
         <>
             <Button variant="info" size="sm" className="me-2" onClick={() => handleEdit(sucursal)} title="Editar">
