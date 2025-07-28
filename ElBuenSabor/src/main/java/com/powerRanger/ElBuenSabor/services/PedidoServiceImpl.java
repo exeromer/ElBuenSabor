@@ -45,6 +45,7 @@ import com.powerRanger.ElBuenSabor.entities.enums.TipoPromocion;
 public class PedidoServiceImpl implements PedidoService {
 
     @Autowired private PedidoRepository pedidoRepository;
+    @Autowired private ArticuloInsumoService articuloInsumoService;
     @Autowired private ClienteRepository clienteRepository;
     @Autowired private DomicilioRepository domicilioRepository;
     @Autowired private SucursalRepository sucursalRepository;

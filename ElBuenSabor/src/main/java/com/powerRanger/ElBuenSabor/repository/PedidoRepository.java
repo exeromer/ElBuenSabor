@@ -56,10 +56,10 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
             Pageable pageable
     );
 
-    // --- NUEVOS MÉTODOS PARA CAJERO, COCINA, DELIVERY ---
+    // ---  MÉTODOS PARA CAJERO, COCINA, DELIVERY ---
     @Query("SELECT p FROM Pedido p " +
             "WHERE p.sucursal.id = :sucursalId " +
-            "AND p.estadoActivo = true " + // Solo pedidos activos
+            "AND p.estadoActivo = true " + 
             "AND (:estado IS NULL OR p.estado = :estado) " +
             "AND (:pedidoId IS NULL OR p.id = :pedidoId) " +
             "AND (:fechaDesde IS NULL OR p.fechaPedido >= :fechaDesde) " +
@@ -85,7 +85,7 @@ public interface PedidoRepository extends JpaRepository<Pedido, Integer> {
     @Query("SELECT p FROM Pedido p " +
             "WHERE p.sucursal.id = :sucursalId " +
             "AND p.estado = 'EN_CAMINO' " +
-            "AND p.tipoEnvio = 'DELIVERY' " + // Solo DELIVERY para el delivery
+            "AND p.tipoEnvio = 'DELIVERY' " + 
             "AND p.estadoActivo = true " +
             "ORDER BY p.fechaPedido ASC, p.horaEstimadaFinalizacion ASC")
     List<Pedido> findPedidosForDelivery(@Param("sucursalId") Integer sucursalId);
