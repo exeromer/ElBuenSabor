@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faShoppingCart } from '@fortawesome/free-solid-svg-icons';
 import './PromotionCard.sass';
 import toast from 'react-hot-toast';
+import { ArticuloService } from '../../../services/ArticuloService'; // Importa el servicio de Artículo
 
 interface PromotionCardProps {
   promocion: PromocionResponse;
@@ -14,11 +15,12 @@ interface PromotionCardProps {
 
 const PromotionCard: React.FC<PromotionCardProps> = ({ promocion }) => {
   const { addToCart } = useCart();
-  const { userRole } = useUser(); 
+  const { userRole } = useUser();
 
   const defaultImage = '/placeholder-image.png';
   const imageUrl = promocion.imagenes?.[0]?.denominacion || defaultImage;
 
+  // ▼▼▼ FUNCIÓN 'handleComprar' CORREGIDA ▼▼▼
   const handleComprar = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.stopPropagation();
 
@@ -27,32 +29,23 @@ const PromotionCard: React.FC<PromotionCardProps> = ({ promocion }) => {
       return;
     }
 
-    const promesas = promocion.detallesPromocion.map(detalle => {
-      const articuloParaAgregar = {
-        id: detalle.articulo.id,
-        denominacion: detalle.articulo.denominacion,
-        precioVenta: detalle.articulo.precioVenta,
-        type: 'manufacturado' as const,
-        estadoActivo: true,
-        imagenes: [],
-        categoria: { id: 0, denominacion: '', estadoActivo: true },
-        unidadMedida: { id: 0, denominacion: '' },
-        descripcion: '',
-        tiempoEstimadoMinutos: 0,
-        preparacion: '',
-        manufacturadoDetalles: [],
-      };
-      return addToCart(articuloParaAgregar, detalle.cantidad);
-    });
+    // Usamos toast.promise para una mejor experiencia de usuario
+    const promise = (async () => {
+      // Iteramos sobre cada artículo que incluye la promoción
+      for (const detalle of promocion.detallesPromocion) {
+        // 1. Obtenemos la información COMPLETA del artículo desde el backend
+        const fullArticle = await ArticuloService.getById(detalle.articulo.id);
 
-    Promise.all(promesas)
-      .then(() => {
-        toast.success(`¡Promoción "${promocion.denominacion}" añadida al carrito!`);
-      })
-      .catch(error => {
-        console.error("Error al añadir promoción al carrito:", error);
-        toast.error('No se pudo añadir la promoción al carrito.');
-      });
+        // 2. Añadimos el artículo correcto y completo al carrito
+        await addToCart(fullArticle, detalle.cantidad);
+      }
+    })();
+
+    toast.promise(promise, {
+      loading: `Añadiendo "${promocion.denominacion}"...`,
+      success: `¡Promoción "${promocion.denominacion}" añadida al carrito!`,
+      error: (err) => `Error: ${err.message || 'No se pudo añadir la promoción.'}`,
+    });
   };
 
 
@@ -63,9 +56,9 @@ const PromotionCard: React.FC<PromotionCardProps> = ({ promocion }) => {
         <Card.Title>{promocion.denominacion}</Card.Title>
         <Card.Text className="text-muted">{promocion.descripcionDescuento}</Card.Text>
         {userRole === 'CLIENTE' && (
-          <Button 
-            variant="primary" 
-            className="mt-auto btn-comprar-promo" 
+          <Button
+            variant="primary"
+            className="mt-auto btn-comprar-promo"
             onClick={handleComprar}
           >
             <FontAwesomeIcon icon={faShoppingCart} className="me-2" />

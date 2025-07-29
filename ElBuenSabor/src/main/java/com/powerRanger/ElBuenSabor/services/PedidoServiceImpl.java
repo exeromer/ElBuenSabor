@@ -680,31 +680,30 @@ public class PedidoServiceImpl implements PedidoService {
 
         // Mapear los detalles de la promoción si existen en el DTO
         if (dto.getDetallesPromocion() != null) {
-            Set<PromocionDetalle> detalles = new HashSet<>();
+            // ▼▼▼ CORRECCIÓN PRINCIPAL AQUÍ ▼▼▼
+            // Cambiamos Set por List para que coincida con la entidad Promocion.
+            List<PromocionDetalle> detalles = new ArrayList<>();
             for (PromocionDetalleResponseDTO detalleDto : dto.getDetallesPromocion()) {
                 PromocionDetalle detalle = new PromocionDetalle();
                 detalle.setId(detalleDto.getId());
                 detalle.setCantidad(detalleDto.getCantidad());
                 if (detalleDto.getArticulo() != null) {
-                    Articulo articulo = new Articulo();
-                    articulo.setId(detalleDto.getArticulo().getId());
-                    articulo.setDenominacion(detalleDto.getArticulo().getDenominacion());
-                    articulo.setPrecioVenta(detalleDto.getArticulo().getPrecioVenta());
+                    // Buscamos el artículo real para asegurar que la entidad esté completa
+                    Articulo articulo = articuloRepository.findById(detalleDto.getArticulo().getId())
+                            .orElse(new Articulo()); // O manejar el error si el artículo no se encuentra
                     detalle.setArticulo(articulo);
                 }
                 detalles.add(detalle);
             }
-            promocion.setDetallesPromocion(detalles);
+            promocion.setDetallesPromocion(detalles); // Ahora la asignación es correcta
         }
 
-        // Mapear sucursales si existen en el DTO
+        // Mapear sucursales si existen en el DTO (esto ya estaba bien, se mantiene como Set)
         if (dto.getSucursales() != null) {
             Set<Sucursal> sucursales = new HashSet<>();
             for (SucursalSimpleResponseDTO sucursalDto : dto.getSucursales()) {
-                Sucursal sucursal = new Sucursal();
-                sucursal.setId(sucursalDto.getId());
-                sucursal.setNombre(sucursalDto.getNombre());
-                sucursales.add(sucursal);
+                // Es mejor práctica cargar la entidad real de la sucursal si la necesitas más adelante
+                sucursalRepository.findById(sucursalDto.getId()).ifPresent(sucursales::add);
             }
             promocion.setSucursales(sucursales);
         }

@@ -6,7 +6,6 @@ import { faTrashAlt } from '@fortawesome/free-solid-svg-icons';
 import { Link } from 'react-router-dom';
 
 const CartModal: React.FC = () => {
-  // FIX: Obtenemos los nuevos valores de desglose de precios del contexto
   const {
     cart,
     updateQuantity,

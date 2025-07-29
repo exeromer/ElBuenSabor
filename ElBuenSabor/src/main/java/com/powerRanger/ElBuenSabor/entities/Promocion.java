@@ -74,7 +74,7 @@ public class Promocion {
     private List<Imagen> imagenes = new ArrayList<>();
 
     @OneToMany(mappedBy = "promocion", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private Set<PromocionDetalle> detallesPromocion = new HashSet<>();
+    private List<PromocionDetalle> detallesPromocion = new ArrayList<>(); // De Set a List
 
     @ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
     @JoinTable(
@@ -89,10 +89,14 @@ public class Promocion {
     @NotNull(message = "El estado activo es obligatorio")
     private Boolean estadoActivo = true;
 
+
+    public Promocion(Set<Sucursal> sucursales, List<Imagen> imagenes, List<PromocionDetalle> detallesPromocion) {
+        this.sucursales = sucursales;
+        this.imagenes = imagenes;
+        this.detallesPromocion = detallesPromocion;
+    }
+
     public Promocion() {
-        this.imagenes = new ArrayList<>();
-        this.detallesPromocion = new HashSet<>();
-        this.sucursales = new HashSet<>();
     }
 
     // Getters y Setters
@@ -122,8 +126,8 @@ public class Promocion {
     public List<Imagen> getImagenes() { return imagenes; }
     public void setImagenes(List<Imagen> imagenes) { this.imagenes = imagenes; }
 
-    public Set<PromocionDetalle> getDetallesPromocion() { return detallesPromocion; }
-    public void setDetallesPromocion(Set<PromocionDetalle> detallesPromocion) { this.detallesPromocion = detallesPromocion; }
+    public List<PromocionDetalle> getDetallesPromocion() { return detallesPromocion; }
+    public void setDetallesPromocion(List<PromocionDetalle> detallesPromocion) { this.detallesPromocion = detallesPromocion; }
 
     public Set<Sucursal> getSucursales() { return sucursales; }
     public void setSucursales(Set<Sucursal> sucursales) { this.sucursales = sucursales; }
@@ -145,11 +149,11 @@ public class Promocion {
         }
     }
     public void addDetallePromocion(PromocionDetalle detalle) {
-        if (this.detallesPromocion == null) this.detallesPromocion = new HashSet<>();
-        if (this.detallesPromocion.add(detalle)) {
-            detalle.setPromocion(this);
-        }
+        if (this.detallesPromocion == null) this.detallesPromocion = new ArrayList<>();
+        this.detallesPromocion.add(detalle); // El .add() de una lista no necesita la validación que tenía el Set
+        detalle.setPromocion(this);
     }
+
     public void removeDetallePromocion(PromocionDetalle detalle) {
         if (this.detallesPromocion != null && this.detallesPromocion.remove(detalle)) {
             detalle.setPromocion(null);

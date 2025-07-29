@@ -122,7 +122,7 @@ public class PromocionServiceImpl implements PromocionService {
         }
 
         // Sincronizar Detalles de Promoción - ¡CORREGIDO! Usar HashSet para la entidad
-        if (promocion.getDetallesPromocion() == null) promocion.setDetallesPromocion(new HashSet<>()); // ¡CORREGIDO! De ArrayList a HashSet
+        if (promocion.getDetallesPromocion() == null) promocion.setDetallesPromocion(new ArrayList<>()); // ¡CORREGIDO! De ArrayList a HashSet
         promocion.getDetallesPromocion().clear();
         if (dto.getDetallesPromocion() != null && !dto.getDetallesPromocion().isEmpty()) {
             for (PromocionDetalleRequestDTO detalleDto : dto.getDetallesPromocion()) { // CORREGIDO: PromocionDetalleRequestDTO
