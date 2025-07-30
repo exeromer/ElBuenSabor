@@ -11,7 +11,7 @@ import Titulo from '../components/utils/Titulo/Titulo';
 import PedidoDetailModal from '../components/pedidos/PedidoDetailModal';
 import { faEye, faCheck, faClock, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { isPast, parse } from 'date-fns';
+import { isPast } from 'date-fns';
 
 const PedidoCard: React.FC<{ pedido: PedidoResponse; onMarcarListo: () => void; onVerDetalles: () => void; onAbrirDemora: () => void; isDemorado: boolean }> = 
 ({ pedido, onMarcarListo, onVerDetalles, onAbrirDemora, isDemorado }) => (
@@ -75,12 +75,14 @@ const CocinaPage: React.FC = () => {
     const { items: pedidosEnPreparacion, isLoading: loadingPreparacion, error: errorPreparacion, reload: reloadPreparacion } = useSearchableData({ fetchData: fetchEnPreparacion });
     const { items: pedidosListos, isLoading: loadingListos, error: errorListos, reload: reloadListos } = useSearchableData({ fetchData: fetchListos });
 
-    const [pedidosEnTiempo, pedidosDemorados] = useMemo(() => {
+        const [pedidosEnTiempo, pedidosDemorados] = useMemo(() => {
         const enTiempo: PedidoResponse[] = [];
         const demorados: PedidoResponse[] = [];
 
         pedidosEnPreparacion.forEach(pedido => {
-            const horaEstimadaCompleta = parse(pedido.horaEstimadaFinalizacion, 'HH:mm:ss', new Date(pedido.fechaPedido));
+            const fechaHoraString = `${pedido.fechaPedido}T${pedido.horaEstimadaFinalizacion}`;
+            const horaEstimadaCompleta = new Date(fechaHoraString);
+
             if (isPast(horaEstimadaCompleta)) {
                 demorados.push(pedido);
             } else {
