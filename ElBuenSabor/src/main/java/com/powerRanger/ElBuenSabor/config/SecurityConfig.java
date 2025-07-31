@@ -95,7 +95,7 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.DELETE, "/api/clientes/{clienteId}/carrito/items/**").hasAuthority("ROLE_CLIENTE")
                                 .requestMatchers("/api/carrito/**").hasAuthority("ROLE_CLIENTE") // Rutas del carrito
                                 .requestMatchers("/api/clientes/perfil").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")
-                                .requestMatchers("/api/domicilios/**").hasAuthority("ROLE_CLIENTE")
+                                .requestMatchers("/api/domicilios/**").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN")
 
                                 // ---- CLIENTE y ADMIN ----
                                 .requestMatchers("/api/clientes/perfil").hasAnyAuthority("ROLE_CLIENTE", "ROLE_ADMIN", "ROLE_EMPLEADO")

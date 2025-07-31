@@ -1,9 +1,11 @@
 package com.powerRanger.ElBuenSabor.services;
 
+import com.powerRanger.ElBuenSabor.dtos.EmpleadoResponseDTO;
 import com.powerRanger.ElBuenSabor.dtos.UsuarioRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.UsuarioResponseDTO;
 import com.powerRanger.ElBuenSabor.entities.Usuario;
 import com.powerRanger.ElBuenSabor.entities.enums.Rol;
+import com.powerRanger.ElBuenSabor.repository.EmpleadoRepository;
 import com.powerRanger.ElBuenSabor.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -25,6 +27,8 @@ public class UsuarioServiceImpl implements UsuarioService {
     private UsuarioRepository usuarioRepository;
     @Autowired
     private ClienteService clienteService;
+    @Autowired
+    private EmpleadoRepository  empleadoRepository;
 
     private UsuarioResponseDTO convertToResponseDto(Usuario usuario) {
         if (usuario == null) return null;
@@ -35,6 +39,22 @@ public class UsuarioServiceImpl implements UsuarioService {
         dto.setRol(usuario.getRol());
         dto.setEstadoActivo(usuario.getEstadoActivo());
         dto.setFechaBaja(usuario.getFechaBaja());
+        if (usuario.getRol() == Rol.EMPLEADO) {
+            empleadoRepository.findByUsuarioId(usuario.getId()).ifPresent(empleado -> {
+                EmpleadoResponseDTO empleadoDto = new EmpleadoResponseDTO();
+                empleadoDto.setId(empleado.getId());
+                empleadoDto.setNombre(empleado.getNombre());
+                empleadoDto.setApellido(empleado.getApellido());
+                empleadoDto.setTelefono(empleado.getTelefono());
+                empleadoDto.setRolEmpleado(empleado.getRolEmpleado());
+                empleadoDto.voidSetUsuarioId(empleado.getUsuario().getId());
+                empleadoDto.setUsernameUsuario(empleado.getUsuario().getUsername());
+                empleadoDto.setEstadoActivo(empleado.getEstadoActivo());
+                empleadoDto.setFechaBaja(empleado.getFechaBaja());
+
+                dto.setEmpleado(empleadoDto);
+            });
+        }
         return dto;
     }
 

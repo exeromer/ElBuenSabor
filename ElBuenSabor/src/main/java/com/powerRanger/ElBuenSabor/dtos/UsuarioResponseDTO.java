@@ -9,7 +9,8 @@ public class UsuarioResponseDTO {
     private String username;
     private Rol rol;
     private Boolean estadoActivo;
-    private LocalDate fechaBaja; // Podría ser útil mostrarla
+    private LocalDate fechaBaja;
+    private EmpleadoResponseDTO empleado;
 
     // Getters y Setters
     public Integer getId() { return id; }
@@ -24,4 +25,6 @@ public class UsuarioResponseDTO {
     public void setEstadoActivo(Boolean estadoActivo) { this.estadoActivo = estadoActivo; }
     public LocalDate getFechaBaja() { return fechaBaja; }
     public void setFechaBaja(LocalDate fechaBaja) { this.fechaBaja = fechaBaja; }
+    public EmpleadoResponseDTO getEmpleado() {return empleado;}
+    public void setEmpleado(EmpleadoResponseDTO empleado) {this.empleado = empleado;}
 }

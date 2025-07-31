@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Container, Card, Button, Table, Spinner, Alert, Tabs, Tab, Dropdown, DropdownButton, Badge } from 'react-bootstrap';
+import { Container, Card, Button, Table, Spinner, Alert, Tabs, Tab, Dropdown, DropdownButton, Badge, Modal, Form } from 'react-bootstrap';
 import { useAuth0 } from '@auth0/auth0-react';
 import { ClienteUsuarioService } from '../services/clienteUsuarioService';
+import { EmpleadoService } from '../services/EmpleadoService';
 import type { UsuarioResponse, ClienteResponse, UsuarioRequest, ClienteRequest, DomicilioResponse } from '../types/types';
 import type { Rol } from '../types/enums';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -24,6 +25,9 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
     const [editingUser, setEditingUser] = useState<UsuarioResponse | null>(null);
     const [showClientForm, setShowClientForm] = useState(false);
     const [editingClient, setEditingClient] = useState<ClienteResponse | null>(null);
+    const [showRoleModal, setShowRoleModal] = useState(false);
+    const [selectedUserForRole, setSelectedUserForRole] = useState<UsuarioResponse | null>(null);
+    const [newEmployeeRole, setNewEmployeeRole] = useState<'CAJERO' | 'COCINA' | 'DELIVERY'>('COCINA');
 
     const clienteUsuarioService = new ClienteUsuarioService();
 
@@ -124,6 +128,36 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
         fetchData();
     };
 
+    const handleOpenRoleModal = (user: UsuarioResponse) => {
+        // Es crucial que el backend envíe el objeto 'empleado' dentro del 'usuario' para que esto funcione
+        if (user.rol === 'EMPLEADO' && user.empleado) {
+            setSelectedUserForRole(user);
+            setNewEmployeeRole(user.empleado.rolEmpleado); // Precargamos el rol actual
+            setShowRoleModal(true);
+        } else {
+            toast.error("Este usuario no es un empleado o sus datos de empleado no están disponibles.");
+        }
+    };
+
+    const handleRoleChange = async () => {
+        if (!selectedUserForRole || !selectedUserForRole.empleado?.id) {
+            toast.error("No se ha seleccionado un empleado válido para el cambio de rol.");
+            return;
+        }
+
+        const promise = EmpleadoService.cambiarRol(selectedUserForRole.empleado.id, newEmployeeRole);
+
+        toast.promise(promise, {
+            loading: 'Actualizando rol...',
+            success: () => {
+                fetchData(); 
+                setShowRoleModal(false);
+                return 'Rol del empleado actualizado con éxito.';
+            },
+            error: (err: any) => err.message || 'No se pudo actualizar el rol.',
+        });
+    };
+
     if (loading) {
         return <Container className="text-center my-5"><Spinner animation="border" /></Container>;
     }
@@ -153,8 +187,8 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
                                             <td>{user.auth0Id?.substring(user.auth0Id.indexOf('|') + 1) || 'No disponible'}</td>
                                             <td><Badge bg={user.rol === 'ADMIN' ? 'danger' : user.rol === 'EMPLEADO' ? 'info' : 'secondary'}>{user.rol}</Badge></td>
                                             <td>
-                                                {user.estadoActivo 
-                                                    ? <Badge bg="success"><FontAwesomeIcon icon={faCheckCircle} className="me-1" /> Activo</Badge> 
+                                                {user.estadoActivo
+                                                    ? <Badge bg="success"><FontAwesomeIcon icon={faCheckCircle} className="me-1" /> Activo</Badge>
                                                     : <Badge bg="danger"><FontAwesomeIcon icon={faBan} className="me-1" /> Inactivo</Badge>
                                                 }
                                             </td>
@@ -165,6 +199,17 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
                                                         <Dropdown.Item key={role} onClick={() => handleUpdateUserRole(user.id, role)} disabled={user.rol === role}>Cambiar a {role}</Dropdown.Item>
                                                     ))}
                                                 </DropdownButton>
+                                                {user.rol === 'EMPLEADO' && (
+                                                    <Button
+                                                        variant="outline-info"
+                                                        size="sm"
+                                                        className="me-2"
+                                                        title="Cambiar Rol Específico de Empleado"
+                                                        onClick={() => handleOpenRoleModal(user)}
+                                                    >
+                                                        <FontAwesomeIcon icon={faUserShield} />
+                                                    </Button>
+                                                )}
                                                 <DropdownButton
                                                     id={`dropdown-estado-${user.id}`}
                                                     title={<FontAwesomeIcon icon={user.estadoActivo ? faToggleOn : faToggleOff} />}
@@ -201,8 +246,8 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
                                             <td>{client.telefono}</td>
                                             <td>{client.usuarioId}</td>
                                             <td>
-                                                {client.estadoActivo 
-                                                    ? <Badge bg="success"><FontAwesomeIcon icon={faCheckCircle} className="me-1" /> Activo</Badge> 
+                                                {client.estadoActivo
+                                                    ? <Badge bg="success"><FontAwesomeIcon icon={faCheckCircle} className="me-1" /> Activo</Badge>
                                                     : <Badge bg="danger"><FontAwesomeIcon icon={faBan} className="me-1" /> Inactivo</Badge>
                                                 }
                                             </td>
@@ -229,6 +274,35 @@ const ManageUsersPage: React.FC<ManageUsersPageProps> = () => {
             </Tabs>
             <UserForm show={showUserForm} handleClose={() => setShowUserForm(false)} onSave={handleFormSubmit} userToEdit={editingUser} />
             <ClientForm show={showClientForm} handleClose={() => setShowClientForm(false)} onSave={handleFormSubmit} clientToEdit={editingClient} />
+            <Modal show={showRoleModal} onHide={() => setShowRoleModal(false)} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title>Cambiar Rol de Empleado</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <p>
+                        Cambiando el rol para el usuario: <strong>{selectedUserForRole?.username}</strong>
+                    </p>
+                    <Form.Group>
+                        <Form.Label>Nuevo Rol Específico:</Form.Label>
+                        <Form.Select
+                            value={newEmployeeRole}
+                            onChange={(e) => setNewEmployeeRole(e.target.value as 'CAJERO' | 'COCINA' | 'DELIVERY')}
+                        >
+                            <option value="CAJERO">Cajero</option>
+                            <option value="COCINA">Cocina</option>
+                            <option value="DELIVERY">Delivery</option>
+                        </Form.Select>
+                    </Form.Group>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowRoleModal(false)}>
+                        Cancelar
+                    </Button>
+                    <Button variant="primary" onClick={handleRoleChange}>
+                        Guardar Cambios
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Container>
     );
 };

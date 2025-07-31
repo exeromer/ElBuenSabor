@@ -163,8 +163,8 @@ export interface DomicilioRequest {
   calle: string;
   numero: number;
   cp: string;
-  localidadNombre: string; 
-  provinciaId: number;   
+  localidadNombre: string;
+  provinciaId: number;
 }
 
 export interface DomicilioResponse {
@@ -422,7 +422,8 @@ export interface UsuarioResponse {
   username: string;
   rol: Rol;
   estadoActivo: boolean;
-  fechaBaja?: string; // LocalDate -> string
+  fechaBaja?: string;
+  empleado?: EmpleadoResponse;
 }
 
 export interface EmpleadoResponse {

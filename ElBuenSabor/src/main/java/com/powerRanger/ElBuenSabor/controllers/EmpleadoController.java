@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.validation.annotation.Validated;
@@ -126,6 +127,24 @@ public class EmpleadoController {
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return handleGenericException(e, HttpStatus.NOT_FOUND);
+        }
+    }
+
+
+    @PutMapping("/{id}/rol")
+    public ResponseEntity<EmpleadoResponseDTO> cambiarRolEmpleado(
+            @PathVariable Integer id,
+            @RequestBody Map<String, String> body) {
+        try {
+            String nuevoRolStr = body.get("nuevoRol");
+            if (nuevoRolStr == null) {
+                return ResponseEntity.badRequest().build();
+            }
+            EmpleadoResponseDTO empleadoActualizado = empleadoService.cambiarRol(id, nuevoRolStr);
+            return ResponseEntity.ok(empleadoActualizado);
+        } catch (Exception e) {
+            // Considera un manejo de errores más específico si es necesario
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 

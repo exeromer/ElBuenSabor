@@ -38,6 +38,17 @@ export class EmpleadoService {
     return response.data;
   }
     /**
+   * Cambia el rol específico de un empleado (Cajero, Cocina, Delivery).
+   * @param empleadoId - El ID del perfil del Empleado.
+   * @param nuevoRol - El nuevo rol a asignar.
+   */
+  static async cambiarRol(empleadoId: number, nuevoRol: 'CAJERO' | 'COCINA' | 'DELIVERY'): Promise<EmpleadoResponse> {
+    // El cuerpo de la petición coincide con lo que espera el backend: { "nuevoRol": "COCINA" }
+    const response = await apiClient.put<EmpleadoResponse>(`/empleados/${empleadoId}/rol`, { nuevoRol });
+    return response.data;
+  }
+  
+    /**
    * Actualiza el perfil del empleado autenticado.
    */
   static async updateMiPerfil(data: Partial<EmpleadoRequest>): Promise<EmpleadoResponse> {

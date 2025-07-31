@@ -50,7 +50,7 @@ export class FacturaService {
    * @param id - El ID de la factura a anular.
    */
   static async anularFactura(id: number): Promise<FacturaResponse> {
-    const response = await apiClient.put<FacturaResponse>(`/facturas/anular/${id}`);
+    const response = await apiClient.post<FacturaResponse>(`/facturas/anular/${id}`);
     return response.data;
   }
 }

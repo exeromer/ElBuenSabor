@@ -91,6 +91,14 @@ export class ClienteUsuarioService {
         await apiClient.delete(`/usuarios/${id}`);
     }
 
+    // Dentro de la clase ClienteUsuarioService
+
+    async cambiarRolEmpleado(empleadoId: number, nuevoRol: string, token: string): Promise<void> {
+        setAuthToken(token);
+        const response = await apiClient.put(`/empleados/${empleadoId}/rol`, { nuevoRol });
+        return response.data;
+    }
+
     /**
      * @function getAllClientes
      * @description Obtiene todos los clientes (para ADMIN).

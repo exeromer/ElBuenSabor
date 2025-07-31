@@ -4,7 +4,9 @@ import com.powerRanger.ElBuenSabor.dtos.EmpleadoRequestDTO;
 import com.powerRanger.ElBuenSabor.dtos.EmpleadoResponseDTO;
 import com.powerRanger.ElBuenSabor.entities.Empleado;
 import com.powerRanger.ElBuenSabor.entities.Usuario;
+import com.powerRanger.ElBuenSabor.entities.enums.Rol;
 import com.powerRanger.ElBuenSabor.entities.enums.RolEmpleado;
+import com.powerRanger.ElBuenSabor.exceptions.InvalidOperationException;
 import com.powerRanger.ElBuenSabor.repository.EmpleadoRepository;
 import com.powerRanger.ElBuenSabor.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -154,6 +156,29 @@ public class EmpleadoServiceImpl implements EmpleadoService {
         empleado.setEstadoActivo(false);
         empleado.setFechaBaja(LocalDate.now());
         empleadoRepository.save(empleado);
+    }
+    @Override
+    @Transactional
+    public EmpleadoResponseDTO cambiarRol(Integer empleadoId, String nuevoRolStr) throws Exception {
+        Empleado empleado = empleadoRepository.findById(empleadoId)
+                .orElseThrow(() -> new InvalidOperationException("Empleado no encontrado con ID: " + empleadoId));
+
+        RolEmpleado rolEnum;
+        try {
+            rolEnum = RolEmpleado.valueOf(nuevoRolStr.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new InvalidOperationException("El rol especificado '" + nuevoRolStr + "' no es válido.");
+        }
+
+        // Validamos que el rol sea uno de los roles de empleado permitidos
+        if (rolEnum != RolEmpleado.COCINA && rolEnum != RolEmpleado.CAJERO && rolEnum != RolEmpleado.DELIVERY) {
+            throw new InvalidOperationException("Solo se puede asignar un rol de tipo COCINA, CAJERO o DELIVERY.");
+        }
+
+        empleado.setRolEmpleado(rolEnum);
+        Empleado empleadoGuardado = empleadoRepository.save(empleado);
+
+        return convertToResponseDto(empleadoGuardado);
     }
 
     @Override
